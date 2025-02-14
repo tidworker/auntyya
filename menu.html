@@ -231,29 +231,24 @@
   <button class="menu-button" onclick="openModal('熱湯')">熱湯</button>
 </div>
 
-<!-- 
-  新增一個外層 div (id="orderSection")，
-  包住「訂單列表」與「完成訂單按鈕」。
--->
-<div id="orderSection">
-  <!-- 訂單列表 (不顯示「價格」) -->
-  <h3>訂單列表 (不顯示價格)</h3>
-  <table class="order-list">
-    <thead>
-      <tr>
-        <th>品項</th>
-        <th>數量</th>
-        <th>備註</th>
-        <th>操作</th>
-      </tr>
-    </thead>
-    <tbody id="orderTable"></tbody>
-  </table>
+<!-- 訂單列表 (不顯示「價格」) -->
+<h3>訂單列表 (不顯示價格)</h3>
+<table class="order-list">
+  <thead>
+    <tr>
+      <th>品項</th>
+      <th>數量</th>
+      <th>備註</th>
+      <th>操作</th>
+    </tr>
+  </thead>
+  <tbody id="orderTable"></tbody>
+</table>
 
-  <div class="actions">
-    <button class="menu-button" onclick="completeOrder()">完成訂單</button>
-  </div>
+<div class="actions">
+  <button class="menu-button" onclick="completeOrder()">完成訂單</button>
 </div>
+
 
 <!-- ========== 多步驟「點餐」Modal ========== -->
 <div id="mainModal" class="modal">
@@ -293,6 +288,7 @@
 
     <!-- STEP 3: 辣度 / 飲料冰數 / 湯數量 -->
     <div id="stepThird" class="hidden">
+
       <!-- 蔥油餅/麵線/炒麵 => 辣度(全部辣) -->
       <div id="spicyBlock" class="hidden">
         <h3>選擇辣數量</h3>
@@ -336,6 +332,7 @@
     </div>
   </div>
 </div>
+
 
 <!-- ========== 客製(備註) Modal (含刪除) ========== -->
 <div id="customModal" class="modal-cust">
@@ -725,7 +722,14 @@ function updateOrderList(){
         <td>${quantity}</td>
         <td>${remark || ""}</td>
         <td>
+          <!-- 保留「客製」按鈕 -->
           <button class="menu-button-sm" onclick="openCustomModal('${item}')">客製</button>
+          <!-- 新增「刪除」按鈕（直接刪當筆） -->
+          <button class="menu-button-sm" 
+                  style="background-color:#900; color:#fff;"
+                  onclick="removeItem('${item}')">
+            刪除
+          </button>
         </td>
       </tr>
     `;
@@ -733,20 +737,23 @@ function updateOrderList(){
   }
 }
 
-/* 
-  完成訂單 => 
-   1) 將 orders 寫到 localStorage
-   2) 同頁面「取消顯示」(隱藏 orderSection)
-*/
-function completeOrder(){
-  // 1) 存至 localStorage
-  localStorage.setItem('orders', JSON.stringify(orders));
-  
-  // 2) 隱藏「訂單列表」所在容器 (或改為清空表格內容)
-  document.getElementById("orderSection").style.display = "none";
-  // 若僅想清空表格，改用:
-  // document.getElementById("orderTable").innerHTML = "";
+/** 只刪除當筆訂單 */
+function removeItem(itemName) {
+  // 1) 刪除該項目
+  if(orders[itemName]){
+    delete orders[itemName];
+  }
+  // 2) 更新畫面
+  updateOrderList();
 }
+
+/* 完成訂單 => 存入 localStorage (可自行保留或刪除) */
+function completeOrder(){
+  localStorage.setItem('orders', JSON.stringify(orders));
+  alert("已完成訂單，並寫入 localStorage");
+  // 這裡沒有跳轉，也沒有清空整表
+}
+
 
 /* =================== 3) 客製(備註) Modal + 刪除 =================== */
 let currentItemForCust = null;
