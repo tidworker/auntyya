@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <title>語音點餐 - 主頁面 (讀取menu資料庫)</title>
+  <title>語音點餐 - 長按錄音 + 短延遲解析 + Modal客製</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <style>
     /* ====== 全域樣式 ====== */
@@ -14,51 +14,35 @@
       padding: 0;
     }
     header {
-      background-color: #4a4a4a;
-      color: #fff;
-      padding: 10px 0;
-      text-align: center;
+      background-color: #4a4a4a; color: #fff;
+      padding: 10px 0; text-align: center;
     }
     main {
-      max-width: 800px;
-      margin: 20px auto;
-      padding: 20px;
+      max-width: 800px; margin: 20px auto; padding: 20px;
       background-color: #fff;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
       border-radius: 10px;
       position: relative;
     }
     h1, h2 {
-      margin: 0 0 20px;
-      font-weight: normal;
+      margin: 0 0 20px; font-weight: normal;
     }
     label {
-      display: block;
-      margin-bottom: 10px;
-      font-size: 18px;
+      display: block; margin-bottom: 10px; font-size: 18px;
     }
     #inputTextArea {
-      width: 100%;
-      height: 80px;
-      margin-bottom: 20px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      padding: 10px;
-      font-size: 14px;
-      resize: none;
+      width: 100%; height: 80px; margin-bottom: 20px;
+      border-radius: 5px; border: 1px solid #ccc;
+      padding: 10px; font-size: 14px; resize: none;
       background-color: #f9f9f9;
     }
 
     /* ====== 按鈕樣式 ====== */
     button {
-      font-size: 14px;
-      padding: 10px 15px;
-      background-color: #6c757d;
-      color: #fff;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      margin-right: 5px;
+      font-size: 14px; padding: 10px 15px;
+      background-color: #6c757d; color: #fff;
+      border: none; border-radius: 5px;
+      cursor: pointer; margin-right: 5px;
     }
     #clearInputBtn {
       background-color: #adb5bd;
@@ -74,94 +58,68 @@
     /* ====== 表格樣式 ====== */
     #orderTable {
       border-collapse: collapse;
-      width: 100%;
-      margin-top: 20px;
+      width: 100%; margin-top: 20px;
       font-size: 14px;
     }
     th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
+      border: 1px solid #ddd; padding: 8px;
       text-align: left;
     }
     th {
       background-color: #e9ecef;
     }
     #totalPrice {
-      font-weight: bold;
-      font-size: 16px;
+      font-weight: bold; font-size: 16px;
     }
 
-    /* ====== 客製化Modal ====== */
+    /* ====== 客製化 Modal ====== */
     #customizeModal {
       display: none;
       position: fixed; 
       top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.5);
-      align-items: center; 
-      justify-content: center;
+      align-items: center; justify-content: center;
       z-index: 9999;
     }
     #modalContent {
       background: #fff;
       padding: 20px;
       border-radius: 5px;
-      max-width: 300px;
-      margin: auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      max-width: 300px; margin: auto;
+      display: flex; flex-direction: column; align-items: center;
     }
     .option-btns {
-      display: flex; 
-      flex-wrap: wrap;
-      gap: 5px; 
-      margin-bottom: 10px;
+      display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px;
     }
     .option-btn {
-      background-color: #ccc;
-      border: none;
-      padding: 5px 10px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 14px;
+      background-color: #ccc; border: none;
+      padding: 5px 10px; border-radius: 5px;
+      cursor: pointer; font-size: 14px;
     }
     .option-btn.active {
-      background-color: #6c757d;
-      color: #fff;
+      background-color: #6c757d; color: #fff;
     }
     .qty-row {
-      display: flex;
-      align-items: center;
+      display: flex; align-items: center; gap: 5px;
       margin-bottom: 10px;
-      gap: 5px;
     }
     #minusQtyBtn, #plusQtyBtn {
-      background-color: #adb5bd;
-      border: none;
-      padding: 5px 12px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
+      background-color: #adb5bd; border: none;
+      padding: 5px 12px; border-radius: 5px;
+      cursor: pointer; font-size: 16px;
     }
     #qtyInput {
-      width: 60px;
-      text-align: center;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      padding: 4px;
-      font-size: 14px;
+      width: 60px; text-align: center;
+      border: 1px solid #ccc; border-radius: 5px;
+      padding: 4px; font-size: 14px;
     }
     #modalBtns {
-      display: flex;
-      gap: 10px;
+      display: flex; gap: 10px;
     }
     #confirmBtn, #cancelBtn {
-      background-color: #6c757d;
-      color: #fff;
-      border: none;
-      padding: 8px 14px;
-      border-radius: 5px;
-      cursor: pointer;
+      background-color: #6c757d; color: #fff;
+      border: none; padding: 8px 14px;
+      border-radius: 5px; cursor: pointer;
     }
     #cancelBtn {
       background-color: #adb5bd;
@@ -170,12 +128,10 @@
     /* ====== RWD 手機 ====== */
     @media (max-width: 600px) {
       main {
-        margin: 10px;
-        padding: 15px;
+        margin: 10px; padding: 15px;
       }
-      h1, h2 {
-        font-size: 18px;
-        margin-bottom: 15px;
+      h1,h2 {
+        font-size: 18px; margin-bottom: 15px;
       }
       label {
         font-size: 16px;
@@ -190,8 +146,7 @@
         font-size: 14px;
       }
       button {
-        font-size: 13px;
-        padding: 8px 10px;
+        font-size: 13px; padding: 8px 10px;
       }
     }
 
@@ -208,7 +163,7 @@
       border-radius: 30px;
       margin-right: 0;
 
-      /* 禁用長按選字 & 系統快顯 */
+      /* 禁用長按選字和系統快顯 */
       -webkit-user-select: none;
       user-select: none;
       -webkit-touch-callout: none;
@@ -221,12 +176,11 @@
 </head>
 <body>
   <header>
-    <h1>語音點餐 - 主頁面 (讀取menu資料庫)</h1>
+    <h1>語音點餐 - 長按錄音 + 短延遲解析 + Modal客製</h1>
   </header>
   <main>
-    <p>此頁面會自動從 Local Storage 讀取 "menuItems" (菜單) 及 "homophones" (同音字庫)，若空白則請先到 menu.html 編輯並儲存。</p>
-
-    <label for="inputTextArea">點餐內容 (可輸入或長按錄音):</label>
+    <!-- 手動輸入框 -->
+    <label for="inputTextArea">點餐內容(可輸入或長按錄音):</label>
     <textarea id="inputTextArea" placeholder="輸入文字…"></textarea>
     <br/>
     <button id="clearInputBtn" onclick="onClearClick()">清除點餐</button>
@@ -291,32 +245,8 @@
 
   <script>
     /************************************
-     * 0. 從Local Storage讀取資料: menuItems & homophones
+     * 0. 震動函式
      ************************************/
-    const rawMenu = localStorage.getItem("menuItems") || "{}";
-    const rawHomophones = localStorage.getItem("homophones") || "{}";
-
-    let itemPrices = {};
-    let homophones = {};
-
-    try {
-      itemPrices = JSON.parse(rawMenu);
-      homophones = JSON.parse(rawHomophones);
-    } catch (e) {
-      console.error("解析menu / homophones 失敗", e);
-      itemPrices = {};
-      homophones = {};
-    }
-    console.log("讀取到的菜單 itemPrices:", itemPrices);
-    console.log("讀取到的同音字庫 homophones:", homophones);
-
-    /************************************
-     * 1. 全域 & 震動函式
-     ************************************/
-    var orderList = [];
-    let recognition = null; // 用於語音輸入
-    var extraKeywords = ["辣","冰","溫"]; // 這部分同音字外, 自行定義
-
     function vibrate(ms) {
       if (navigator.vibrate) {
         navigator.vibrate(ms);
@@ -324,7 +254,33 @@
     }
 
     /************************************
-     * 2. 按鈕事件
+     * 全域變數 & 商品 / 同音字 / 關鍵字
+     ************************************/
+    var orderList = [];
+    var itemPrices = {
+      "紅茶": 25,
+      "綠茶": 20,
+      "蔥油餅": 30,
+      "芝麻蔥油餅": 20,
+      "蔥油餅加蛋": 30
+    };
+    var homophones = {
+      "紅茶": ["紅查","鴻茶"],
+      "綠茶": ["綠查"],
+      "蔥油餅": ["蔥餅","油餅"],
+      "芝麻蔥油餅": ["芝麻蔥餅","芝蔥餅","不加蛋"],
+      "蔥油餅加蛋": ["蛋餅","加蛋","蔥油餅加蛋"],
+      "1": ["一","億"],
+      "2": ["兩","量"],
+      "3": ["三","參"]
+    };
+    var extraKeywords = ["辣","冰","溫"];
+
+    let recognition = null;
+    let currentCustomizeIndexes = [];
+
+    /************************************
+     * 1. 按鈕事件
      ************************************/
     function onClearClick() {
       vibrate(50);
@@ -352,24 +308,24 @@
     }
 
     /************************************
-     * 3. 長按語音 (短延遲解析)
+     * 2. 長按語音 (短延遲解析)
      ************************************/
     function startVoiceInput(e) {
-      e.preventDefault(); 
-      vibrate(50); // 按下震動
-
+      e.preventDefault(); // 阻止文字選取或系統快顯
+      vibrate(50);       // 按下震動
+      
       document.getElementById("inputTextArea").value = "";
 
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SpeechRecognition) {
-        alert("瀏覽器不支援語音識別，請用Android Chrome/Edge。");
+      if(!SpeechRecognition) {
+        alert("瀏覽器不支援語音識別, 請用Android Chrome/Edge。");
         return;
       }
       recognition = new SpeechRecognition();
       recognition.lang = "zh-TW";
 
-      // 不使用 onend => setTimeout馬上解析
-      recognition.onend = null;
+      // 不在 onend 裡做任何事，改用 setTimeout
+      recognition.onend = null; 
       recognition.onresult = (ev)=>{
         const txt = ev.results[0][0].transcript;
         document.getElementById("inputTextArea").value = txt;
@@ -382,62 +338,61 @@
 
     function stopVoiceInput(e) {
       e.preventDefault();
-      if (recognition) {
-        recognition.onend = null; 
+
+      if(recognition) {
+        recognition.onend = null; // 覆蓋
         recognition.stop();
 
-        // 100ms短延遲後解析
+        // 關閉後短延遲馬上解析 => 縮短等待時間
         setTimeout(()=>{
           analyzeText();
-        }, 100);
+        },100);
 
         recognition = null;
       }
     }
 
     /************************************
-     * 4. 清除 & 完成訂單
+     * 3. 清除 & 完成訂單
      ************************************/
     function clearInputArea() {
-      document.getElementById("inputTextArea").value = "";
+      document.getElementById("inputTextArea").value="";
     }
     function completeOrder() {
-      orderList = [];
-      document.getElementById("orderTableBody").innerHTML = "";
-      document.getElementById("totalPrice").textContent = "0";
-      document.getElementById("inputTextArea").value = "";
+      orderList=[];
+      document.getElementById("orderTableBody").innerHTML="";
+      document.getElementById("totalPrice").textContent="0";
+      document.getElementById("inputTextArea").value="";
     }
 
     /************************************
-     * 5. 解析文字 (含 辣/冰/溫)
+     * 4. 解析文字 (含 辣/冰/溫)
      ************************************/
     function analyzeText() {
       let text = document.getElementById("inputTextArea").value.trim();
 
-      // (A) 同音字替換
-      for (const item in homophones) {
-        const arr = homophones[item];
-        arr.forEach(syn => {
-          const re = new RegExp(syn, "g");
-          text = text.replace(re, item);
+      // A) 同音字替換
+      for(const h in homophones){
+        homophones[h].forEach(syn=>{
+          const re = new RegExp(syn,"g");
+          text=text.replace(re,h);
         });
       }
 
       const newItems=[];
 
-      // (B1) 部分X => "商品N份M份辣"
+      // (A1) 部分X => "商品N份M份辣"
       extraKeywords.forEach(keyword=>{
         for(const itemName in itemPrices){
           const partRe=new RegExp(itemName+"(\\d+)份(\\d+)份"+keyword,"g");
           text=text.replace(partRe,(m,totalStr,partStr)=>{
-            const total=parseInt(totalStr);
-            const part=parseInt(partStr);
+            const total=parseInt(totalStr), part=parseInt(partStr);
             addOrUpdateItem(newItems,itemName,total,keyword,part);
             return "";
           });
         }
       });
-      // (B2) 全部X => "商品N份辣"
+      // (A2) 全部X => "商品N份辣"
       extraKeywords.forEach(keyword=>{
         for(const itemName in itemPrices){
           const allRe=new RegExp(itemName+"(\\d+)份"+keyword,"g");
@@ -448,7 +403,7 @@
           });
         }
       });
-      // (B3) 一般 => "N份商品" / "商品N份"
+      // (A3) 一般 => "N份商品" / "商品N份"
       for(const itemName in itemPrices){
         const p1=new RegExp("(\\d+)份"+itemName,"g");
         text=text.replace(p1,(m,qStr)=>{
@@ -474,11 +429,8 @@
       let existing = newItems.find(o=>o.name===name);
       if(!existing){
         existing={
-          name,
-          price: itemPrices[name]||0,
-          quantity:0,
-          attrs:{},
-          remark:""
+          name, price:itemPrices[name]||0,
+          quantity:0, attrs:{}, remark:""
         };
         newItems.push(existing);
       }
@@ -502,7 +454,7 @@
     }
 
     /************************************
-     * 6. 更新表格 & 總金額
+     * 5. 更新表格 & 總金額
      ************************************/
     function updateOrderTable(checkedIndexes){
       const tbody=document.getElementById("orderTableBody");
@@ -516,9 +468,7 @@
         chk.type="checkbox";
         chk.classList.add("selectItem");
         chk.dataset.index=idx;
-        if(checkedIndexes && checkedIndexes.indexOf(idx)!==-1){
-          chk.checked=true;
-        }
+        if(checkedIndexes && checkedIndexes.indexOf(idx)!==-1) chk.checked=true;
         c1.appendChild(chk);
 
         row.insertCell(1).textContent=item.name;
@@ -547,7 +497,7 @@
     }
 
     /************************************
-     * 7. 增/減/刪除
+     * 6. 增/減/刪除
      ************************************/
     function getSelectedIndexes(){
       const checks=document.querySelectorAll(".selectItem:checked");
@@ -576,7 +526,7 @@
     }
 
     /************************************
-     * 8. 客製化Modal
+     * 7. 客製Modal
      ************************************/
     const customizeModal=document.getElementById("customizeModal");
     const optionButtons=document.querySelectorAll(".option-btn");
@@ -619,6 +569,7 @@
     });
     // 確定/取消
     document.getElementById("confirmBtn").addEventListener("click",()=>{
+      // 收集active
       const selectedOpts=[];
       optionButtons.forEach(btn=>{
         if(btn.classList.contains("active")){
@@ -658,7 +609,7 @@
     function mergeNoMore(line){
       const tokens=line.split(/\s+/);
       const final=[];
-      for(let i=0; i<tokens.length; i++){
+      for(let i=0;i<tokens.length;i++){
         const tk=tokens[i];
         if((tk==="不"||tk==="多") && i<tokens.length-1){
           const nt=tokens[i+1];
