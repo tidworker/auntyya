@@ -231,24 +231,29 @@
   <button class="menu-button" onclick="openModal('熱湯')">熱湯</button>
 </div>
 
-<!-- 訂單列表 (不顯示「價格」) -->
-<h3>訂單列表 (不顯示價格)</h3>
-<table class="order-list">
-  <thead>
-    <tr>
-      <th>品項</th>
-      <th>數量</th>
-      <th>備註</th>
-      <th>操作</th>
-    </tr>
-  </thead>
-  <tbody id="orderTable"></tbody>
-</table>
+<!-- 
+  新增一個外層 div (id="orderSection")，
+  包住「訂單列表」與「完成訂單按鈕」。
+-->
+<div id="orderSection">
+  <!-- 訂單列表 (不顯示「價格」) -->
+  <h3>訂單列表 (不顯示價格)</h3>
+  <table class="order-list">
+    <thead>
+      <tr>
+        <th>品項</th>
+        <th>數量</th>
+        <th>備註</th>
+        <th>操作</th>
+      </tr>
+    </thead>
+    <tbody id="orderTable"></tbody>
+  </table>
 
-<div class="actions">
-  <button class="menu-button" onclick="completeOrder()">完成訂單</button>
+  <div class="actions">
+    <button class="menu-button" onclick="completeOrder()">完成訂單</button>
+  </div>
 </div>
-
 
 <!-- ========== 多步驟「點餐」Modal ========== -->
 <div id="mainModal" class="modal">
@@ -288,7 +293,6 @@
 
     <!-- STEP 3: 辣度 / 飲料冰數 / 湯數量 -->
     <div id="stepThird" class="hidden">
-
       <!-- 蔥油餅/麵線/炒麵 => 辣度(全部辣) -->
       <div id="spicyBlock" class="hidden">
         <h3>選擇辣數量</h3>
@@ -332,7 +336,6 @@
     </div>
   </div>
 </div>
-
 
 <!-- ========== 客製(備註) Modal (含刪除) ========== -->
 <div id="customModal" class="modal-cust">
@@ -731,17 +734,18 @@ function updateOrderList(){
 }
 
 /* 
-  ===================
-    這裡「刪除跳轉到 order.html」的功能，只保留將 orders 寫入 localStorage
-    如果也不需要 localStorage，可以把那行一併移除
-  ===================
+  完成訂單 => 
+   1) 將 orders 寫到 localStorage
+   2) 同頁面「取消顯示」(隱藏 orderSection)
 */
 function completeOrder(){
-  // 1) 如果依然想把結果暫存到 localStorage
+  // 1) 存至 localStorage
   localStorage.setItem('orders', JSON.stringify(orders));
-
-  // 2) 直接註解掉或刪除跳轉功能
-  // window.location.href = 'order.html'; // ← 這行已刪除
+  
+  // 2) 隱藏「訂單列表」所在容器 (或改為清空表格內容)
+  document.getElementById("orderSection").style.display = "none";
+  // 若僅想清空表格，改用:
+  // document.getElementById("orderTable").innerHTML = "";
 }
 
 /* =================== 3) 客製(備註) Modal + 刪除 =================== */
