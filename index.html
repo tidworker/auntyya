@@ -2,110 +2,68 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>Index - 滿版頁框 + 底部並排按鈕</title>
-  <!-- 手機自適應 -->
+  <title>Index - 滿版頁框</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* 使整個頁面以 Flexbox 佔滿視窗高度 */
     html, body {
-      margin: 0;
+      margin: 0; 
       padding: 0;
       height: 100%;
       display: flex;
       flex-direction: column;
-      font-family: Arial, sans-serif;
       background: #f0f0f0;
+      font-family: Arial, sans-serif;
     }
-
-    header {
-      background: #ddd;
-      flex: 0 0 auto;
-      padding: 15px 0;
-      text-align: center;
-    }
-    header h2 {
-      margin: 0;
-      font-size: 24px;
-      color: #333;
-    }
-
-    /* 中間容器: 兩個iframe 疊在一起, 用 display: none/block 切換顯示 */
     #iframeContainer {
       flex: 1 1 auto;
       position: relative;
-      overflow: hidden;
     }
     iframe {
-      position: absolute;
+      position: absolute; 
       top: 0; left: 0;
-      width: 100%;
+      width: 100%; 
       height: 100%;
       border: none;
-      display: none; /* 預設隱藏, 只顯示其中一個 */
+      display: none;
     }
-
-    /* 底部 Menu / Order 按鈕 */
     .bottom-nav {
-      flex: 0 0 auto;
-      background-color: #555;
-      display: flex;
-      justify-content: space-between; /* 左一個、右一個 */
+      flex: 0 0 auto; 
+      background: #555; 
+      display: flex; 
+      justify-content: space-between;
       align-items: center;
-      padding: 10px;
     }
     .nav-button {
-      font-size: 20px;
-      padding: 14px 22px;
-      margin: 0 10px;
-      border: none;
+      font-size: 20px; 
+      padding: 14px 22px; 
+      border: none; 
+      background: #555; 
+      color: #fff; 
       cursor: pointer;
-      color: #fff;
-      background-color: #555;
-      border-radius: 0;
-      transition: background-color 0.2s;
-    }
-    .nav-button:hover {
-      background-color: #333;
-    }
-
-    @media (max-width: 600px) {
-      .nav-button {
-        flex: 1;        
-        margin: 0 5px;  
-        font-size: 18px;
-      }
     }
   </style>
 </head>
 <body>
-  <header>
-    <h2>Index - Menu / Order 切換</h2>
-  </header>
-
-  <!-- 中間區: 兩個 iframe 疊在一起 -->
   <div id="iframeContainer">
     <iframe id="menuFrame"  src="menu.html"></iframe>
     <iframe id="orderFrame" src="order.html"></iframe>
   </div>
-
-  <!-- 底部: Menu / Order 按鈕 -->
   <div class="bottom-nav">
     <button class="nav-button" onclick="showPage('menuFrame')">Menu</button>
     <button class="nav-button" onclick="showPage('orderFrame')">Order</button>
   </div>
-
+  
   <script>
-    function showPage(frameId) {
-      // 同時隱藏兩個 iframe
-      document.getElementById("menuFrame").style.display  = "none";
-      document.getElementById("orderFrame").style.display = "none";
-
-      // 顯示指定的 iframe
+    function showPage(frameId){
+      document.getElementById("menuFrame").style.display = "none";
+      document.getElementById("orderFrame").style.display= "none";
+      // 如果每次切到 order 時要保證重讀 localStorage
+      // if (frameId === "orderFrame"){
+      //   document.getElementById("orderFrame").contentWindow.location.reload();
+      // }
       document.getElementById(frameId).style.display = "block";
     }
-
-    // 預設顯示 menuFrame
-    showPage('menuFrame');
+    showPage("menuFrame"); // 預設顯示 menu
   </script>
 </body>
 </html>
