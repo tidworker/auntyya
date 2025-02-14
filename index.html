@@ -2,12 +2,14 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>index.html - Menu / Order 切換</title>
+  <title>Index - Menu / Order 切換 (手機友善)</title>
+  <!-- 手機自適應 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       margin: 0; 
       padding: 0; 
-      text-align: center; 
+      text-align: center;
       font-family: Arial, sans-serif;
       background: #f0f0f0;
     }
@@ -16,64 +18,81 @@
       padding: 15px 0;
       margin-bottom: 10px;
     }
+    header h2 {
+      margin: 0;
+      font-size: 24px;
+      color: #333;
+    }
+
+    /* 兩個按鈕：預設並排，大字體 */
+    .nav-container {
+      margin-bottom: 10px;
+    }
     .nav-button {
-      font-size: 18px;
-      padding: 10px 20px;
+      font-size: 20px;
+      padding: 14px 22px;
       margin: 5px;
       border: none;
+      cursor: pointer;
       background-color: #555;
       color: #fff;
-      cursor: pointer;
+      border-radius: 0;       /* 去圓角 */
+      transition: background-color 0.2s;
     }
     .nav-button:hover {
       background-color: #333;
     }
 
-    /* 兩個 iframe，都先設 display: none; 只顯示其中一個 */
-    #menuFrame, 
+    /* 兩個 iframe，都先隱藏，僅顯示其中一個 */
+    #menuFrame,
     #orderFrame {
       width: 100%;
-      height: 800px; 
-      border: none;  
-      display: none; 
+      height: 800px;   /* 預設電腦上顯示高度 */
+      border: none;
+      display: none;
     }
 
-    /* 調整適應手機 */
+    /* RWD: 小螢幕(手機)按鈕全寬 & iframe高度縮短 */
     @media (max-width: 600px) {
+      .nav-button {
+        width: 95%;
+        display: block;   /* 每個按鈕一行 */
+        margin: 5px auto;
+      }
       #menuFrame,
       #orderFrame {
-        height: 600px;
+        height: 600px;  /* 手機瀏覽時比較適合的高度 */
       }
     }
   </style>
 </head>
 <body>
-<header>
-  <h2>index.html - Menu / Order 切換</h2>
-</header>
+  <header>
+    <h2>Index - Menu / Order 切換</h2>
+  </header>
 
-<!-- 上方切換按鈕 -->
-<div>
-  <button class="nav-button" onclick="showPage('menuFrame')">Menu</button>
-  <button class="nav-button" onclick="showPage('orderFrame')">Order</button>
-</div>
+  <!-- 兩個切換按鈕 -->
+  <div class="nav-container">
+    <button class="nav-button" onclick="showPage('menuFrame')">Menu</button>
+    <button class="nav-button" onclick="showPage('orderFrame')">Order</button>
+  </div>
 
-<!-- 以 iframe 內嵌 menu.html / order.html -->
-<iframe id="menuFrame"  src="menu.html"></iframe>
-<iframe id="orderFrame" src="order.html"></iframe>
+  <!-- 以 iframe 方式載入 menu.html / order.html -->
+  <iframe id="menuFrame"  src="menu.html"></iframe>
+  <iframe id="orderFrame" src="order.html"></iframe>
 
-<script>
-function showPage(pageId) {
-  // 同時隱藏 menuFrame、orderFrame
-  document.getElementById("menuFrame").style.display  = "none";
-  document.getElementById("orderFrame").style.display = "none";
+  <script>
+    function showPage(pageId) {
+      // 同時隱藏兩個 iframe
+      document.getElementById("menuFrame").style.display  = "none";
+      document.getElementById("orderFrame").style.display = "none";
 
-  // 顯示指定的 pageId
-  document.getElementById(pageId).style.display = "block";
-}
+      // 顯示指定的 pageId
+      document.getElementById(pageId).style.display = "block";
+    }
 
-// 預設顯示 "menuFrame" (menu.html)
-showPage('menuFrame');
-</script>
+    // 預設顯示 Menu 頁面
+    showPage('menuFrame');
+  </script>
 </body>
 </html>
