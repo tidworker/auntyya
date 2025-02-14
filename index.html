@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <title>語音點餐 - 長按錄音 + 短延遲解析 + Modal客製</title>
+  <title>語音點餐 - 長按錄音 + 防文字選取 + Modal客製</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <style>
     /* ====== 全域樣式 ====== */
@@ -14,35 +14,51 @@
       padding: 0;
     }
     header {
-      background-color: #4a4a4a; color: #fff;
-      padding: 10px 0; text-align: center;
+      background-color: #4a4a4a;
+      color: #fff;
+      padding: 10px 0;
+      text-align: center;
     }
     main {
-      max-width: 800px; margin: 20px auto; padding: 20px;
+      max-width: 800px;
+      margin: 20px auto;
+      padding: 20px;
       background-color: #fff;
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
       border-radius: 10px;
       position: relative;
     }
     h1, h2 {
-      margin: 0 0 20px; font-weight: normal;
+      margin: 0 0 20px;
+      font-weight: normal;
     }
     label {
-      display: block; margin-bottom: 10px; font-size: 18px;
+      display: block;
+      margin-bottom: 10px;
+      font-size: 18px;
     }
     #inputTextArea {
-      width: 100%; height: 80px; margin-bottom: 20px;
-      border-radius: 5px; border: 1px solid #ccc;
-      padding: 10px; font-size: 14px; resize: none;
+      width: 100%;
+      height: 80px;
+      margin-bottom: 20px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      padding: 10px;
+      font-size: 14px;
+      resize: none;
       background-color: #f9f9f9;
     }
 
     /* ====== 按鈕樣式 ====== */
     button {
-      font-size: 14px; padding: 10px 15px;
-      background-color: #6c757d; color: #fff;
-      border: none; border-radius: 5px;
-      cursor: pointer; margin-right: 5px;
+      font-size: 14px;
+      padding: 10px 15px;
+      background-color: #6c757d;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-right: 5px;
     }
     #clearInputBtn {
       background-color: #adb5bd;
@@ -58,68 +74,94 @@
     /* ====== 表格樣式 ====== */
     #orderTable {
       border-collapse: collapse;
-      width: 100%; margin-top: 20px;
+      width: 100%;
+      margin-top: 20px;
       font-size: 14px;
     }
     th, td {
-      border: 1px solid #ddd; padding: 8px;
+      border: 1px solid #ddd;
+      padding: 8px;
       text-align: left;
     }
     th {
       background-color: #e9ecef;
     }
     #totalPrice {
-      font-weight: bold; font-size: 16px;
+      font-weight: bold;
+      font-size: 16px;
     }
 
-    /* ====== 客製化 Modal ====== */
+    /* ====== 客製化Modal ====== */
     #customizeModal {
       display: none;
-      position: fixed; 
+      position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.5);
-      align-items: center; justify-content: center;
+      align-items: center; 
+      justify-content: center;
       z-index: 9999;
     }
     #modalContent {
       background: #fff;
       padding: 20px;
       border-radius: 5px;
-      max-width: 300px; margin: auto;
-      display: flex; flex-direction: column; align-items: center;
+      max-width: 300px;
+      margin: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     .option-btns {
-      display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px;
-    }
-    .option-btn {
-      background-color: #ccc; border: none;
-      padding: 5px 10px; border-radius: 5px;
-      cursor: pointer; font-size: 14px;
-    }
-    .option-btn.active {
-      background-color: #6c757d; color: #fff;
-    }
-    .qty-row {
-      display: flex; align-items: center; gap: 5px;
+      display: flex; 
+      flex-wrap: wrap;
+      gap: 5px; 
       margin-bottom: 10px;
     }
+    .option-btn {
+      background-color: #ccc;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .option-btn.active {
+      background-color: #6c757d;
+      color: #fff;
+    }
+    .qty-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 5px;
+    }
     #minusQtyBtn, #plusQtyBtn {
-      background-color: #adb5bd; border: none;
-      padding: 5px 12px; border-radius: 5px;
-      cursor: pointer; font-size: 16px;
+      background-color: #adb5bd;
+      border: none;
+      padding: 5px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
     }
     #qtyInput {
-      width: 60px; text-align: center;
-      border: 1px solid #ccc; border-radius: 5px;
-      padding: 4px; font-size: 14px;
+      width: 60px;
+      text-align: center;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 4px;
+      font-size: 14px;
     }
     #modalBtns {
-      display: flex; gap: 10px;
+      display: flex;
+      gap: 10px;
     }
     #confirmBtn, #cancelBtn {
-      background-color: #6c757d; color: #fff;
-      border: none; padding: 8px 14px;
-      border-radius: 5px; cursor: pointer;
+      background-color: #6c757d;
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 5px;
+      cursor: pointer;
     }
     #cancelBtn {
       background-color: #adb5bd;
@@ -128,9 +170,10 @@
     /* ====== RWD 手機 ====== */
     @media (max-width: 600px) {
       main {
-        margin: 10px; padding: 15px;
+        margin: 10px;
+        padding: 15px;
       }
-      h1,h2 {
+      h1, h2 {
         font-size: 18px; margin-bottom: 15px;
       }
       label {
@@ -146,11 +189,12 @@
         font-size: 14px;
       }
       button {
-        font-size: 13px; padding: 8px 10px;
+        font-size: 13px;
+        padding: 8px 10px;
       }
     }
 
-    /* ====== 長按語音按鈕 ====== */
+    /* ====== 長按語音按鈕 - fixed在下方 ====== */
     #voiceBtn {
       position: fixed;
       bottom: 20px;
@@ -163,7 +207,7 @@
       border-radius: 30px;
       margin-right: 0;
 
-      /* 禁用長按選字和系統快顯 */
+      /* 取消長按文字選取 or 系統快顯 */
       -webkit-user-select: none;
       user-select: none;
       -webkit-touch-callout: none;
@@ -176,12 +220,12 @@
 </head>
 <body>
   <header>
-    <h1>語音點餐 - 長按錄音 + 短延遲解析 + Modal客製</h1>
+    <h1>語音點餐 - 長按錄音 + 防文字選取 + Modal客製</h1>
   </header>
   <main>
     <!-- 手動輸入框 -->
     <label for="inputTextArea">點餐內容(可輸入或長按錄音):</label>
-    <textarea id="inputTextArea" placeholder="輸入文字…"></textarea>
+    <textarea id="inputTextArea" placeholder="輸入內容..."></textarea>
     <br/>
     <button id="clearInputBtn" onclick="onClearClick()">清除點餐</button>
 
@@ -233,7 +277,7 @@
       </div>
       <div class="qty-row">
         <button id="minusQtyBtn" type="button">-</button>
-        <input id="qtyInput" type="number" step="1" min="0" value="0" />
+        <input id="qtyInput" type="number" step="1" min="0" value="0"/>
         <button id="plusQtyBtn" type="button">+</button>
       </div>
       <div id="modalBtns">
@@ -275,9 +319,10 @@
       "3": ["三","參"]
     };
     var extraKeywords = ["辣","冰","溫"];
+    let recognition = null; // 用於語音輸入
 
-    let recognition = null;
-    let currentCustomizeIndexes = [];
+    // 客製Modal用
+    var currentCustomizeIndexes = [];
 
     /************************************
      * 1. 按鈕事件
@@ -308,29 +353,27 @@
     }
 
     /************************************
-     * 2. 長按語音 (短延遲解析)
+     * 2. 長按語音: 按下 -> start, 鬆開 -> stop
      ************************************/
     function startVoiceInput(e) {
-      e.preventDefault(); // 阻止文字選取或系統快顯
-      vibrate(50);       // 按下震動
-      
+      e.preventDefault();      // 阻止長按文字選取或快顯
+      vibrate(50);            // 按下震動
+
       document.getElementById("inputTextArea").value = "";
 
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if(!SpeechRecognition) {
-        alert("瀏覽器不支援語音識別, 請用Android Chrome/Edge。");
+      if (!SpeechRecognition) {
+        alert("瀏覽器不支援語音識別，請用Android Chrome/Edge。");
         return;
       }
       recognition = new SpeechRecognition();
       recognition.lang = "zh-TW";
 
-      // 不在 onend 裡做任何事，改用 setTimeout
-      recognition.onend = null; 
-      recognition.onresult = (ev)=>{
+      recognition.onresult = (ev) => {
         const txt = ev.results[0][0].transcript;
         document.getElementById("inputTextArea").value = txt;
       };
-      recognition.onerror = (err)=>{
+      recognition.onerror = (err) => {
         console.error("語音錯誤:", err.error);
       };
       recognition.start();
@@ -338,17 +381,11 @@
 
     function stopVoiceInput(e) {
       e.preventDefault();
-
-      if(recognition) {
-        recognition.onend = null; // 覆蓋
+      if (recognition) {
         recognition.stop();
-
-        // 關閉後短延遲馬上解析 => 縮短等待時間
-        setTimeout(()=>{
+        recognition.onend = () => {
           analyzeText();
-        },100);
-
-        recognition = null;
+        };
       }
     }
 
@@ -356,98 +393,107 @@
      * 3. 清除 & 完成訂單
      ************************************/
     function clearInputArea() {
-      document.getElementById("inputTextArea").value="";
+      document.getElementById("inputTextArea").value = "";
     }
     function completeOrder() {
-      orderList=[];
-      document.getElementById("orderTableBody").innerHTML="";
-      document.getElementById("totalPrice").textContent="0";
-      document.getElementById("inputTextArea").value="";
+      orderList = [];
+      document.getElementById("orderTableBody").innerHTML = "";
+      document.getElementById("totalPrice").textContent = "0";
+      document.getElementById("inputTextArea").value = "";
     }
 
     /************************************
      * 4. 解析文字 (含 辣/冰/溫)
      ************************************/
     function analyzeText() {
-      let text = document.getElementById("inputTextArea").value.trim();
-
-      // A) 同音字替換
-      for(const h in homophones){
-        homophones[h].forEach(syn=>{
-          const re = new RegExp(syn,"g");
-          text=text.replace(re,h);
+      const textOrig = document.getElementById("inputTextArea").value.trim();
+      let text = textOrig;
+      // (A) 同音字替換
+      for (const h in homophones) {
+        homophones[h].forEach(syn => {
+          const reg = new RegExp(syn, "g");
+          text = text.replace(reg, h);
         });
       }
 
-      const newItems=[];
+      const newItems = [];
 
-      // (A1) 部分X => "商品N份M份辣"
-      extraKeywords.forEach(keyword=>{
-        for(const itemName in itemPrices){
-          const partRe=new RegExp(itemName+"(\\d+)份(\\d+)份"+keyword,"g");
-          text=text.replace(partRe,(m,totalStr,partStr)=>{
-            const total=parseInt(totalStr), part=parseInt(partStr);
-            addOrUpdateItem(newItems,itemName,total,keyword,part);
+      // (B1) 部分X => ex: "紅茶3份2份辣"
+      extraKeywords.forEach(keyword => {
+        for (const itemName in itemPrices) {
+          const partRe = new RegExp(itemName + "(\\d+)份(\\d+)份" + keyword, "g");
+          text = text.replace(partRe, (match, totalStr, partStr) => {
+            const total = parseInt(totalStr);
+            const part = parseInt(partStr);
+            addOrUpdateItem(newItems, itemName, total, keyword, part);
             return "";
           });
         }
       });
-      // (A2) 全部X => "商品N份辣"
-      extraKeywords.forEach(keyword=>{
-        for(const itemName in itemPrices){
-          const allRe=new RegExp(itemName+"(\\d+)份"+keyword,"g");
-          text=text.replace(allRe,(m,qtyStr)=>{
-            const total=parseInt(qtyStr);
-            addOrUpdateItem(newItems,itemName,total,keyword,total);
+
+      // (B2) 全部X => ex: "紅茶3份辣"
+      extraKeywords.forEach(keyword => {
+        for (const itemName in itemPrices) {
+          const allRe = new RegExp(itemName + "(\\d+)份" + keyword, "g");
+          text = text.replace(allRe, (match, qtyStr) => {
+            const total = parseInt(qtyStr);
+            addOrUpdateItem(newItems, itemName, total, keyword, total);
             return "";
           });
         }
       });
-      // (A3) 一般 => "N份商品" / "商品N份"
-      for(const itemName in itemPrices){
-        const p1=new RegExp("(\\d+)份"+itemName,"g");
-        text=text.replace(p1,(m,qStr)=>{
-          addOrUpdateItem(newItems,itemName,parseInt(qStr),null,0);
+
+      // (B3) 一般 => "N份商品" / "商品N份"
+      for (const itemName in itemPrices) {
+        const p1 = new RegExp("(\\d+)份" + itemName, "g");
+        text = text.replace(p1, (m, qStr) => {
+          addOrUpdateItem(newItems, itemName, parseInt(qStr), null, 0);
           return "";
         });
-        const p2=new RegExp(itemName+"(\\d+)份","g");
-        text=text.replace(p2,(m,qStr)=>{
-          addOrUpdateItem(newItems,itemName,parseInt(qStr),null,0);
+
+        const p2 = new RegExp(itemName + "(\\d+)份", "g");
+        text = text.replace(p2, (m, qStr) => {
+          addOrUpdateItem(newItems, itemName, parseInt(qStr), null, 0);
           return "";
         });
       }
 
+      // 合併 => 若有新增 => 震動
       mergeToOrderList(newItems);
-      if(newItems.length>0){
-        vibrate(100); // 新增成功 => 震動
+      if (newItems.length > 0) {
+        vibrate(100);
       }
       updateOrderTable();
     }
 
     function addOrUpdateItem(newItems, name, qty, attrKey, attrQty) {
-      if(!qty) qty=1;
-      let existing = newItems.find(o=>o.name===name);
-      if(!existing){
-        existing={
-          name, price:itemPrices[name]||0,
-          quantity:0, attrs:{}, remark:""
+      if (!qty) qty = 1;
+      let existing = newItems.find(o => o.name === name);
+      if (!existing) {
+        existing = {
+          name: name,
+          price: itemPrices[name] || 0,
+          quantity: 0,
+          attrs: {},
+          remark: ""
         };
         newItems.push(existing);
       }
-      existing.quantity+=qty;
-      if(attrKey){
-        existing.attrs[attrKey]=(existing.attrs[attrKey]||0)+attrQty;
+      existing.quantity += qty;
+      if (attrKey) {
+        existing.attrs[attrKey] = (existing.attrs[attrKey] || 0) + attrQty;
       }
     }
-    function mergeToOrderList(newItems){
-      newItems.forEach(newItem=>{
-        const found=orderList.find(o=>o.name===newItem.name && !o.remark);
-        if(found){
-          found.quantity+=newItem.quantity;
-          for(const k in newItem.attrs){
-            found.attrs[k]=(found.attrs[k]||0)+newItem.attrs[k];
+
+    function mergeToOrderList(newItems) {
+      newItems.forEach(newItem => {
+        const found = orderList.find(o => o.name === newItem.name && !o.remark);
+        if (found) {
+          found.quantity += newItem.quantity;
+          for (const k in newItem.attrs) {
+            found.attrs[k] = (found.attrs[k] || 0) + newItem.attrs[k];
           }
-        }else{
+        } else {
           orderList.push(newItem);
         }
       });
@@ -456,165 +502,174 @@
     /************************************
      * 5. 更新表格 & 總金額
      ************************************/
-    function updateOrderTable(checkedIndexes){
-      const tbody=document.getElementById("orderTableBody");
-      tbody.innerHTML="";
-      orderList.forEach((item,idx)=>{
-        const row=tbody.insertRow();
+    function updateOrderTable(checkedIndexes) {
+      const tbody = document.getElementById("orderTableBody");
+      tbody.innerHTML = "";
 
-        // 選擇
-        const c1=row.insertCell(0);
-        const chk=document.createElement("input");
-        chk.type="checkbox";
+      orderList.forEach((item, idx) => {
+        const row = tbody.insertRow();
+
+        // 選擇checkbox
+        const c1 = row.insertCell(0);
+        const chk = document.createElement("input");
+        chk.type = "checkbox";
         chk.classList.add("selectItem");
-        chk.dataset.index=idx;
-        if(checkedIndexes && checkedIndexes.indexOf(idx)!==-1) chk.checked=true;
+        chk.dataset.index = idx;
+        if (checkedIndexes && checkedIndexes.indexOf(idx) !== -1) {
+          chk.checked = true;
+        }
         c1.appendChild(chk);
 
-        row.insertCell(1).textContent=item.name;
-        row.insertCell(2).textContent=item.price;
-        row.insertCell(3).textContent=item.quantity;
-        row.insertCell(4).textContent=buildRemark(item);
+        row.insertCell(1).textContent = item.name;
+        row.insertCell(2).textContent = item.price;
+        row.insertCell(3).textContent = item.quantity;
+        row.insertCell(4).textContent = buildRemark(item);
       });
+
       updateTotalPrice();
     }
-    function buildRemark(item){
-      const lines=[];
-      for(const k in item.attrs){
-        const val=item.attrs[k];
-        if(val>0){
+
+    // 備註 => ex: 「辣×2\n不蒜 x3」
+    function buildRemark(item) {
+      const lines = [];
+      for (const k in item.attrs) {
+        const val = item.attrs[k];
+        if (val > 0) {
           lines.push(`${k}×${val}`);
         }
       }
-      if(item.remark){
+      if (item.remark) {
         lines.push(item.remark);
       }
       return lines.join("\n");
     }
-    function updateTotalPrice(){
-      const total=orderList.reduce((acc,it)=>acc+it.price*it.quantity,0);
-      document.getElementById("totalPrice").textContent=total;
+
+    function updateTotalPrice() {
+      const total = orderList.reduce((acc, it) => acc + it.price * it.quantity, 0);
+      document.getElementById("totalPrice").textContent = total;
     }
 
     /************************************
-     * 6. 增/減/刪除
+     * 6. 增 / 減 / 刪除
      ************************************/
-    function getSelectedIndexes(){
-      const checks=document.querySelectorAll(".selectItem:checked");
-      const indexes=[];
-      checks.forEach(chk=>indexes.push(parseInt(chk.dataset.index)));
+    function getSelectedIndexes() {
+      const checked = document.querySelectorAll(".selectItem:checked");
+      const indexes = [];
+      checked.forEach(chk => indexes.push(parseInt(chk.dataset.index)));
       return indexes;
     }
-    function incrementSelected(){
-      const sel=getSelectedIndexes();
-      sel.forEach(i=>orderList[i].quantity++);
+    function incrementSelected() {
+      const sel = getSelectedIndexes();
+      sel.forEach(i => orderList[i].quantity++);
       updateOrderTable(sel);
     }
-    function decrementSelected(){
-      const sel=getSelectedIndexes();
-      sel.forEach(i=>{
-        if(orderList[i].quantity>1){
+    function decrementSelected() {
+      const sel = getSelectedIndexes();
+      sel.forEach(i => {
+        if (orderList[i].quantity > 1) {
           orderList[i].quantity--;
         }
       });
       updateOrderTable(sel);
     }
-    function deleteSelected(){
-      const sel=getSelectedIndexes().sort((a,b)=>b-a);
-      sel.forEach(i=>orderList.splice(i,1));
+    function deleteSelected() {
+      const sel = getSelectedIndexes().sort((a,b)=>b-a);
+      sel.forEach(i => orderList.splice(i,1));
       updateOrderTable();
     }
 
     /************************************
-     * 7. 客製Modal
+     * 7. 客製化Modal
      ************************************/
-    const customizeModal=document.getElementById("customizeModal");
-    const optionButtons=document.querySelectorAll(".option-btn");
-    const qtyInput=document.getElementById("qtyInput");
-    const minusQtyBtn=document.getElementById("minusQtyBtn");
-    const plusQtyBtn=document.getElementById("plusQtyBtn");
+    const customizeModal = document.getElementById("customizeModal");
+    const optionButtons = document.querySelectorAll(".option-btn");
+    const qtyInput = document.getElementById("qtyInput");
+    const minusQtyBtn = document.getElementById("minusQtyBtn");
+    const plusQtyBtn = document.getElementById("plusQtyBtn");
 
-    function customizeSelected(){
-      const sel=getSelectedIndexes();
-      if(sel.length===0){
+    function customizeSelected() {
+      const sel = getSelectedIndexes();
+      if (sel.length === 0) {
         alert("請先勾選要客製化的餐點！");
         return;
       }
-      currentCustomizeIndexes=sel;
+      currentCustomizeIndexes = sel;
       openCustomizeModal();
     }
-    function openCustomizeModal(){
-      optionButtons.forEach(btn=>btn.classList.remove("active"));
-      qtyInput.value="0";
-      customizeModal.style.display="flex";
+    function openCustomizeModal() {
+      // 重置
+      optionButtons.forEach(btn => btn.classList.remove("active"));
+      qtyInput.value = "0";
+      customizeModal.style.display = "flex";
     }
-    function closeCustomizeModal(){
-      customizeModal.style.display="none";
+    function closeCustomizeModal() {
+      customizeModal.style.display = "none";
     }
 
-    // 選項
-    optionButtons.forEach(btn=>{
-      btn.addEventListener("click",function(){
+    // 選項按鈕 => 切換active
+    optionButtons.forEach(btn => {
+      btn.addEventListener("click", function() {
         this.classList.toggle("active");
       });
     });
     // 數量 + -
-    minusQtyBtn.addEventListener("click",()=>{
-      let val=parseInt(qtyInput.value||"0");
-      if(val>0) qtyInput.value=val-1;
+    minusQtyBtn.addEventListener("click", () => {
+      const val = parseInt(qtyInput.value || "0");
+      if (val > 0) qtyInput.value = val - 1;
     });
-    plusQtyBtn.addEventListener("click",()=>{
-      let val=parseInt(qtyInput.value||"0");
-      qtyInput.value=val+1;
+    plusQtyBtn.addEventListener("click", () => {
+      const val = parseInt(qtyInput.value || "0");
+      qtyInput.value = val + 1;
     });
-    // 確定/取消
-    document.getElementById("confirmBtn").addEventListener("click",()=>{
+    // 確定 & 取消
+    document.getElementById("confirmBtn").addEventListener("click", () => {
       // 收集active
-      const selectedOpts=[];
-      optionButtons.forEach(btn=>{
-        if(btn.classList.contains("active")){
+      const selectedOpts = [];
+      optionButtons.forEach(btn => {
+        if (btn.classList.contains("active")) {
           selectedOpts.push(btn.dataset.value);
         }
       });
-      let rawLine="";
-      if(selectedOpts.length>0){
-        rawLine=mergeNoMore(selectedOpts.join(" "));
+      let rawLine = "";
+      if (selectedOpts.length > 0) {
+        rawLine = mergeNoMore(selectedOpts.join(" "));
       }
-      const numStr=qtyInput.value.trim();
-      if(numStr && numStr!=="0"){
-        rawLine+=" x"+numStr;
+      const numStr = qtyInput.value.trim();
+      if (numStr && numStr !== "0") {
+        rawLine += " x" + numStr;
       }
-      if(rawLine){
-        currentCustomizeIndexes.forEach(i=>{
-          if(orderList[i].remark){
-            orderList[i].remark+=" / "+rawLine;
+
+      if (rawLine) {
+        currentCustomizeIndexes.forEach(i => {
+          if (orderList[i].remark) {
+            orderList[i].remark += " / " + rawLine;
           } else {
-            orderList[i].remark=rawLine;
+            orderList[i].remark = rawLine;
           }
         });
         updateOrderTable(currentCustomizeIndexes);
       }
       closeCustomizeModal();
     });
-    document.getElementById("cancelBtn").addEventListener("click",()=>{
+    document.getElementById("cancelBtn").addEventListener("click", () => {
       closeCustomizeModal();
     });
-    customizeModal.addEventListener("click",(e)=>{
-      if(e.target.id==="customizeModal"){
+    customizeModal.addEventListener("click", (e) => {
+      if(e.target.id === "customizeModal"){
         closeCustomizeModal();
       }
     });
 
     // 合併「不+蒜 => 不蒜」「多+菜 => 多菜」
     function mergeNoMore(line){
-      const tokens=line.split(/\s+/);
-      const final=[];
-      for(let i=0;i<tokens.length;i++){
-        const tk=tokens[i];
+      const tokens = line.split(/\s+/);
+      const final = [];
+      for(let i=0; i<tokens.length; i++){
+        const tk = tokens[i];
         if((tk==="不"||tk==="多") && i<tokens.length-1){
-          const nt=tokens[i+1];
+          const nt = tokens[i+1];
           if(["醋","蒜","菜"].includes(nt)){
-            final.push(tk+nt);
+            final.push(tk+nt);  // "不"+"蒜" => "不蒜"
             i++;
             continue;
           }
@@ -623,6 +678,7 @@
       }
       return final.join(" ");
     }
+
   </script>
 </body>
 </html>
