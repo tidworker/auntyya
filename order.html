@@ -2,15 +2,14 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>訂單頁面 (order.html)</title>
-  <!-- 手機裝置自適應 -->
+  <title>order.html - 訂單顯示</title>
+  <!-- 手機自適應 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
+      margin: 0; padding: 0; 
       text-align: center;
+      font-family: Arial, sans-serif;
       background-color: #f0f0f0;
       color: #333;
     }
@@ -24,15 +23,15 @@
       font-size: 24px;
       color: #333;
     }
+
     .order-list {
-      margin: 20px auto;
+      margin: 0 auto;
       width: 90%;
       max-width: 600px;
       border-collapse: collapse;
       background-color: #fff;
     }
-    .order-list th,
-    .order-list td {
+    .order-list th, .order-list td {
       border: 1px solid #aaa;
       padding: 10px;
       font-size: 18px;
@@ -43,60 +42,131 @@
     }
     .total-price {
       font-size: 22px;
-      margin-top: 10px;
+      margin: 10px;
+    }
+
+    .action-button {
+      font-size: 16px;
+      padding: 8px 14px;
+      margin: 5px;
+      border: none;
+      cursor: pointer;
+      color: #fff;
+      background-color: #555;
+      border-radius: 0;
+      transition: background-color 0.2s;
+    }
+    .action-button:hover {
+      background-color: #333;
     }
   </style>
 </head>
 <body>
+  <header>
+    <h2>order.html - 累積訂單</h2>
+  </header>
 
-<h3>以下為您剛才的訂單</h3>
-<table class="order-list">
-  <thead>
-    <tr>
-      <th>品項</th>
-      <th>數量</th>
-      <th>備註</th>
-      <th>價格</th>
-    </tr>
-  </thead>
-  <tbody id="orderTable"></tbody>
-</table>
-<div class="total-price">
-  總金額: $<span id="totalPrice">0</span>
-</div>
-
-<script>
-window.onload = function() {
-  // 從 localStorage 取出 'orders'
-  let stored = localStorage.getItem('orders');
-  if(!stored) {
-    // 若沒有資料，提示
-    document.getElementById("orderTable").innerHTML = "<tr><td colspan='4'>尚無訂單資料</td></tr>";
-    return;
-  }
-  let orders = JSON.parse(stored);
-
-  let orderTable = document.getElementById("orderTable");
-  let totalPrice = 0;
-  orderTable.innerHTML = "";
-
-  for(let item in orders){
-    let { price, quantity, remark } = orders[item];
-    let itemTotal = price * quantity;
-    totalPrice += itemTotal;
-
-    let row = `
+  <h3>以下顯示您目前所有累積的訂單品項</h3>
+  
+  <table class="order-list">
+    <thead>
       <tr>
-        <td>${item}</td>
-        <td>${quantity}</td>
-        <td>${remark || ""}</td>
-        <td>$${itemTotal}</td>
+        <th>品項</th>
+        <th>數量</th>
+        <th>備註</th>
+        <th>價格</th>
+        <th>操作</th>
       </tr>
-    `;
-    orderTable.innerHTML += row;
-  }
-  document.getElementById("totalPrice").textContent = totalPrice;
-}
-</script>
+    </thead>
+    <tbody id="orderTable"></tbody>
+  </table>
+  <div class="total-price">總金額: $<span id="totalPrice">0</span></div>
+
+  <!-- 清空全部訂單 -->
+  <button class="action-button" onclick="clearAllOrders()">清空全部訂單</button>
+
+  <script>
+    let orders = {};
+
+    // 讀取 localStorage
+    function loadOrders() {
+      let stored = localStorage.getItem('orders');
+      if (stored) {
+        orders = JSON.parse(stored);
+      } else {
+        orders = {};
+      }
+    }
+
+    // 刪除某個品項
+    function deleteItem(item) {
+      if (orders[item]) {
+        delete orders[item];
+        saveOrders();
+        renderOrders();
+      }
+    }
+
+    // 全部清空
+    function clearAllOrders() {
+      // 確認一下？
+      if (confirm("確定要清空整張訂單嗎？")) {
+        localStorage.removeItem('orders');
+        orders = {};
+        renderOrders();
+      }
+    }
+
+    // 存回 localStorage
+    function saveOrders() {
+      localStorage.setItem('orders', JSON.stringify(orders));
+    }
+
+    // 顯示 (含累積)
+    function renderOrders() {
+      let orderTable = document.getElementById("orderTable");
+      let totalPrice = 0;
+      orderTable.innerHTML = "";
+
+      // 若 orders 為空，顯示提示
+      let keys = Object.keys(orders);
+      if (keys.length === 0) {
+        orderTable.innerHTML = `
+          <tr>
+            <td colspan="5">目前尚無訂單資料</td>
+          </tr>
+        `;
+        document.getElementById("totalPrice").textContent = "0";
+        return;
+      }
+
+      // 否則顯示每個品項
+      for (let item in orders) {
+        let { price, quantity, remark } = orders[item];
+        let itemTotal = price * quantity;
+        totalPrice += itemTotal;
+
+        let row = `
+          <tr>
+            <td>${item}</td>
+            <td>${quantity}</td>
+            <td>${remark || ""}</td>
+            <td>$${itemTotal}</td>
+            <td>
+              <button class="action-button" onclick="deleteItem('${item}')">刪除</button>
+            </td>
+          </tr>
+        `;
+        orderTable.innerHTML += row;
+      }
+      document.getElementById("totalPrice").textContent = totalPrice;
+    }
+
+    // 頁面載入時
+    window.onload = function() {
+      loadOrders();
+      renderOrders();
+    }
+  </script>
 </body>
 </html>
