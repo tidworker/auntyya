@@ -17,10 +17,9 @@
       background: #f0f0f0;
     }
 
-    /* (可選) 頂端標題區塊 */
     header {
       background: #ddd;
-      flex: 0 0 auto; /* 高度固定，不可伸縮 */
+      flex: 0 0 auto;
       padding: 15px 0;
       text-align: center;
     }
@@ -30,28 +29,27 @@
       color: #333;
     }
 
-    /* 中間放 2 個 iframe，滿版疊在一起，切換顯示 */
+    /* 中間容器: 兩個iframe 疊在一起, 用 display: none/block 切換顯示 */
     #iframeContainer {
-      flex: 1 1 auto;        /* 撐滿中間剩餘空間 */
-      position: relative;    /* 讓 iframe 可以絕對定位 */
+      flex: 1 1 auto;
+      position: relative;
       overflow: hidden;
     }
-    /* 兩個 iframe 絕對定位，預設隱藏 */
     iframe {
       position: absolute;
       top: 0; left: 0;
       width: 100%;
       height: 100%;
       border: none;
-      display: none; /* 預設隱藏 */
+      display: none; /* 預設隱藏, 只顯示其中一個 */
     }
 
-    /* 底部一排並排的按鈕 (Menu/Order) */
+    /* 底部 Menu / Order 按鈕 */
     .bottom-nav {
-      flex: 0 0 auto; /* 固定高度 */
+      flex: 0 0 auto;
       background-color: #555;
       display: flex;
-      justify-content: space-between;  /* 左右分布 */
+      justify-content: space-between; /* 左一個、右一個 */
       align-items: center;
       padding: 10px;
     }
@@ -70,29 +68,27 @@
       background-color: #333;
     }
 
-    /* RWD: 在手機上，兩個按鈕可以各佔一半寬度 */
     @media (max-width: 600px) {
       .nav-button {
-        flex: 1;          /* 兩個按鈕平分整個底部寬度 */
-        margin: 0 5px;    /* 中間小空隙 */
+        flex: 1;        
+        margin: 0 5px;  
         font-size: 18px;
       }
     }
   </style>
 </head>
 <body>
-  <!-- (可選) 頂端標題 -->
   <header>
     <h2>Index - Menu / Order 切換</h2>
   </header>
 
-  <!-- 中間：裝載 2 個 iframe，menu.html & order.html -->
+  <!-- 中間區: 兩個 iframe 疊在一起 -->
   <div id="iframeContainer">
     <iframe id="menuFrame"  src="menu.html"></iframe>
     <iframe id="orderFrame" src="order.html"></iframe>
   </div>
 
-  <!-- 底部：Menu / Order 按鈕，並排在左右 -->
+  <!-- 底部: Menu / Order 按鈕 -->
   <div class="bottom-nav">
     <button class="nav-button" onclick="showPage('menuFrame')">Menu</button>
     <button class="nav-button" onclick="showPage('orderFrame')">Order</button>
@@ -100,7 +96,7 @@
 
   <script>
     function showPage(frameId) {
-      // 同時隱藏 2 個 iframe
+      // 同時隱藏兩個 iframe
       document.getElementById("menuFrame").style.display  = "none";
       document.getElementById("orderFrame").style.display = "none";
 
@@ -108,7 +104,7 @@
       document.getElementById(frameId).style.display = "block";
     }
 
-    // 預設顯示 Menu 頁面
+    // 預設顯示 menuFrame
     showPage('menuFrame');
   </script>
 </body>
