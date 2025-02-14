@@ -231,7 +231,6 @@
       .counter input {
         width: 50px;
       }
-      /* 若想確保兩行，不要自動折行，可把 flex-wrap 設回wrap，並依寬度控制 */
     }
   </style>
 </head>
@@ -304,7 +303,7 @@
       </div>
     </div>
 
-    <!-- STEP 3: 辣度 / 飲料冰數 / 湯數量 -->
+    <!-- STEP 3: 辣度 / 飲料冰數 / 湯數量 + 荷包蛋選擇 -->
     <div id="stepThird" class="hidden">
       <div id="spicyBlock" class="hidden">
         <h3>選擇辣數量</h3>
@@ -317,7 +316,16 @@
           <input type="number" id="spicyInput" min="0" value="0">
           <button onclick="changeValue('spicyInput', 1)">+</button>
         </div>
-        <button class="menu-button-sm" onclick="confirmOrder()">確認點餐</button>
+      </div>
+
+      <!-- 新增: 荷包蛋選擇 (每顆 +15元) -->
+      <div id="eggBlock" class="hidden">
+        <h3>選擇荷包蛋數量</h3>
+        <div class="counter">
+          <button onclick="changeValue('eggInput', -1)">-</button>
+          <input type="number" id="eggInput" min="0" value="0">
+          <button onclick="changeValue('eggInput', 1)">+</button>
+        </div>
       </div>
 
       <div id="drinkIceBlock" class="hidden">
@@ -331,7 +339,6 @@
           <input type="number" id="drinkIceInput" min="0" value="0">
           <button onclick="changeValue('drinkIceInput', 1)">+</button>
         </div>
-        <button class="menu-button-sm" onclick="confirmOrder()">確認點餐</button>
       </div>
 
       <div id="soupQuantityBlock" class="hidden">
@@ -341,8 +348,10 @@
           <input type="number" id="soupQuantityInput" min="1" value="1">
           <button onclick="changeValue('soupQuantityInput', 1)">+</button>
         </div>
-        <button class="menu-button-sm" onclick="confirmOrder()">確認點餐</button>
       </div>
+
+      <!-- 最後按鈕：確認點餐 -->
+      <button class="menu-button-sm" onclick="confirmOrder()">確認點餐</button>
     </div>
   </div>
 </div>
@@ -409,7 +418,7 @@
 </div>
 
 <script>
-/* =================== 1) 資料設定 =================== */
+// =================== 1) 資料設定 ===================
 const subTypes = {
   "蔥油餅": {
     "加蛋": 30,
@@ -448,14 +457,16 @@ let flows = {
 
 let orders = {};
 
-/* =================== 2) 多步驟流程控制 =================== */
+// =================== 2) 多步驟流程控制 ===================
 let currentCategory = "";
 let currentFlowSteps = [];
 let currentStepIndex = 0;
 let selectedSubType = "";
 let selectedPrice = 0;
+
 let generalQuantity = 1;
 let spicyQty = 0;
+let eggQty = 0;     // 新增: 荷包蛋數量
 let drinkTotal = 1;
 let drinkIce = 0;
 let soupQty = 1;
@@ -479,16 +490,21 @@ function resetInputs() {
   selectedPrice = 0;
   generalQuantity = 1;
   spicyQty = 0;
+  eggQty = 0;
   drinkTotal = 1;
   drinkIce = 0;
   soupQty = 1;
 
   let gQ = document.getElementById("generalQuantityInput");
   if(gQ) gQ.value=1;
+
   let spI = document.getElementById("spicyInput");
   if(spI){ spI.value=0; spI.disabled=false; }
   let allSp = document.getElementById("allSpicy");
   if(allSp) allSp.checked=false;
+
+  let eI = document.getElementById("eggInput");
+  if(eI) eI.value = 0;
 
   let dT = document.getElementById("drinkTotalInput");
   if(dT) dT.value=1;
@@ -534,44 +550,49 @@ function nextStep(){
   gotoNextStep();
 }
 
+// 依「步驟」決定顯示內容
 function renderStep(){
   document.getElementById("stepSubType").style.display="none";
   document.getElementById("stepSecond").classList.add("hidden");
   document.getElementById("stepThird").classList.add("hidden");
+
+  // 先全部隱藏，再依需求顯示
+  document.getElementById("generalQuantityBlock").classList.add("hidden");
+  document.getElementById("drinkTotalBlock").classList.add("hidden");
+  document.getElementById("spicyBlock").classList.add("hidden");
+  document.getElementById("drinkIceBlock").classList.add("hidden");
+  document.getElementById("soupQuantityBlock").classList.add("hidden");
+  document.getElementById("eggBlock").classList.add("hidden");
 
   let stepKey = currentFlowSteps[currentStepIndex];
   switch(stepKey){
     case "QUANTITY":
       document.getElementById("stepSecond").classList.remove("hidden");
       document.getElementById("generalQuantityBlock").classList.remove("hidden");
-      document.getElementById("drinkTotalBlock").classList.add("hidden");
       break;
 
     case "SPICY":
       document.getElementById("stepThird").classList.remove("hidden");
       document.getElementById("spicyBlock").classList.remove("hidden");
-      document.getElementById("drinkIceBlock").classList.add("hidden");
-      document.getElementById("soupQuantityBlock").classList.add("hidden");
+      // 只對 蔥油餅 / 麵線 / 炒麵 顯示荷包蛋
+      if(["蔥油餅","麵線","炒麵"].includes(currentCategory)){
+        document.getElementById("eggBlock").classList.remove("hidden");
+      }
       break;
 
     case "DRINK_TOTAL":
       document.getElementById("stepSecond").classList.remove("hidden");
       document.getElementById("drinkTotalBlock").classList.remove("hidden");
-      document.getElementById("generalQuantityBlock").classList.add("hidden");
       break;
 
     case "DRINK_ICE":
       document.getElementById("stepThird").classList.remove("hidden");
       document.getElementById("drinkIceBlock").classList.remove("hidden");
-      document.getElementById("spicyBlock").classList.add("hidden");
-      document.getElementById("soupQuantityBlock").classList.add("hidden");
       break;
 
     case "SOUP_QTY":
       document.getElementById("stepThird").classList.remove("hidden");
       document.getElementById("soupQuantityBlock").classList.remove("hidden");
-      document.getElementById("spicyBlock").classList.add("hidden");
-      document.getElementById("drinkIceBlock").classList.add("hidden");
       break;
   }
 }
@@ -604,33 +625,41 @@ function changeValue(inputId, amount, extraCheck=""){
 function toggleAllSpicy(){
   let allSp=document.getElementById("allSpicy").checked;
   let spI=document.getElementById("spicyInput");
-  if(allSp){
-    let qty=parseInt(document.getElementById("generalQuantityInput").value)||1;
-    spI.value=qty;
-    spI.disabled=true;
-  }else{
-    spI.disabled=false;
+  if(spI){
+    if(allSp){
+      let qty=parseInt(document.getElementById("generalQuantityInput").value)||1;
+      spI.value=qty;
+      spI.disabled=true;
+    } else {
+      spI.disabled=false;
+    }
   }
 }
 
 function toggleAllIce(){
   let allIc=document.getElementById("allIce").checked;
   let dI=document.getElementById("drinkIceInput");
-  if(allIc){
-    let total=parseInt(document.getElementById("drinkTotalInput").value)||1;
-    dI.value=total;
-    dI.disabled=true;
-  }else{
-    dI.disabled=false;
+  if(dI){
+    if(allIc){
+      let total=parseInt(document.getElementById("drinkTotalInput").value)||1;
+      dI.value=total;
+      dI.disabled=true;
+    } else {
+      dI.disabled=false;
+    }
   }
 }
 
+// 最後一步，點「確認點餐」新增訂單
 function confirmOrder(){
   let gQ=document.getElementById("generalQuantityInput");
   if(gQ) generalQuantity=parseInt(gQ.value)||1;
 
   let spI=document.getElementById("spicyInput");
   if(spI) spicyQty=parseInt(spI.value)||0;
+
+  let eI=document.getElementById("eggInput");
+  if(eI) eggQty=parseInt(eI.value)||0;  // 取得荷包蛋數量
 
   let dT=document.getElementById("drinkTotalInput");
   if(dT) drinkTotal=parseInt(dT.value)||1;
@@ -643,6 +672,8 @@ function confirmOrder(){
 
   let finalItemName="";
   let finalQuantity=1;
+  // 荷包蛋額外費用
+  let extraCost = eggQty * 15; 
 
   switch(currentCategory){
     case "蔥油餅":
@@ -650,22 +681,24 @@ function confirmOrder(){
       if(spicyQty>0){
         finalItemName+=` (加辣x${spicyQty})`;
       }
-      finalQuantity=generalQuantity;
-      break;
-    case "麵線":
-      finalItemName=selectedSubType;
-      if(spicyQty>0){
-        finalItemName+=` (加辣x${spicyQty})`;
+      if(eggQty>0){
+        finalItemName+=` (荷包蛋x${eggQty})`;
       }
       finalQuantity=generalQuantity;
       break;
+
+    case "麵線":
     case "炒麵":
       finalItemName=selectedSubType;
       if(spicyQty>0){
         finalItemName+=` (加辣x${spicyQty})`;
       }
+      if(eggQty>0){
+        finalItemName+=` (荷包蛋x${eggQty})`;
+      }
       finalQuantity=generalQuantity;
       break;
+
     case "飲料":
       let warmCount=drinkTotal-drinkIce;
       if(warmCount<0) warmCount=0;
@@ -682,35 +715,38 @@ function confirmOrder(){
       }
       finalQuantity=drinkTotal;
       break;
+
     case "熱湯":
       finalItemName=selectedSubType;
       finalQuantity=soupQty;
       break;
   }
 
-  addToOrder(finalItemName, selectedPrice, finalQuantity);
+  // 把 荷包蛋額外費用 (extraCost) 加到原本單價
+  addToOrder(finalItemName, selectedPrice + extraCost, finalQuantity);
   closeModal();
 }
 
+// =================== 3) 寫入訂單與更新畫面 ===================
 function addToOrder(itemName, unitPrice, quantity){
-  if(!itemName || !unitPrice)return;
+  if(!itemName || !unitPrice) return;
   if(orders[itemName]){
-    orders[itemName].quantity+=quantity;
-  }else{
-    orders[itemName]={price:unitPrice, quantity, remark:""};
+    orders[itemName].quantity += quantity;
+  } else {
+    orders[itemName] = { price: unitPrice, quantity, remark: "" };
   }
   updateOrderList();
 }
 
 function updateOrderList(){
-  let orderTable=document.getElementById("orderTable");
-  let totalPrice=0;
-  orderTable.innerHTML="";
+  let orderTable = document.getElementById("orderTable");
+  let totalPrice = 0;
+  orderTable.innerHTML = "";
 
   for(let item in orders){
-    let {price,quantity,remark}=orders[item];
-    let itemTotal=price*quantity;
-    totalPrice+=itemTotal;
+    let {price, quantity, remark} = orders[item];
+    let itemTotal = price * quantity;
+    totalPrice += itemTotal;
 
     let row=`
       <tr>
@@ -723,9 +759,9 @@ function updateOrderList(){
         </td>
       </tr>
     `;
-    orderTable.innerHTML+=row;
+    orderTable.innerHTML += row;
   }
-  document.getElementById("totalPrice").innerText=totalPrice;
+  document.getElementById("totalPrice").innerText = totalPrice;
 }
 
 function completeOrder(){
@@ -734,42 +770,42 @@ function completeOrder(){
   alert("訂單已完成，全部清空！");
 }
 
-/* =================== 3) 客製(備註) Modal + 刪除 =================== */
-let currentItemForCust=null;
+// =================== 4) 客製(備註) Modal + 刪除 ===================
+let currentItemForCust = null;
 
 function openCustomModal(item){
-  currentItemForCust=item;
-  let remark=orders[item]?.remark||"";
-  document.getElementById("remarkArea").textContent=remark;
-  document.getElementById("customModal").style.display="block";
+  currentItemForCust = item;
+  let remark = orders[item]?.remark || "";
+  document.getElementById("remarkArea").textContent = remark;
+  document.getElementById("customModal").style.display = "block";
 }
 
 function closeCustomModal(){
-  document.getElementById("customModal").style.display="none";
+  document.getElementById("customModal").style.display = "none";
 }
 
 function appendRemark(str){
-  let remarkDiv=document.getElementById("remarkArea");
+  let remarkDiv = document.getElementById("remarkArea");
   remarkDiv.textContent += str;
 }
 
 function clearRemark(){
-  document.getElementById("remarkArea").textContent="";
+  document.getElementById("remarkArea").textContent = "";
 }
 
 function backspaceRemark(){
-  let remarkDiv=document.getElementById("remarkArea");
-  let currText=remarkDiv.textContent;
+  let remarkDiv = document.getElementById("remarkArea");
+  let currText = remarkDiv.textContent;
   if(currText.length>0){
-    remarkDiv.textContent=currText.slice(0,-1);
+    remarkDiv.textContent = currText.slice(0,-1);
   }
 }
 
 function confirmRemark(){
-  let remarkDiv=document.getElementById("remarkArea");
-  let newText=remarkDiv.textContent;
+  let remarkDiv = document.getElementById("remarkArea");
+  let newText = remarkDiv.textContent;
   if(currentItemForCust && orders[currentItemForCust]){
-    orders[currentItemForCust].remark=newText;
+    orders[currentItemForCust].remark = newText;
     updateOrderList();
   }
   closeCustomModal();
