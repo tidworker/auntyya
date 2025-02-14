@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title>編輯菜單 & 同音字庫 (menu.html)</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background-color: #f7f7f7;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    section {
+      background: #fff;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    h2 {
+      margin-top: 0;
+    }
+    label {
+      display: inline-block;
+      width: 70px;
+      font-size: 14px;
+      margin-right: 5px;
+    }
+    input[type="text"], input[type="number"] {
+      width: 150px;
+      padding: 5px;
+      margin-right: 5px;
+      font-size: 14px;
+    }
+    button {
+      font-size: 14px;
+      padding: 6px 12px;
+      cursor: pointer;
+      margin-right: 5px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+    }
+    th {
+      background-color: #e9ecef;
+    }
+    .deleteBtn {
+      background-color: #dc3545;
+      color: #fff;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .deleteBtn:hover {
+      background-color: #b52d3b;
+    }
+    #saveBtn, #loadBtn {
+      font-size: 16px;
+      padding: 8px 14px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>編輯「菜單」與「同音字庫」</h1>
+
+  <section id="menuSection">
+    <h2>菜單 (menu)</h2>
+    <div>
+      <label for="menuItemName">品項</label>
+      <input type="text" id="menuItemName" placeholder="例如：紅茶"/>
+      <label for="menuItemPrice">價格</label>
+      <input type="number" id="menuItemPrice" placeholder="25"/>
+      <button onclick="addMenuItem()">新增品項</button>
+    </div>
+    <table id="menuTable">
+      <thead>
+        <tr>
+          <th>品項</th>
+          <th>價格</th>
+          <th>刪除</th>
+        </tr>
+      </thead>
+      <tbody id="menuTableBody">
+        <!-- 動態插入 -->
+      </tbody>
+    </table>
+  </section>
+
+  <section id="homophonesSection">
+    <h2>同音字庫 (homophones)</h2>
+    <div>
+      <label for="hpItemName">品項</label>
+      <input type="text" id="hpItemName" placeholder="例如：紅茶"/>
+      <label for="hpSynonyms">同音字</label>
+      <input type="text" id="hpSynonyms" placeholder="以逗號分隔，如: 紅查,鴻茶"/>
+      <button onclick="addHomophone()">新增同音字</button>
+    </div>
+    <table id="homophonesTable">
+      <thead>
+        <tr>
+          <th>品項</th>
+          <th>同音字(逗號分隔)</th>
+          <th>刪除</th>
+        </tr>
+      </thead>
+      <tbody id="homophonesTableBody">
+        <!-- 動態插入 -->
+      </tbody>
+    </table>
+  </section>
+
+  <button id="saveBtn" onclick="saveToLocalStorage()">儲存全部</button>
+  <button id="loadBtn" onclick="loadFromLocalStorage()">重新讀取</button>
+
+  <script>
+    // 全域資料結構：menuItems => { "紅茶":25, "綠茶":20, ... }
+    // homophones => { "紅茶":["紅查","鴻茶"], "綠茶":["綠查"], ... }
+    let menuItems = {};
+    let homophones = {};
+
+    // 1) 新增品項到 menuItems
+    function addMenuItem() {
+      const name = document.getElementById("menuItemName").value.trim();
+      const priceStr = document.getElementById("menuItemPrice").value.trim();
+      if (!name || !priceStr) {
+        alert("請輸入完整品項和價格");
+        return;
+      }
+      const price = parseInt(priceStr, 10);
+      if (isNaN(price) || price < 0) {
+        alert("價格需為正整數");
+        return;
+      }
+
+      // 放到 menuItems
+      menuItems[name] = price;
+
+      // 更新表格
+      updateMenuTable();
+      // 清空輸入框
+      document.getElementById("menuItemName").value = "";
+      document.getElementById("menuItemPrice").value = "";
+    }
+
+    // 2) 更新菜單表格
+    function updateMenuTable() {
+      const tbody = document.getElementById("menuTableBody");
+      tbody.innerHTML = "";
+      // 依序將 menuItems 裡的 key,value 顯示
+      for (let itemName in menuItems) {
+        const price = menuItems[itemName];
+        const tr = document.createElement("tr");
+        
+        const nameTd = document.createElement("td");
+        nameTd.textContent = itemName;
+        tr.appendChild(nameTd);
+
+        const priceTd = document.createElement("td");
+        priceTd.textContent = price;
+        tr.appendChild(priceTd);
+
+        const delTd = document.createElement("td");
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "刪除";
+        delBtn.classList.add("deleteBtn");
+        delBtn.onclick = () => {
+          delete menuItems[itemName];
+          updateMenuTable();
+        };
+        delTd.appendChild(delBtn);
+        tr.appendChild(delTd);
+
+        tbody.appendChild(tr);
+      }
+    }
+
+    // 3) 新增同音字
+    function addHomophone() {
+      const name = document.getElementById("hpItemName").value.trim();
+      const synonymsStr = document.getElementById("hpSynonyms").value.trim();
+      if (!name || !synonymsStr) {
+        alert("請輸入品項與同音字(逗號分隔)");
+        return;
+      }
+      const arr = synonymsStr.split(",").map(s => s.trim()).filter(x => x);
+
+      if (!homophones[name]) {
+        homophones[name] = [];
+      }
+      // 合併到既有陣列
+      homophones[name] = Array.from(new Set([...homophones[name], ...arr]));
+
+      updateHomophonesTable();
+      document.getElementById("hpItemName").value = "";
+      document.getElementById("hpSynonyms").value = "";
+    }
+
+    // 4) 更新同音字表格
+    function updateHomophonesTable() {
+      const tbody = document.getElementById("homophonesTableBody");
+      tbody.innerHTML = "";
+      for (let itemName in homophones) {
+        const arr = homophones[itemName]; // 陣列
+
+        const tr = document.createElement("tr");
+
+        const nameTd = document.createElement("td");
+        nameTd.textContent = itemName;
+        tr.appendChild(nameTd);
+
+        const synTd = document.createElement("td");
+        synTd.textContent = arr.join(", "); // 逗號分隔
+        tr.appendChild(synTd);
+
+        const delTd = document.createElement("td");
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "刪除";
+        delBtn.classList.add("deleteBtn");
+        delBtn.onclick = () => {
+          delete homophones[itemName];
+          updateHomophonesTable();
+        };
+        delTd.appendChild(delBtn);
+        tr.appendChild(delTd);
+
+        tbody.appendChild(tr);
+      }
+    }
+
+    // 5) 儲存到 Local Storage
+    function saveToLocalStorage() {
+      const menuText = JSON.stringify(menuItems);
+      const hpText = JSON.stringify(homophones);
+      localStorage.setItem("menuItems", menuText);
+      localStorage.setItem("homophones", hpText);
+
+      alert("已儲存菜單 & 同音字庫到Local Storage！");
+    }
+
+    // 6) 讀取 / 載入
+    function loadFromLocalStorage() {
+      const rawMenu = localStorage.getItem("menuItems") || "{}";
+      const rawHp = localStorage.getItem("homophones") || "{}";
+      try {
+        menuItems = JSON.parse(rawMenu);
+        homophones = JSON.parse(rawHp);
+      } catch(e) {
+        console.error("解析失敗", e);
+        menuItems = {};
+        homophones = {};
+      }
+      updateMenuTable();
+      updateHomophonesTable();
+      alert("已載入Local Storage資料");
+    }
+
+    // 頁面載入時自動讀取
+    window.addEventListener("load", () => {
+      loadFromLocalStorage();
+    });
+  </script>
+</body>
+</html>
