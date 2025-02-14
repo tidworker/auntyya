@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>訂單頁面 (order.html)</title>
+  <!-- 手機裝置自適應 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+      background-color: #f0f0f0;
+      color: #333;
+    }
+    header {
+      background: #ddd;
+      padding: 15px 0;
+      margin-bottom: 20px;
+    }
+    header h2 {
+      margin: 0;
+      font-size: 24px;
+      color: #333;
+    }
+    .order-list {
+      margin: 20px auto;
+      width: 90%;
+      max-width: 600px;
+      border-collapse: collapse;
+      background-color: #fff;
+    }
+    .order-list th,
+    .order-list td {
+      border: 1px solid #aaa;
+      padding: 10px;
+      font-size: 18px;
+    }
+    .order-list th {
+      background-color: #ddd;
+      color: #333;
+    }
+    .total-price {
+      font-size: 22px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h2>訂單頁面 (order.html)</h2>
+</header>
+
+<h3>以下為您剛才的訂單</h3>
+<table class="order-list">
+  <thead>
+    <tr>
+      <th>品項</th>
+      <th>數量</th>
+      <th>備註</th>
+      <th>價格</th>
+    </tr>
+  </thead>
+  <tbody id="orderTable"></tbody>
+</table>
+<div class="total-price">
+  總金額: $<span id="totalPrice">0</span>
+</div>
+
+<script>
+window.onload = function() {
+  // 從 localStorage 取出 'orders'
+  let stored = localStorage.getItem('orders');
+  if(!stored) {
+    // 若沒有資料，提示
+    document.getElementById("orderTable").innerHTML = "<tr><td colspan='4'>尚無訂單資料</td></tr>";
+    return;
+  }
+  let orders = JSON.parse(stored);
+
+  let orderTable = document.getElementById("orderTable");
+  let totalPrice = 0;
+  orderTable.innerHTML = "";
+
+  for(let item in orders){
+    let { price, quantity, remark } = orders[item];
+    let itemTotal = price * quantity;
+    totalPrice += itemTotal;
+
+    let row = `
+      <tr>
+        <td>${item}</td>
+        <td>${quantity}</td>
+        <td>${remark || ""}</td>
+        <td>$${itemTotal}</td>
+      </tr>
+    `;
+    orderTable.innerHTML += row;
+  }
+  document.getElementById("totalPrice").textContent = totalPrice;
+}
+</script>
+</body>
+</html>
