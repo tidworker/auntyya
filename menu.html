@@ -677,7 +677,13 @@ function confirmOrder(){
 
   switch(currentCategory){
     case "蔥油餅":
-      finalItemName=`蔥油餅(${selectedSubType})`;
+      // ★★ 關鍵改動：加蛋 => 顯示「蔥油餅加蛋」，不加蛋 => 顯示「蔥油餅」 ★★
+      if(selectedSubType === "加蛋"){
+        finalItemName = "蔥油餅加蛋";
+      } else {
+        finalItemName = "蔥油餅";
+      }
+      // 以下保留原加辣、荷包蛋等資訊
       if(spicyQty>0){
         finalItemName+=` (加辣x${spicyQty})`;
       }
@@ -685,18 +691,21 @@ function confirmOrder(){
         finalItemName+=` (荷包蛋x${eggQty})`;
       }
       finalQuantity=generalQuantity;
+      // 單價 = 原子選項價錢 + 荷包蛋費用
+      addToOrder(finalItemName, selectedPrice + extraCost, finalQuantity);
       break;
 
     case "麵線":
     case "炒麵":
-      finalItemName=selectedSubType;
+      let baseName = selectedSubType; // 直接顯示「大炒麵 / 小炒麵 / 大腸麵線」等
       if(spicyQty>0){
-        finalItemName+=` (加辣x${spicyQty})`;
+        baseName+=` (加辣x${spicyQty})`;
       }
       if(eggQty>0){
-        finalItemName+=` (荷包蛋x${eggQty})`;
+        baseName+=` (荷包蛋x${eggQty})`;
       }
       finalQuantity=generalQuantity;
+      addToOrder(baseName, selectedPrice + extraCost, finalQuantity);
       break;
 
     case "飲料":
@@ -714,16 +723,16 @@ function confirmOrder(){
         finalItemName=selectedSubType;
       }
       finalQuantity=drinkTotal;
+      addToOrder(finalItemName, selectedPrice, finalQuantity);
       break;
 
     case "熱湯":
       finalItemName=selectedSubType;
       finalQuantity=soupQty;
+      addToOrder(finalItemName, selectedPrice, finalQuantity);
       break;
   }
 
-  // 把 荷包蛋額外費用 (extraCost) 加到原本單價
-  addToOrder(finalItemName, selectedPrice + extraCost, finalQuantity);
   closeModal();
 }
 
