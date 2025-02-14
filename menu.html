@@ -1,17 +1,20 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8">
-  <title>menu.html - 多步驟點餐 (不顯示價格)</title>
+  <meta charset="UTF-8" />
+  <title>menu.html - 點餐頁 (不顯示價格)</title>
+  <!-- 手機裝置自適應 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <style>
+    /* ========== 手機優化 + 灰階大按鈕風格 ========== */
     body {
-      margin: 0; 
-      padding: 0;
       font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      text-align: center;
       background-color: #f0f0f0;
       color: #333;
-      text-align: center;
     }
     header {
       background: #ddd;
@@ -24,7 +27,6 @@
       color: #333;
     }
 
-    /* 主選單按鈕 */
     .menu-container {
       margin: 20px auto;
       display: flex;
@@ -36,8 +38,8 @@
       font-size: 20px;
       padding: 14px 22px;
       margin: 5px;
-      border: none;
       cursor: pointer;
+      border: none;
       background-color: #555;
       color: #fff;
       border-radius: 0;
@@ -47,7 +49,7 @@
       background-color: #333;
     }
 
-    /* 訂單列表 (不顯示價格) */
+    /* 訂單列表 - 不顯示「價格」 */
     .order-list {
       margin: 20px auto;
       width: 90%;
@@ -66,40 +68,42 @@
       color: #333;
     }
 
-    .counter {
-      display: flex; 
-      justify-content: center; 
-      align-items: center; 
-      margin: 12px 0;
-    }
-    .counter button {
-      font-size: 22px; 
-      padding: 8px 18px; 
-      margin: 0 12px;
-      cursor: pointer; 
-      background-color: #888; 
-      color: #fff; 
-      border: none; 
-      border-radius: 0;
-    }
-    .counter button:hover {
-      background-color: #666;
-    }
-    .counter input {
-      font-size: 22px;
-      width: 60px;
-      text-align: center;
+    .actions {
+      margin: 20px 0;
     }
 
-    .switch {
-      display: flex; 
-      justify-content: center; 
-      align-items: center; 
-      margin: 12px 0;
+    /* 彈窗 (多步驟 + 客製) */
+    .modal,
+    .modal-cust {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0; 
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      overflow-y: auto;
     }
-    .switch label {
-      margin-left: 10px;
-      font-size: 18px;
+    .modal-content,
+    .modal-content-cust {
+      background-color: #f9f9f9;
+      margin: 10% auto;
+      padding: 20px;
+      width: 400px;
+      max-width: 90%;
+      border-radius: 0;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    .close,
+    .close-cust {
+      position: absolute;
+      right: 15px;
+      top: 10px;
+      font-size: 24px;
+      color: #f00;
       cursor: pointer;
     }
 
@@ -118,75 +122,54 @@
       background-color: #444;
     }
 
-    /* Modal (多步驟) */
-    .modal {
-      display: none; 
-      position: fixed; 
-      z-index: 9999;
-      left: 0; top: 0;
-      width: 100%; 
-      height: 100%; 
-      background-color: rgba(0,0,0,0.5);
-      overflow-y: auto;
+    .counter {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 12px 0;
     }
-    .modal-content {
-      background-color: #fff;
-      margin: 10% auto;
-      padding: 20px;
-      width: 320px;
-      max-width: 90%;
-      border-radius: 0;
-      text-align: center;
-      position: relative;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    }
-    .close {
-      position: absolute;
-      right: 15px; 
-      top: 10px; 
-      font-size: 24px; 
-      color: #f00; 
+    .counter button {
+      font-size: 22px;
+      padding: 8px 18px;
+      margin: 0 12px;
       cursor: pointer;
+      background-color: #888; 
+      color: #fff;
+      border: none;
+      border-radius: 0;
+    }
+    .counter button:hover {
+      background-color: #666;
+    }
+    .counter input {
+      font-size: 22px;
+      width: 60px;
+      text-align: center;
+    }
+    .switch {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 12px 0;
+    }
+    .switch label {
+      margin-left: 10px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .hidden {
+      display: none;
     }
 
-    /* Modal (客製備註) */
-    .modal-cust {
-      display: none; 
-      position: fixed; 
-      z-index: 9999;
-      left: 0; top: 0; 
-      width: 100%; 
-      height: 100%; 
-      background-color: rgba(0,0,0,0.5);
-      overflow-y: auto;
-    }
-    .modal-content-cust {
-      background-color: #fff;
-      margin: 10% auto;
-      padding: 20px;
-      width: 400px;
-      max-width: 90%;
-      border-radius: 0;
-      text-align: center;
-      position: relative;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    }
-    .close-cust {
-      position: absolute;
-      right: 15px; 
-      top: 10px;
-      font-size: 24px; 
-      color: #f00;
-      cursor: pointer;
-    }
+    /* 客製(備註)彈窗(含刪除) */
     .key-section {
       margin: 12px 0;
     }
     .key-row {
-      display: flex; 
-      justify-content: center; 
+      display: flex;
+      justify-content: center;
       margin: 8px 0;
-      flex-wrap: nowrap;
+      flex-wrap: nowrap; 
     }
     .key-btn {
       width: 70px;
@@ -235,179 +218,185 @@
   </style>
 </head>
 <body>
-  <header>
-    <h2>menu.html - 多步驟點餐 (不顯示價格)</h2>
-  </header>
+<header>
+  <h2>menu.html - 點餐頁</h2>
+</header>
 
-  <!-- 主選單 (蔥油餅、麵線、炒麵、飲料、熱湯) -->
-  <div class="menu-container">
-    <button class="menu-button" onclick="openModal()">蔥油餅</button>
-    <button class="menu-button" onclick="openModal('麵線')">麵線</button>
-    <button class="menu-button" onclick="openModal('炒麵')">炒麵</button>
-    <button class="menu-button" onclick="openModal('飲料')">飲料</button>
-    <button class="menu-button" onclick="openModal('熱湯')">熱湯</button>
-  </div>
+<!-- 主選單按鈕 -->
+<div class="menu-container">
+  <button class="menu-button" onclick="openModal('蔥油餅')">蔥油餅</button>
+  <button class="menu-button" onclick="openModal('麵線')">麵線</button>
+  <button class="menu-button" onclick="openModal('炒麵')">炒麵</button>
+  <button class="menu-button" onclick="openModal('飲料')">飲料</button>
+  <button class="menu-button" onclick="openModal('熱湯')">熱湯</button>
+</div>
 
-  <!-- 訂單列表 (不顯示「價格」) -->
-  <h3>訂單列表 (不顯示價格)</h3>
-  <table class="order-list">
-    <thead>
-      <tr>
-        <th>品項</th>
-        <th>數量</th>
-        <th>備註</th>
-        <th>操作</th>
-      </tr>
-    </thead>
-    <tbody id="orderTable"></tbody>
-  </table>
+<!-- 訂單列表 (不顯示「價格」) -->
+<h3>訂單列表 (不顯示價格)</h3>
+<table class="order-list">
+  <thead>
+    <tr>
+      <th>品項</th>
+      <th>數量</th>
+      <th>備註</th>
+      <th>操作</th>
+    </tr>
+  </thead>
+  <tbody id="orderTable"></tbody>
+</table>
 
-  <!-- 完成訂單 -->
+<div class="actions">
   <button class="menu-button" onclick="completeOrder()">完成訂單</button>
+</div>
 
-  <!-- 多步驟彈窗 (Modal) -->
-  <div id="mainModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal()">&times;</span>
-      <!-- STEP1: 子選項 (蔥油餅: 加蛋/不加蛋; 麵線: 大腸/肉羹/綜合/清; etc.) -->
-      <div id="stepSubType">
-        <h3 id="stepSubTypeTitle"></h3>
-        <div id="subTypeButtons"></div>
+
+<!-- ========== 多步驟「點餐」Modal ========== -->
+<div id="mainModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeModal()">&times;</span>
+
+    <!-- STEP 1: 選子選項 -->
+    <div id="stepSubType">
+      <h3 id="stepSubTypeTitle" style="margin-bottom: 10px;"></h3>
+      <div id="subTypeButtons"></div>
+    </div>
+
+    <!-- STEP 2: 數量 or 飲料總杯數 -->
+    <div id="stepSecond" class="hidden">
+      <!-- 一般數量(蔥油餅/麵線/炒麵/熱湯) -->
+      <div id="generalQuantityBlock" class="hidden">
+        <h3>選擇數量</h3>
+        <div class="counter">
+          <button onclick="changeValue('generalQuantityInput', -1, 'allSpicy')">-</button>
+          <input type="number" id="generalQuantityInput" min="1" value="1">
+          <button onclick="changeValue('generalQuantityInput', 1, 'allSpicy')">+</button>
+        </div>
+        <button class="menu-button-sm" onclick="nextStep()">下一步</button>
       </div>
 
-      <!-- STEP2: 份數 或 飲料總杯數 -->
-      <div id="stepSecond" class="hidden">
-        <!-- 一般數量 (給蔥油餅/麵線/炒麵/熱湯) -->
-        <div id="generalQuantityBlock" class="hidden">
-          <h3>選擇數量</h3>
-          <div class="counter">
-            <button onclick="changeValue('generalQuantityInput', -1, 'allSpicy')">-</button>
-            <input type="number" id="generalQuantityInput" min="1" value="1">
-            <button onclick="changeValue('generalQuantityInput', 1, 'allSpicy')">+</button>
-          </div>
-          <button class="menu-button-sm" onclick="nextStep()">下一步</button>
+      <!-- 飲料：總杯數 (可「全數冰」) -->
+      <div id="drinkTotalBlock" class="hidden">
+        <h3>選擇總杯數</h3>
+        <div class="counter">
+          <button onclick="changeValue('drinkTotalInput', -1, 'allIce')">-</button>
+          <input type="number" id="drinkTotalInput" min="1" value="1">
+          <button onclick="changeValue('drinkTotalInput', 1, 'allIce')">+</button>
         </div>
+        <button class="menu-button-sm" onclick="nextStep()">下一步</button>
+      </div>
+    </div>
 
-        <!-- 飲料: 總杯數 (可「全數冰」) -->
-        <div id="drinkTotalBlock" class="hidden">
-          <h3>選擇總杯數</h3>
-          <div class="counter">
-            <button onclick="changeValue('drinkTotalInput', -1, 'allIce')">-</button>
-            <input type="number" id="drinkTotalInput" min="1" value="1">
-            <button onclick="changeValue('drinkTotalInput', 1, 'allIce')">+</button>
-          </div>
-          <button class="menu-button-sm" onclick="nextStep()">下一步</button>
+    <!-- STEP 3: 辣度 / 飲料冰數 / 湯數量 -->
+    <div id="stepThird" class="hidden">
+
+      <!-- 蔥油餅/麵線/炒麵 => 辣度(全部辣) -->
+      <div id="spicyBlock" class="hidden">
+        <h3>選擇辣數量</h3>
+        <div class="switch">
+          <input type="checkbox" id="allSpicy" onchange="toggleAllSpicy()">
+          <label for="allSpicy">全部辣</label>
         </div>
+        <div class="counter">
+          <button onclick="changeValue('spicyInput', -1)">-</button>
+          <input type="number" id="spicyInput" min="0" value="0">
+          <button onclick="changeValue('spicyInput', 1)">+</button>
+        </div>
+        <button class="menu-button-sm" onclick="confirmOrder()">確認點餐</button>
       </div>
 
-      <!-- STEP3: 辣度 / 飲料冰數 / 熱湯數量 -->
-      <div id="stepThird" class="hidden">
-        <!-- 蔥油餅/麵線/炒麵 => 辣度 (全部辣) -->
-        <div id="spicyBlock" class="hidden">
-          <h3>選擇辣數量</h3>
-          <div class="switch">
-            <input type="checkbox" id="allSpicy" onchange="toggleAllSpicy()">
-            <label for="allSpicy">全部辣</label>
-          </div>
-          <div class="counter">
-            <button onclick="changeValue('spicyInput', -1)">-</button>
-            <input type="number" id="spicyInput" min="0" value="0">
-            <button onclick="changeValue('spicyInput', 1)">+</button>
-          </div>
-          <button class="menu-button-sm" onclick="confirmOrder()">確認點餐</button>
+      <!-- 飲料：冰的杯數 (全數冰) -->
+      <div id="drinkIceBlock" class="hidden">
+        <h3>選擇冰的杯數</h3>
+        <div class="switch">
+          <input type="checkbox" id="allIce" onchange="toggleAllIce()">
+          <label for="allIce">全數冰</label>
         </div>
+        <div class="counter">
+          <button onclick="changeValue('drinkIceInput', -1)">-</button>
+          <input type="number" id="drinkIceInput" min="0" value="0">
+          <button onclick="changeValue('drinkIceInput', 1)">+</button>
+        </div>
+        <button class="menu-button-sm" onclick="confirmOrder()">確認點餐</button>
+      </div>
 
-        <!-- 飲料 => 冰的杯數 (全數冰) -->
-        <div id="drinkIceBlock" class="hidden">
-          <h3>選擇冰的杯數</h3>
-          <div class="switch">
-            <input type="checkbox" id="allIce" onchange="toggleAllIce()">
-            <label for="allIce">全數冰</label>
-          </div>
-          <div class="counter">
-            <button onclick="changeValue('drinkIceInput', -1)">-</button>
-            <input type="number" id="drinkIceInput" min="0" value="0">
-            <button onclick="changeValue('drinkIceInput', 1)">+</button>
-          </div>
-          <button class="menu-button-sm" onclick="confirmOrder()">確認點餐</button>
+      <!-- 熱湯 => 數量 -->
+      <div id="soupQuantityBlock" class="hidden">
+        <h3>選擇數量</h3>
+        <div class="counter">
+          <button onclick="changeValue('soupQuantityInput', -1)">-</button>
+          <input type="number" id="soupQuantityInput" min="1" value="1">
+          <button onclick="changeValue('soupQuantityInput', 1)">+</button>
         </div>
-
-        <!-- 熱湯 => 數量 -->
-        <div id="soupQuantityBlock" class="hidden">
-          <h3>選擇數量</h3>
-          <div class="counter">
-            <button onclick="changeValue('soupQuantityInput', -1)">-</button>
-            <input type="number" id="soupQuantityInput" min="1" value="1">
-            <button onclick="changeValue('soupQuantityInput', 1)">+</button>
-          </div>
-          <button class="menu-button-sm" onclick="confirmOrder()">確認點餐</button>
-        </div>
+        <button class="menu-button-sm" onclick="confirmOrder()">確認點餐</button>
       </div>
     </div>
   </div>
+</div>
 
-  <!-- 客製(備註)彈窗 -->
-  <div id="customModal" class="modal-cust">
-    <div class="modal-content-cust">
-      <span class="close-cust" onclick="closeCustomModal()">&times;</span>
-      <h3>快速客製</h3>
 
-      <div id="remarkArea"></div>
+<!-- ========== 客製(備註) Modal (含刪除) ========== -->
+<div id="customModal" class="modal-cust">
+  <div class="modal-content-cust">
+    <span class="close-cust" onclick="closeCustomModal()">&times;</span>
+    <h3>快速客製</h3>
+    
+    <!-- 備註顯示區 -->
+    <div id="remarkArea"></div>
 
-      <!-- 文字區按鈕 -->
-      <div class="key-section">
-        <!-- 第一行: 不、多、少、辣 -->
-        <div class="key-row">
-          <button class="key-btn" onclick="appendRemark('不')">不</button>
-          <button class="key-btn" onclick="appendRemark('多')">多</button>
-          <button class="key-btn" onclick="appendRemark('少')">少</button>
-          <button class="key-btn" onclick="appendRemark('辣')">辣</button>
-        </div>
-        <!-- 第二行: 菜、蒜、醋、粉 -->
-        <div class="key-row">
-          <button class="key-btn" onclick="appendRemark('菜')">菜</button>
-          <button class="key-btn" onclick="appendRemark('蒜')">蒜</button>
-          <button class="key-btn" onclick="appendRemark('醋')">醋</button>
-          <button class="key-btn" onclick="appendRemark('粉')">粉</button>
-        </div>
-        <!-- 第三行: 油膏、辣油、豆瓣 -->
-        <div class="key-row">
-          <button class="key-btn" onclick="appendRemark('油膏')">油膏</button>
-          <button class="key-btn" onclick="appendRemark('辣油')">辣油</button>
-          <button class="key-btn" onclick="appendRemark('豆瓣')">豆瓣</button>
-        </div>
+    <!-- 文字按鈕區 -->
+    <div class="key-section">
+      <!-- 第一行: 不、多、少、辣 -->
+      <div class="key-row">
+        <button class="key-btn" onclick="appendRemark('不')">不</button>
+        <button class="key-btn" onclick="appendRemark('多')">多</button>
+        <button class="key-btn" onclick="appendRemark('少')">少</button>
+        <button class="key-btn" onclick="appendRemark('辣')">辣</button>
       </div>
-
-      <!-- 數字按鈕區 (12345, 67890) -->
-      <div class="key-section">
-        <div class="key-row">
-          <button class="key-btn" onclick="appendRemark('1')">1</button>
-          <button class="key-btn" onclick="appendRemark('2')">2</button>
-          <button class="key-btn" onclick="appendRemark('3')">3</button>
-          <button class="key-btn" onclick="appendRemark('4')">4</button>
-          <button class="key-btn" onclick="appendRemark('5')">5</button>
-        </div>
-        <div class="key-row">
-          <button class="key-btn" onclick="appendRemark('6')">6</button>
-          <button class="key-btn" onclick="appendRemark('7')">7</button>
-          <button class="key-btn" onclick="appendRemark('8')">8</button>
-          <button class="key-btn" onclick="appendRemark('9')">9</button>
-          <button class="key-btn" onclick="appendRemark('0')">0</button>
-        </div>
+      <!-- 第二行: 菜、蒜、醋、粉 -->
+      <div class="key-row">
+        <button class="key-btn" onclick="appendRemark('菜')">菜</button>
+        <button class="key-btn" onclick="appendRemark('蒜')">蒜</button>
+        <button class="key-btn" onclick="appendRemark('醋')">醋</button>
+        <button class="key-btn" onclick="appendRemark('粉')">粉</button>
       </div>
-
-      <!-- 功能按鈕 -->
-      <div style="margin-top:10px;">
-        <button class="menu-button-sm" onclick="clearRemark()">清除</button>
-        <button class="menu-button-sm" onclick="backspaceRemark()">退格</button>
-        <button class="menu-button-sm" onclick="confirmRemark()">確定</button>
-        <button class="menu-button-sm" style="background-color:#900; color:white;" onclick="deleteItemInCustom()">刪除</button>
+      <!-- 第三行: 油膏、辣油、豆瓣 -->
+      <div class="key-row">
+        <button class="key-btn" onclick="appendRemark('油膏')">油膏</button>
+        <button class="key-btn" onclick="appendRemark('辣油')">辣油</button>
+        <button class="key-btn" onclick="appendRemark('豆瓣')">豆瓣</button>
       </div>
     </div>
+
+    <!-- 數字按鈕區 (12345, 67890) -->
+    <div class="key-section">
+      <div class="key-row">
+        <button class="key-btn" onclick="appendRemark('1')">1</button>
+        <button class="key-btn" onclick="appendRemark('2')">2</button>
+        <button class="key-btn" onclick="appendRemark('3')">3</button>
+        <button class="key-btn" onclick="appendRemark('4')">4</button>
+        <button class="key-btn" onclick="appendRemark('5')">5</button>
+      </div>
+      <div class="key-row">
+        <button class="key-btn" onclick="appendRemark('6')">6</button>
+        <button class="key-btn" onclick="appendRemark('7')">7</button>
+        <button class="key-btn" onclick="appendRemark('8')">8</button>
+        <button class="key-btn" onclick="appendRemark('9')">9</button>
+        <button class="key-btn" onclick="appendRemark('0')">0</button>
+      </div>
+    </div>
+
+    <!-- 功能按鈕 (含刪除) -->
+    <div style="margin-top:10px;">
+      <button class="menu-button-sm" onclick="clearRemark()">清除</button>
+      <button class="menu-button-sm" onclick="backspaceRemark()">退格</button>
+      <button class="menu-button-sm" onclick="confirmRemark()">確定</button>
+      <button class="menu-button-sm" style="background-color:#900; color:white;" onclick="deleteItemInCustom()">刪除</button>
+    </div>
   </div>
+</div>
 
 <script>
-/* =================== 1) 子選項與價格 =================== */
+/* =================== 1) 資料設定 =================== */
 const subTypes = {
   "蔥油餅": {
     "加蛋": 35,
@@ -436,43 +425,41 @@ const subTypes = {
   }
 };
 
-// 品項流程
 let flows = {
-  "蔥油餅": ["SUB_TYPE","QUANTITY","SPICY"],
-  "麵線":   ["SUB_TYPE","QUANTITY","SPICY"],
-  "炒麵":   ["SUB_TYPE","QUANTITY","SPICY"],
-  "飲料":   ["SUB_TYPE","DRINK_TOTAL","DRINK_ICE"],
-  "熱湯":   ["SUB_TYPE","SOUP_QTY"]
+  "蔥油餅": ["SUB_TYPE", "QUANTITY", "SPICY"],
+  "麵線":   ["SUB_TYPE", "QUANTITY", "SPICY"],
+  "炒麵":   ["SUB_TYPE", "QUANTITY", "SPICY"],
+  "飲料":   ["SUB_TYPE", "DRINK_TOTAL", "DRINK_ICE"],
+  "熱湯":   ["SUB_TYPE", "SOUP_QTY"]
 };
 
-/* =================== 2) 本地 orders =================== 
-   結構: { "蔥油餅(加蛋)": {price, quantity, remark}, ... }
-*/
+// 訂單結構: { "蔥油餅(加蛋)": { price:35, quantity:2, remark:"" }, ... }
 let orders = {};
 
-/* 多步驟控制 */
+/* =================== 2) 多步驟流程控制 =================== */
 let currentCategory = "";
 let currentFlowSteps = [];
 let currentStepIndex = 0;
 let selectedSubType = "";
 let selectedPrice = 0;
 
-let generalQuantity=1;
-let spicyQty=0;
-let drinkTotal=1;
-let drinkIce=0;
-let soupQty=1;
+// 用於各數量、辣度、冰等
+let generalQuantity = 1;
+let spicyQty = 0;
+let drinkTotal = 1;
+let drinkIce = 0;
+let soupQty = 1;
 
-/** 1) 按下「蔥油餅、麵線、炒麵、飲料、熱湯」 => 開啟多步驟Modal */
+
+/** 按下「蔥油餅/麵線/炒麵/飲料/熱湯」 => 開啟多步驟 */
 function openModal(category) {
-  if(!category) category = "蔥油餅"; // 預設, 例如點下"蔥油餅"
   currentCategory = category;
   currentFlowSteps = flows[category];
   currentStepIndex = 0;
-
   resetInputs();
 
   document.getElementById("mainModal").style.display = "block";
+  // STEP1
   document.getElementById("stepSubType").style.display = "block";
   document.getElementById("stepSecond").classList.add("hidden");
   document.getElementById("stepThird").classList.add("hidden");
@@ -480,15 +467,16 @@ function openModal(category) {
   loadSubTypeButtons(category);
 }
 
-function resetInputs(){
+function resetInputs() {
   selectedSubType = "";
   selectedPrice = 0;
-  generalQuantity=1;
-  spicyQty=0;
-  drinkTotal=1;
-  drinkIce=0;
-  soupQty=1;
+  generalQuantity = 1;
+  spicyQty = 0;
+  drinkTotal = 1;
+  drinkIce = 0;
+  soupQty = 1;
 
+  // STEP2 & STEP3 input 重置
   let gQ = document.getElementById("generalQuantityInput");
   if(gQ) gQ.value=1;
   let spI = document.getElementById("spicyInput");
@@ -496,34 +484,34 @@ function resetInputs(){
   let allSp = document.getElementById("allSpicy");
   if(allSp) allSp.checked=false;
 
-  let dt = document.getElementById("drinkTotalInput");
-  if(dt) dt.value=1;
-  let di = document.getElementById("drinkIceInput");
-  if(di){ di.value=0; di.disabled=false; }
+  let dT = document.getElementById("drinkTotalInput");
+  if(dT) dT.value=1;
+  let dI = document.getElementById("drinkIceInput");
+  if(dI){ dI.value=0; dI.disabled=false; }
   let allIc = document.getElementById("allIce");
   if(allIc) allIc.checked=false;
 
-  let sq = document.getElementById("soupQuantityInput");
-  if(sq) sq.value=1;
+  let sQ = document.getElementById("soupQuantityInput");
+  if(sQ) sQ.value=1;
 }
 
-/** 關閉多步驟Modal */
+// 關閉多步驟Modal
 function closeModal(){
   document.getElementById("mainModal").style.display="none";
 }
 
-/** STEP1: 載入子選項按鈕 */
+// STEP1: 載入子選項
 function loadSubTypeButtons(category){
   let title = document.getElementById("stepSubTypeTitle");
   let container = document.getElementById("subTypeButtons");
-  container.innerHTML="";
-  title.innerText="選擇 "+ category +" 種類";
+  container.innerHTML = "";
+  title.innerText = "選擇 " + category + " 種類";
 
   let items = subTypes[category];
   for(let name in items){
     let price = items[name];
     let btn = document.createElement("button");
-    btn.className="menu-button-sm";
+    btn.className = "menu-button-sm";
     btn.innerText = `${name} ($${price})`;
     btn.onclick = function(){
       selectedSubType = name;
@@ -534,16 +522,16 @@ function loadSubTypeButtons(category){
   }
 }
 
-/** 流程前進 */
-function gotoNextStep(){
+// 流程前進
+function gotoNextStep() {
   currentStepIndex++;
   renderStep();
 }
-function nextStep(){
+function nextStep() {
   gotoNextStep();
 }
 
-/** 動態顯示 STEP2 or STEP3 */
+// 動態顯示 Step2 或 Step3
 function renderStep(){
   document.getElementById("stepSubType").style.display="none";
   document.getElementById("stepSecond").classList.add("hidden");
@@ -556,23 +544,27 @@ function renderStep(){
       document.getElementById("generalQuantityBlock").classList.remove("hidden");
       document.getElementById("drinkTotalBlock").classList.add("hidden");
       break;
+
     case "SPICY":
       document.getElementById("stepThird").classList.remove("hidden");
       document.getElementById("spicyBlock").classList.remove("hidden");
       document.getElementById("drinkIceBlock").classList.add("hidden");
       document.getElementById("soupQuantityBlock").classList.add("hidden");
       break;
+
     case "DRINK_TOTAL":
       document.getElementById("stepSecond").classList.remove("hidden");
       document.getElementById("drinkTotalBlock").classList.remove("hidden");
       document.getElementById("generalQuantityBlock").classList.add("hidden");
       break;
+
     case "DRINK_ICE":
       document.getElementById("stepThird").classList.remove("hidden");
       document.getElementById("drinkIceBlock").classList.remove("hidden");
       document.getElementById("spicyBlock").classList.add("hidden");
       document.getElementById("soupQuantityBlock").classList.add("hidden");
       break;
+
     case "SOUP_QTY":
       document.getElementById("stepThird").classList.remove("hidden");
       document.getElementById("soupQuantityBlock").classList.remove("hidden");
@@ -582,60 +574,63 @@ function renderStep(){
   }
 }
 
-/** 數值 + - */
+/** 數值 + - + 全部辣/全數冰 */
 function changeValue(inputId, amount, extraCheck=""){
   let input = document.getElementById(inputId);
-  if(!input) return;
+  if(!input)return;
   let val = parseInt(input.value)||0;
   let minVal = parseInt(input.min)||0;
-  let newVal = val+amount;
-  if(newVal<minVal) newVal=minVal;
+  let newVal = val + amount;
+  if(newVal<minVal) newVal = minVal;
   input.value = newVal;
 
-  // 若勾「全部辣」，同步辣度 = 數量
   if(extraCheck==="allSpicy"){
     let allSp = document.getElementById("allSpicy");
     if(allSp && allSp.checked){
+      // 辣度=數量
       let qty = parseInt(document.getElementById("generalQuantityInput").value)||1;
-      document.getElementById("spicyInput").value= qty;
+      document.getElementById("spicyInput").value = qty;
     }
   }
-  // 若勾「全數冰」，同步冰的杯數 = 總杯數
   if(extraCheck==="allIce"){
     let allIc = document.getElementById("allIce");
     if(allIc && allIc.checked){
-      let dt = parseInt(document.getElementById("drinkTotalInput").value)||1;
-      document.getElementById("drinkIceInput").value = dt;
+      // 冰數=總杯數
+      let total = parseInt(document.getElementById("drinkTotalInput").value)||1;
+      document.getElementById("drinkIceInput").value = total;
     }
   }
 }
 
+// 全部辣
 function toggleAllSpicy(){
   let allSp = document.getElementById("allSpicy").checked;
-  let spI  = document.getElementById("spicyInput");
+  let spI = document.getElementById("spicyInput");
   if(allSp){
     let qty = parseInt(document.getElementById("generalQuantityInput").value)||1;
-    spI.value = qty;
-    spI.disabled = true;
+    spI.value=qty;
+    spI.disabled=true;
   } else {
-    spI.disabled = false;
+    spI.disabled=false;
   }
 }
 
+// 全數冰
 function toggleAllIce(){
   let allIc = document.getElementById("allIce").checked;
-  let dI   = document.getElementById("drinkIceInput");
+  let dI = document.getElementById("drinkIceInput");
   if(allIc){
-    let dt = parseInt(document.getElementById("drinkTotalInput").value)||1;
-    dI.value=dt;
+    let total = parseInt(document.getElementById("drinkTotalInput").value)||1;
+    dI.value=total;
     dI.disabled=true;
   } else {
     dI.disabled=false;
   }
 }
 
-/** 最後確認 => 加入 orders */
+// 最後確認 => 加入訂單(不顯示價格,但資料裡有price)
 function confirmOrder(){
+  // 讀取目前輸入
   let gQ = document.getElementById("generalQuantityInput");
   if(gQ) generalQuantity = parseInt(gQ.value)||1;
 
@@ -656,34 +651,31 @@ function confirmOrder(){
 
   switch(currentCategory){
     case "蔥油餅":
-      finalItemName= `蔥油餅(${selectedSubType})`;
+      finalItemName = `蔥油餅(${selectedSubType})`;
       if(spicyQty>0){
-        finalItemName+= ` (加辣x${spicyQty})`;
+        finalItemName += ` (加辣x${spicyQty})`;
       }
       finalQuantity=generalQuantity;
       break;
-
     case "麵線":
-      finalItemName= selectedSubType; // 大腸麵線
+      finalItemName= selectedSubType; // 大腸麵線/肉羹麵線...
       if(spicyQty>0){
-        finalItemName+= ` (加辣x${spicyQty})`;
+        finalItemName += ` (加辣x${spicyQty})`;
       }
       finalQuantity=generalQuantity;
       break;
-
     case "炒麵":
-      finalItemName= selectedSubType; // 大炒麵
+      finalItemName= selectedSubType; // 大炒麵/小炒麵
       if(spicyQty>0){
-        finalItemName+= ` (加辣x${spicyQty})`;
+        finalItemName += ` (加辣x${spicyQty})`;
       }
       finalQuantity=generalQuantity;
       break;
-
     case "飲料":
-      let warmCount = drinkTotal - drinkIce;
+      let warmCount=drinkTotal-drinkIce;
       if(warmCount<0) warmCount=0;
-      let icePart  = (drinkIce>0) ? `冰${drinkIce}` : "";
-      let warmPart = (warmCount>0)? `溫${warmCount}`: "";
+      let icePart=(drinkIce>0)?`冰${drinkIce}`:"";
+      let warmPart=(warmCount>0)?`溫${warmCount}`:"";
       if(icePart && warmPart){
         finalItemName = `${selectedSubType} (${icePart}, ${warmPart})`;
       } else if(icePart){
@@ -693,13 +685,106 @@ function confirmOrder(){
       } else {
         finalItemName = selectedSubType;
       }
-      finalQuantity= drinkTotal;
+      finalQuantity=drinkTotal;
       break;
-
     case "熱湯":
       finalItemName= selectedSubType;
-      finalQuantity= soupQty;
+      finalQuantity=soupQty;
       break;
   }
 
-  addToO
+  addToOrder(finalItemName, selectedPrice, finalQuantity);
+  closeModal();
+}
+
+function addToOrder(itemName, unitPrice, quantity){
+  if(!itemName || !unitPrice)return;
+  if(orders[itemName]){
+    orders[itemName].quantity += quantity;
+  } else {
+    orders[itemName] = { price: unitPrice, quantity, remark: "" };
+  }
+  updateOrderList();
+}
+
+// 不顯示價格
+function updateOrderList(){
+  let orderTable = document.getElementById("orderTable");
+  orderTable.innerHTML = "";
+
+  for(let item in orders){
+    let { quantity, remark } = orders[item]; 
+    // price保留在資料裡，但不顯示
+
+    let row = `
+      <tr>
+        <td>${item}</td>
+        <td>${quantity}</td>
+        <td>${remark || ""}</td>
+        <td>
+          <button class="menu-button-sm" onclick="openCustomModal('${item}')">客製</button>
+        </td>
+      </tr>
+    `;
+    orderTable.innerHTML += row;
+  }
+}
+
+/* 完成訂單 => 將 orders 存到 localStorage 並跳轉 order.html */
+function completeOrder(){
+  localStorage.setItem('orders', JSON.stringify(orders));
+  window.location.href = 'order.html';
+}
+
+/* =================== 3) 客製(備註) Modal + 刪除 =================== */
+let currentItemForCust = null;
+
+function openCustomModal(item){
+  currentItemForCust = item;
+  let remark = orders[item]?.remark || "";
+  document.getElementById("remarkArea").textContent = remark;
+  document.getElementById("customModal").style.display="block";
+}
+
+function closeCustomModal(){
+  document.getElementById("customModal").style.display="none";
+}
+
+function appendRemark(str){
+  let remarkDiv = document.getElementById("remarkArea");
+  remarkDiv.textContent += str;
+}
+
+function clearRemark(){
+  document.getElementById("remarkArea").textContent="";
+}
+
+function backspaceRemark(){
+  let remarkDiv = document.getElementById("remarkArea");
+  let currText = remarkDiv.textContent;
+  if(currText.length>0){
+    remarkDiv.textContent=currText.slice(0,-1);
+  }
+}
+
+function confirmRemark(){
+  let remarkDiv = document.getElementById("remarkArea");
+  let newText = remarkDiv.textContent;
+  if(currentItemForCust && orders[currentItemForCust]){
+    orders[currentItemForCust].remark = newText;
+    updateOrderList();
+  }
+  closeCustomModal();
+}
+
+// 客製視窗裡的刪除 => 移除該品項
+function deleteItemInCustom(){
+  if(currentItemForCust && orders[currentItemForCust]){
+    delete orders[currentItemForCust];
+    updateOrderList();
+  }
+  closeCustomModal();
+}
+</script>
+</body>
+</html>
