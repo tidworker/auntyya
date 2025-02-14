@@ -730,9 +730,18 @@ function updateOrderList(){
   }
 }
 
-/* 完成訂單 => 將 orders 存到 localStorage 並跳轉 order.html */
+/* 
+  ===================
+    這裡「刪除跳轉到 order.html」的功能，只保留將 orders 寫入 localStorage
+    如果也不需要 localStorage，可以把那行一併移除
+  ===================
+*/
 function completeOrder(){
+  // 1) 如果依然想把結果暫存到 localStorage
+  localStorage.setItem('orders', JSON.stringify(orders));
 
+  // 2) 直接註解掉或刪除跳轉功能
+  // window.location.href = 'order.html'; // ← 這行已刪除
 }
 
 /* =================== 3) 客製(備註) Modal + 刪除 =================== */
