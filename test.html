@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <title>語音點餐系統 - 長按點餐</title>
+  <title>語音點餐 - 長按錄音 + 防文字選取 + Modal客製</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <style>
     /* ====== 全域樣式 ====== */
@@ -15,7 +15,7 @@
     }
     header {
       background-color: #4a4a4a;
-      color: white;
+      color: #fff;
       padding: 10px 0;
       text-align: center;
     }
@@ -71,7 +71,7 @@
       margin-top: 10px;
     }
 
-    /* ====== 表格 ====== */
+    /* ====== 表格樣式 ====== */
     #orderTable {
       border-collapse: collapse;
       width: 100%;
@@ -91,7 +91,7 @@
       font-size: 16px;
     }
 
-    /* ====== 客製化 Modal ====== */
+    /* ====== 客製化Modal ====== */
     #customizeModal {
       display: none;
       position: fixed;
@@ -152,7 +152,7 @@
       font-size: 14px;
     }
     #modalBtns {
-      display: flex; 
+      display: flex;
       gap: 10px;
     }
     #confirmBtn, #cancelBtn {
@@ -189,15 +189,15 @@
         font-size: 14px;
       }
       button {
-        font-size: 13px; 
+        font-size: 13px;
         padding: 8px 10px;
       }
     }
 
-    /* ====== 長按語音按鈕 - 底部 50px ====== */
+    /* ====== 長按語音按鈕 - fixed在下方 ====== */
     #voiceBtn {
       position: fixed;
-      bottom: 50px; /* 改為離底部50px */
+      bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
       z-index: 9999;
@@ -206,6 +206,12 @@
       background-color: #17a2b8;
       border-radius: 30px;
       margin-right: 0;
+
+      /* 取消長按文字選取 or 系統快顯 */
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: none;
     }
     #voiceBtn:active {
       background-color: #138496;
@@ -214,13 +220,13 @@
 </head>
 <body>
   <header>
-    <h1>語音點餐 - 長按錄音(按鈕向上提升)</h1>
+    <h1>語音點餐 - 長按錄音 + 防文字選取 + Modal客製</h1>
   </header>
   <main>
-    <label for="inputTextArea">點餐內容 (長按「按住說話」可錄音):</label>
-    <textarea id="inputTextArea" placeholder="也可自行輸入文字…"></textarea>
+    <!-- 手動輸入框 -->
+    <label for="inputTextArea">點餐內容(可輸入或長按錄音):</label>
+    <textarea id="inputTextArea" placeholder="輸入內容..."></textarea>
     <br/>
-    <!-- 其他按鈕 -->
     <button id="clearInputBtn" onclick="onClearClick()">清除點餐</button>
 
     <h2>餐點清單:</h2>
@@ -247,18 +253,18 @@
     <button id="completeOrderBtn" onclick="onCompleteOrderClick()">完成訂單</button>
   </main>
 
-  <!-- 語音輸入按鈕 (長按) -->
+  <!-- 長按語音按鈕 -->
   <button
     id="voiceBtn"
-    onmousedown="startVoiceInput()"
-    onmouseup="stopVoiceInput()"
-    ontouchstart="startVoiceInput()"
-    ontouchend="stopVoiceInput()"
+    onmousedown="startVoiceInput(event)"
+    onmouseup="stopVoiceInput(event)"
+    ontouchstart="startVoiceInput(event)"
+    ontouchend="stopVoiceInput(event)"
   >
     按住 說話
   </button>
 
-  <!-- 客製化Modal (與 JS 相同) -->
+  <!-- 客製化 Modal -->
   <div id="customizeModal">
     <div id="modalContent">
       <h3>客製化</h3>
@@ -271,7 +277,7 @@
       </div>
       <div class="qty-row">
         <button id="minusQtyBtn" type="button">-</button>
-        <input id="qtyInput" type="number" step="1" min="0" value="0" />
+        <input id="qtyInput" type="number" step="1" min="0" value="0"/>
         <button id="plusQtyBtn" type="button">+</button>
       </div>
       <div id="modalBtns">
@@ -282,31 +288,434 @@
   </div>
 
   <script>
-    /* 與您先前的解析語音、客製邏輯、震動程式等相同。
-       以下僅示範核心結構，可把之前的function全部複製進來。 */
-
-    // 範例：震動函式
-    function vibrate(duration) {
+    /************************************
+     * 0. 震動函式
+     ************************************/
+    function vibrate(ms) {
       if (navigator.vibrate) {
-        navigator.vibrate(duration);
+        navigator.vibrate(ms);
       }
     }
 
-    // 長按語音
-    let recognition = null;
-    function startVoiceInput() {
-      vibrate(50); // 按下時震動
-      /* 其餘跟之前相同：document.getElementById("inputTextArea").value = "";
-         new SpeechRecognition() => onresult =>  ...
-         recognition.start(); 
-      */
+    /************************************
+     * 全域變數 & 商品 / 同音字 / 關鍵字
+     ************************************/
+    var orderList = [];
+    var itemPrices = {
+            "芝麻蔥油餅": 20,
+            "蔥油餅加蛋": 30,
+            "蛋餅加荷包蛋": 45,
+            "大腸麵線": 50,
+            "肉羹麵線": 50,
+            "綜合麵線": 50,
+            "清麵線": 40,
+            "純麵線": 40,
+            "大炒麵": 40,
+            "小炒麵": 30,
+            "荷包蛋": 15,
+            "貢丸湯": 35,
+            "肉羹湯": 35,
+            "綜合湯": 35,  
+            "紅茶": 10,            
+            "奶茶": 15,
+            "豆漿": 15,
+            "米漿": 15
+        };
+
+        var homophones = {
+            "麵": ["面", "念", "唸"],
+            "線": ["鮮"],
+            "綜": ["中"],
+            "辣": ["拉","那","啦"],
+            "合": ["和", "河"],            
+            "清": ["青","金","新","稀","吃"],
+            "炒": ["草", "早", "找","島"],
+            "芝麻蔥油餅": ["蔥油餅", "不加蛋","附加蛋"],
+            "蔥油餅加蛋": ["蛋餅", "加蛋"],
+            "蛋餅加荷包蛋": ["蛋蔥油餅加蛋"],
+            "大腸麵線": ["大腸","大腸麵線麵線"],
+            "綜合麵線": ["綜合","綜合麵線麵線"],
+            "肉羹麵線": ["肉羹","肉羹麵線麵線"],
+            "肉羹湯": ["肉羹麵線湯"],
+            "綜合湯": ["綜合麵線湯"],
+            "清麵線": ["清","清麵線麵線"],
+            "純麵線": ["純","純麵線麵線"],
+            "大炒麵": ["大炒","大炒麵麵","炒麵"], 
+            "小炒麵": ["小大炒麵","小炒","小炒麵麵"],
+            "份": ["碗", "杯", "個","玩","顆","婉","晚","分","噸","完"],
+            "1": ["一", "億"],
+            "2": ["兩", "量", "涼"],
+            "3": ["三", "參", "山", "上", "單"],
+            "4": ["四", "是", "試"],
+            "5": ["五", "無", "午"],
+            "6": ["六", "溜"],
+            "7": ["七", "妻"],
+            "8": ["八", "咖", "包"],
+            "9": ["九", "酒"],
+            "10": ["十", "時"]
+        };
+
+    var extraKeywords = ["辣","冰","溫"];
+    let recognition = null; // 用於語音輸入
+
+    // 客製Modal用
+    var currentCustomizeIndexes = [];
+
+    /************************************
+     * 1. 按鈕事件
+     ************************************/
+    function onClearClick() {
+      vibrate(50);
+      clearInputArea();
     }
-    function stopVoiceInput() {
-      /* recognition.stop(); => onend => analyzeText() */
+    function onIncrementClick() {
+      vibrate(50);
+      incrementSelected();
+    }
+    function onDecrementClick() {
+      vibrate(50);
+      decrementSelected();
+    }
+    function onDeleteClick() {
+      vibrate(50);
+      deleteSelected();
+    }
+    function onCustomizeClick() {
+      vibrate(50);
+      customizeSelected();
+    }
+    function onCompleteOrderClick() {
+      vibrate(50);
+      completeOrder();
     }
 
-    // 其他功能: onClearClick, onIncrementClick, etc...
-    // analyzeText(), parse "辣/冰/溫", merge, update table, etc...
+    /************************************
+     * 2. 長按語音: 按下 -> start, 鬆開 -> stop
+     ************************************/
+    function startVoiceInput(e) {
+      e.preventDefault();      // 阻止長按文字選取或快顯
+      vibrate(50);            // 按下震動
+
+      document.getElementById("inputTextArea").value = "";
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("瀏覽器不支援語音識別，請用Android Chrome/Edge。");
+        return;
+      }
+      recognition = new SpeechRecognition();
+      recognition.lang = "zh-TW";
+
+      recognition.onresult = (ev) => {
+        const txt = ev.results[0][0].transcript;
+        document.getElementById("inputTextArea").value = txt;
+      };
+      recognition.onerror = (err) => {
+        console.error("語音錯誤:", err.error);
+      };
+      recognition.start();
+    }
+
+    function stopVoiceInput(e) {
+      e.preventDefault();
+      if (recognition) {
+        recognition.stop();
+        recognition.onend = () => {
+          analyzeText();
+        };
+      }
+    }
+
+    /************************************
+     * 3. 清除 & 完成訂單
+     ************************************/
+    function clearInputArea() {
+      document.getElementById("inputTextArea").value = "";
+    }
+    function completeOrder() {
+      orderList = [];
+      document.getElementById("orderTableBody").innerHTML = "";
+      document.getElementById("totalPrice").textContent = "0";
+      document.getElementById("inputTextArea").value = "";
+    }
+
+    /************************************
+     * 4. 解析文字 (含 辣/冰/溫)
+     ************************************/
+    function analyzeText() {
+      const textOrig = document.getElementById("inputTextArea").value.trim();
+      let text = textOrig;
+      // (A) 同音字替換
+      for (const h in homophones) {
+        homophones[h].forEach(syn => {
+          const reg = new RegExp(syn, "g");
+          text = text.replace(reg, h);
+        });
+      }
+
+      const newItems = [];
+
+      // (B1) 部分X => ex: "紅茶3份2份辣"
+      extraKeywords.forEach(keyword => {
+        for (const itemName in itemPrices) {
+          const partRe = new RegExp(itemName + "(\\d+)份(\\d+)份" + keyword, "g");
+          text = text.replace(partRe, (match, totalStr, partStr) => {
+            const total = parseInt(totalStr);
+            const part = parseInt(partStr);
+            addOrUpdateItem(newItems, itemName, total, keyword, part);
+            return "";
+          });
+        }
+      });
+
+      // (B2) 全部X => ex: "紅茶3份辣"
+      extraKeywords.forEach(keyword => {
+        for (const itemName in itemPrices) {
+          const allRe = new RegExp(itemName + "(\\d+)份" + keyword, "g");
+          text = text.replace(allRe, (match, qtyStr) => {
+            const total = parseInt(qtyStr);
+            addOrUpdateItem(newItems, itemName, total, keyword, total);
+            return "";
+          });
+        }
+      });
+
+      // (B3) 一般 => "N份商品" / "商品N份"
+      for (const itemName in itemPrices) {
+        const p1 = new RegExp("(\\d+)份" + itemName, "g");
+        text = text.replace(p1, (m, qStr) => {
+          addOrUpdateItem(newItems, itemName, parseInt(qStr), null, 0);
+          return "";
+        });
+
+        const p2 = new RegExp(itemName + "(\\d+)份", "g");
+        text = text.replace(p2, (m, qStr) => {
+          addOrUpdateItem(newItems, itemName, parseInt(qStr), null, 0);
+          return "";
+        });
+      }
+
+      // 合併 => 若有新增 => 震動
+      mergeToOrderList(newItems);
+      if (newItems.length > 0) {
+        vibrate(100);
+      }
+      updateOrderTable();
+    }
+
+    function addOrUpdateItem(newItems, name, qty, attrKey, attrQty) {
+      if (!qty) qty = 1;
+      let existing = newItems.find(o => o.name === name);
+      if (!existing) {
+        existing = {
+          name: name,
+          price: itemPrices[name] || 0,
+          quantity: 0,
+          attrs: {},
+          remark: ""
+        };
+        newItems.push(existing);
+      }
+      existing.quantity += qty;
+      if (attrKey) {
+        existing.attrs[attrKey] = (existing.attrs[attrKey] || 0) + attrQty;
+      }
+    }
+
+    function mergeToOrderList(newItems) {
+      newItems.forEach(newItem => {
+        const found = orderList.find(o => o.name === newItem.name && !o.remark);
+        if (found) {
+          found.quantity += newItem.quantity;
+          for (const k in newItem.attrs) {
+            found.attrs[k] = (found.attrs[k] || 0) + newItem.attrs[k];
+          }
+        } else {
+          orderList.push(newItem);
+        }
+      });
+    }
+
+    /************************************
+     * 5. 更新表格 & 總金額
+     ************************************/
+    function updateOrderTable(checkedIndexes) {
+      const tbody = document.getElementById("orderTableBody");
+      tbody.innerHTML = "";
+
+      orderList.forEach((item, idx) => {
+        const row = tbody.insertRow();
+
+        // 選擇checkbox
+        const c1 = row.insertCell(0);
+        const chk = document.createElement("input");
+        chk.type = "checkbox";
+        chk.classList.add("selectItem");
+        chk.dataset.index = idx;
+        if (checkedIndexes && checkedIndexes.indexOf(idx) !== -1) {
+          chk.checked = true;
+        }
+        c1.appendChild(chk);
+
+        row.insertCell(1).textContent = item.name;
+        row.insertCell(2).textContent = item.price;
+        row.insertCell(3).textContent = item.quantity;
+        row.insertCell(4).textContent = buildRemark(item);
+      });
+
+      updateTotalPrice();
+    }
+
+    // 備註 => ex: 「辣×2\n不蒜 x3」
+    function buildRemark(item) {
+      const lines = [];
+      for (const k in item.attrs) {
+        const val = item.attrs[k];
+        if (val > 0) {
+          lines.push(`${k}×${val}`);
+        }
+      }
+      if (item.remark) {
+        lines.push(item.remark);
+      }
+      return lines.join("\n");
+    }
+
+    function updateTotalPrice() {
+      const total = orderList.reduce((acc, it) => acc + it.price * it.quantity, 0);
+      document.getElementById("totalPrice").textContent = total;
+    }
+
+    /************************************
+     * 6. 增 / 減 / 刪除
+     ************************************/
+    function getSelectedIndexes() {
+      const checked = document.querySelectorAll(".selectItem:checked");
+      const indexes = [];
+      checked.forEach(chk => indexes.push(parseInt(chk.dataset.index)));
+      return indexes;
+    }
+    function incrementSelected() {
+      const sel = getSelectedIndexes();
+      sel.forEach(i => orderList[i].quantity++);
+      updateOrderTable(sel);
+    }
+    function decrementSelected() {
+      const sel = getSelectedIndexes();
+      sel.forEach(i => {
+        if (orderList[i].quantity > 1) {
+          orderList[i].quantity--;
+        }
+      });
+      updateOrderTable(sel);
+    }
+    function deleteSelected() {
+      const sel = getSelectedIndexes().sort((a,b)=>b-a);
+      sel.forEach(i => orderList.splice(i,1));
+      updateOrderTable();
+    }
+
+    /************************************
+     * 7. 客製化Modal
+     ************************************/
+    const customizeModal = document.getElementById("customizeModal");
+    const optionButtons = document.querySelectorAll(".option-btn");
+    const qtyInput = document.getElementById("qtyInput");
+    const minusQtyBtn = document.getElementById("minusQtyBtn");
+    const plusQtyBtn = document.getElementById("plusQtyBtn");
+
+    function customizeSelected() {
+      const sel = getSelectedIndexes();
+      if (sel.length === 0) {
+        alert("請先勾選要客製化的餐點！");
+        return;
+      }
+      currentCustomizeIndexes = sel;
+      openCustomizeModal();
+    }
+    function openCustomizeModal() {
+      // 重置
+      optionButtons.forEach(btn => btn.classList.remove("active"));
+      qtyInput.value = "0";
+      customizeModal.style.display = "flex";
+    }
+    function closeCustomizeModal() {
+      customizeModal.style.display = "none";
+    }
+
+    // 選項按鈕 => 切換active
+    optionButtons.forEach(btn => {
+      btn.addEventListener("click", function() {
+        this.classList.toggle("active");
+      });
+    });
+    // 數量 + -
+    minusQtyBtn.addEventListener("click", () => {
+      const val = parseInt(qtyInput.value || "0");
+      if (val > 0) qtyInput.value = val - 1;
+    });
+    plusQtyBtn.addEventListener("click", () => {
+      const val = parseInt(qtyInput.value || "0");
+      qtyInput.value = val + 1;
+    });
+    // 確定 & 取消
+    document.getElementById("confirmBtn").addEventListener("click", () => {
+      // 收集active
+      const selectedOpts = [];
+      optionButtons.forEach(btn => {
+        if (btn.classList.contains("active")) {
+          selectedOpts.push(btn.dataset.value);
+        }
+      });
+      let rawLine = "";
+      if (selectedOpts.length > 0) {
+        rawLine = mergeNoMore(selectedOpts.join(" "));
+      }
+      const numStr = qtyInput.value.trim();
+      if (numStr && numStr !== "0") {
+        rawLine += " x" + numStr;
+      }
+
+      if (rawLine) {
+        currentCustomizeIndexes.forEach(i => {
+          if (orderList[i].remark) {
+            orderList[i].remark += " / " + rawLine;
+          } else {
+            orderList[i].remark = rawLine;
+          }
+        });
+        updateOrderTable(currentCustomizeIndexes);
+      }
+      closeCustomizeModal();
+    });
+    document.getElementById("cancelBtn").addEventListener("click", () => {
+      closeCustomizeModal();
+    });
+    customizeModal.addEventListener("click", (e) => {
+      if(e.target.id === "customizeModal"){
+        closeCustomizeModal();
+      }
+    });
+
+    // 合併「不+蒜 => 不蒜」「多+菜 => 多菜」
+    function mergeNoMore(line){
+      const tokens = line.split(/\s+/);
+      const final = [];
+      for(let i=0; i<tokens.length; i++){
+        const tk = tokens[i];
+        if((tk==="不"||tk==="多") && i<tokens.length-1){
+          const nt = tokens[i+1];
+          if(["醋","蒜","菜"].includes(nt)){
+            final.push(tk+nt);  // "不"+"蒜" => "不蒜"
+            i++;
+            continue;
+          }
+        }
+        final.push(tk);
+      }
+      return final.join(" ");
+    }
+
   </script>
 </body>
 </html>
