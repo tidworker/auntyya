@@ -1,68 +1,194 @@
-<!-- order.html -->
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <title>訂單明細</title>
+  <title>訂單管理 - 葉阿姨點餐系統</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- 省略樣式 -->
+  <style>
+    /* 保持原先 UI 設計 */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+      background-color: #f0f0f0;
+      color: #333;
+    }
+    header {
+      background: #ddd;
+      padding: 15px 0;
+      margin-bottom: 20px;
+    }
+    header h2 {
+      margin: 0;
+      font-size: 24px;
+      color: #333;
+    }
+    .order-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 10px;
+    }
+    .order-block {
+      background: #fff;
+      border: 1px solid #aaa;
+      margin-bottom: 20px;
+      padding: 10px;
+      text-align: left;
+    }
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .order-header h3 {
+      margin: 0;
+      font-size: 20px;
+    }
+    .order-list {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 10px;
+    }
+    .order-list th,
+    .order-list td {
+      border: 1px solid #aaa;
+      padding: 8px;
+      font-size: 16px;
+    }
+    .order-list th {
+      background: #ddd;
+    }
+    .total-price {
+      font-size: 18px;
+      text-align: right;
+      margin-top: 5px;
+    }
+    .actions {
+      margin: 20px;
+    }
+    .menu-button {
+      font-size: 18px;
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+      border: none;
+      background-color: #555;
+      color: #fff;
+      transition: background-color 0.2s;
+    }
+    .menu-button:hover {
+      background-color: #333;
+    }
+  </style>
 </head>
 <body>
-<header>
-  <h2>目前訂單</h2>
-</header>
+  <header>
+    <h2>訂單管理</h2>
+  </header>
 
-<table>
-  <thead>
-    <tr>
-      <th>品項</th>
-      <th>數量</th>
-      <th>備註</th>
-      <th>小計</th>
-    </tr>
-  </thead>
-  <tbody id="orderDetails"></tbody>
-</table>
-<div>
-  總金額: $<span id="totalPrice">0</span>
-</div>
+  <div class="order-container" id="orderContainer">
+    <!-- 依序產生多筆訂單 -->
+  </div>
 
-<!-- 也可以再加一個返回Button -->
-<button onclick="goBackMenu()">返回Menu</button>
+  <div class="actions">
+    <button class="menu-button" onclick="goBackMenu()">返回 Menu</button>
+  </div>
 
-<script>
-function goBackMenu(){
-  window.location.href = "index.html";
-}
+  <script>
+    // 回主選單
+    function goBackMenu(){
+      window.location.href = "index.html";
+    }
 
-window.onload = function(){
-  let orderStr = localStorage.getItem("currentOrder");
-  if(!orderStr){
-    alert("目前沒有訂單可顯示");
-    return;
-  }
+    // 當頁面載入時，讀取 localStorage 中的 "allOrders"
+    window.onload = function(){
+      let ordersStr = localStorage.getItem("allOrders");
+      let orderContainer = document.getElementById("orderContainer");
 
-  let orders = JSON.parse(orderStr);
-  let tbody = document.getElementById("orderDetails");
-  let total = 0;
+      if(!ordersStr) {
+        orderContainer.innerHTML = "<p>目前沒有訂單</p>";
+        return;
+      }
 
-  for(let itemName in orders){
-    let data = orders[itemName];
-    let subTotal = data.price * data.quantity;
-    total += subTotal;
-    let tr = document.createElement("tr");
-    tr.innerHTML = `
-      <td>${itemName}</td>
-      <td>${data.quantity}</td>
-      <td>${data.remark || ""}</td>
-      <td>$${subTotal}</td>
-    `;
-    tbody.appendChild(tr);
-  }
+      let allOrders = JSON.parse(ordersStr);
+      if(allOrders.length === 0) {
+        orderContainer.innerHTML = "<p>目前沒有訂單</p>";
+        return;
+      }
 
-  document.getElementById("totalPrice").innerText = total;
-};
-</script>
+      // 逐筆產生訂單區塊
+      allOrders.forEach(function(order, index){
+        let orderBlock = document.createElement("div");
+        orderBlock.className = "order-block";
+
+        // 訂單 Header：顯示訂單編號及刪除按鈕
+        let headerDiv = document.createElement("div");
+        headerDiv.className = "order-header";
+        let orderIdHeader = document.createElement("h3");
+        orderIdHeader.innerText = "訂單編號：" + order.orderId;
+        let deleteBtn = document.createElement("button");
+        deleteBtn.className = "menu-button";
+        deleteBtn.innerText = "刪除訂單";
+        deleteBtn.onclick = function(){
+          deleteOrder(index);
+        };
+        headerDiv.appendChild(orderIdHeader);
+        headerDiv.appendChild(deleteBtn);
+        orderBlock.appendChild(headerDiv);
+
+        // 建立訂單明細表格
+        let table = document.createElement("table");
+        table.className = "order-list";
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th>品項</th>
+              <th>數量</th>
+              <th>備註</th>
+              <th>小計</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        `;
+        let tbody = table.querySelector("tbody");
+
+        let total = 0;
+        for(let itemName in order.items){
+          let item = order.items[itemName];
+          let subTotal = item.price * item.quantity;
+          total += subTotal;
+          let tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${itemName}</td>
+            <td>${item.quantity}</td>
+            <td>${item.remark || ""}</td>
+            <td>$${subTotal}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+        orderBlock.appendChild(table);
+
+        // 顯示訂單總金額
+        let totalDiv = document.createElement("div");
+        totalDiv.className = "total-price";
+        totalDiv.innerText = "總金額：$" + total;
+        orderBlock.appendChild(totalDiv);
+
+        orderContainer.appendChild(orderBlock);
+      });
+    };
+
+    // 刪除單筆訂單：從陣列中移除後更新 localStorage 並重新載入頁面
+    function deleteOrder(index){
+      let ordersStr = localStorage.getItem("allOrders");
+      if(!ordersStr) return;
+      let allOrders = JSON.parse(ordersStr);
+      allOrders.splice(index, 1);
+      localStorage.setItem("allOrders", JSON.stringify(allOrders));
+      window.location.reload();
+    }
+  </script>
 </body>
 </html>
