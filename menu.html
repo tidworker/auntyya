@@ -246,7 +246,7 @@
   <button class="menu-button" onclick="openModal('炒麵')">炒麵</button>
   <button class="menu-button" onclick="openModal('飲料')">飲料</button>
   <button class="menu-button" onclick="openModal('熱湯')">熱湯</button>
-  <!-- ✖ 刪除原本的「荷包蛋」主選單按鈕 -->
+  <!-- ✖ 已刪除「荷包蛋」主選單按鈕 -->
 </div>
 
 <!-- 訂單列表 -->
@@ -267,7 +267,8 @@
   總金額: $<span id="totalPrice">0</span>
 </div>
 <div class="actions">
-  <button class="menu-button" onclick="completeOrder()">完成訂單 (整筆刪除)</button>
+  <!-- 這邊改成: 先將訂單存到 localStorage，再跳轉至 order.html -->
+  <button class="menu-button" onclick="completeOrder()">完成訂單 (跳轉至 order.html)</button>
 </div>
 
 <!-- ========== 多步驟「點餐」Modal ========== -->
@@ -449,7 +450,7 @@ const subTypes = {
   }
 };
 
-// ★★ 移除「荷包蛋」主選單 => flows 沒有 "荷包蛋" ★★
+// 已移除「荷包蛋」主選單 => flows 沒有 "荷包蛋"
 let flows = {
   "蔥油餅": ["SUB_TYPE", "QUANTITY", "SPICY"],
   "麵線":   ["SUB_TYPE", "QUANTITY", "SPICY"],
@@ -525,7 +526,7 @@ function closeModal(){
   document.getElementById("mainModal").style.display="none";
 }
 
-// STEP 1: 載入子選項 (如「大炒麵/小炒麵」「加蛋/不加蛋」)
+// STEP 1: 載入子選項
 function loadSubTypeButtons(category){
   let title = document.getElementById("stepSubTypeTitle");
   let container = document.getElementById("subTypeButtons");
@@ -578,7 +579,7 @@ function renderStep(){
     case "SPICY":
       document.getElementById("stepThird").classList.remove("hidden");
       document.getElementById("spicyBlock").classList.remove("hidden");
-      // ★ 若分類是 炒麵(或麵線/蔥油餅)，就顯示 eggBlock
+      // ★ 若分類是 蔥油餅/麵線/炒麵，就顯示 eggBlock
       if(["蔥油餅","麵線","炒麵"].includes(currentCategory)){
         document.getElementById("eggBlock").classList.remove("hidden");
       }
@@ -666,7 +667,7 @@ function confirmOrder(){
   if(spI) spicyQty = parseInt(spI.value)||0;
 
   let eI = document.getElementById("eggInput");
-  if(eI) eggQty = parseInt(eI.value)||0;  // 這就是荷包蛋數量
+  if(eI) eggQty = parseInt(eI.value)||0;  // 荷包蛋數量
 
   let dT = document.getElementById("drinkTotalInput");
   if(dT) drinkTotal = parseInt(dT.value)||1;
@@ -715,12 +716,10 @@ function confirmOrder(){
       if(spicyQty>0){
         finalItemName += ` (加辣x${spicyQty})`;
       }
-      // ★ 加入荷包蛋顯示 & 費用
       if(eggQty>0){
         finalItemName += ` (荷包蛋x${eggQty})`;
       }
       finalQuantity = generalQuantity;
-      // 單價 = 選擇的大/小炒麵Price + (eggQty*15)
       addToOrder(finalItemName, selectedPrice + extraCost, finalQuantity);
       break;
 
@@ -789,10 +788,17 @@ function updateOrderList(){
   document.getElementById("totalPrice").innerText = totalPrice;
 }
 
+/**
+ * 核心改動：
+ * 1. 先把 orders 轉為字串後，存進 localStorage。
+ * 2. 之後跳轉至 order.html。
+ */
 function completeOrder(){
-  orders={};
-  updateOrderList();
-  alert("訂單已完成，全部清空！");
+  // 儲存訂單
+  localStorage.setItem("orderData", JSON.stringify(orders));
+  
+  // 跳轉
+  window.location.href = "order.html";
 }
 
 /* =================== 3) 客製(備註) Modal + 刪除 =================== */
