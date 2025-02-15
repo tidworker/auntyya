@@ -1,143 +1,54 @@
-<!-- 範例：order.html -->
+<!-- order.html -->
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <title>訂單明細 - 葉阿姨點餐系統</title>
+  <title>訂單明細</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      font-family: Arial, sans-serif; 
-      margin: 0; 
-      padding: 0; 
-      text-align: center;
-      background-color: #f0f0f0;
-      color: #333;
-    }
-    header {
-      background: #ddd;
-      padding: 15px 0;
-      margin-bottom: 20px;
-    }
-    header h2 {
-      margin: 0;
-      font-size: 24px;
-      color: #333;
-    }
-    .order-container {
-      max-width: 600px;
-      margin: 0 auto;
-    }
-    .order-info {
-      margin: 20px 0;
-      font-size: 20px;
-    }
-    .order-list {
-      margin: 0 auto;
-      width: 100%;
-      border-collapse: collapse;
-      background-color: #fff;
-    }
-    .order-list th, .order-list td {
-      border: 1px solid #aaa;
-      padding: 10px;
-      font-size: 18px;
-    }
-    .order-list th {
-      background-color: #ddd;
-    }
-    .total-price {
-      font-size: 22px;
-      margin-top: 10px;
-    }
-    .actions {
-      margin: 20px;
-    }
-    .menu-button {
-      font-size: 18px;
-      padding: 10px 20px;
-      margin: 5px;
-      cursor: pointer;
-      border: none;
-      background-color: #555;
-      color: #fff;
-      border-radius: 0;
-      transition: background-color 0.2s;
-    }
-    .menu-button:hover {
-      background-color: #333;
-    }
-  </style>
+
+  <!-- 省略樣式 -->
 </head>
 <body>
 <header>
-  <h2>訂單明細</h2>
+  <h2>目前訂單</h2>
 </header>
 
-<div class="order-container">
-  <div id="orderInfo" class="order-info"></div>
-  <table class="order-list">
-    <thead>
-      <tr>
-        <th>品項</th>
-        <th>數量</th>
-        <th>備註</th>
-        <th>小計</th>
-      </tr>
-    </thead>
-    <tbody id="orderDetails"></tbody>
-  </table>
-  <div class="total-price">
-    總金額: $<span id="totalPrice">0</span>
-  </div>
-
-  <!-- 新增: 訂單管理(刪除) + 返回Menu -->
-  <div class="actions">
-    <button class="menu-button" onclick="deleteOrder()">刪除此訂單</button>
-    <button class="menu-button" onclick="goBackMenu()">返回Menu</button>
-  </div>
+<table>
+  <thead>
+    <tr>
+      <th>品項</th>
+      <th>數量</th>
+      <th>備註</th>
+      <th>小計</th>
+    </tr>
+  </thead>
+  <tbody id="orderDetails"></tbody>
+</table>
+<div>
+  總金額: $<span id="totalPrice">0</span>
 </div>
+
+<!-- 也可以再加一個返回Button -->
+<button onclick="goBackMenu()">返回Menu</button>
 
 <script>
 function goBackMenu(){
-  // 直接連回 index.html
   window.location.href = "index.html";
 }
 
-function deleteOrder(){
-  // 刪除 localStorage 的 "currentOrder"
-  localStorage.removeItem("currentOrder");
-  alert("訂單已刪除");
-  
-  // 刪除後，可選擇要留在本頁或跳回menu
-  // 這裡示範跳回menu
-  goBackMenu();
-}
-
 window.onload = function(){
-  // 從 localStorage 取出剛才存的資料
   let orderStr = localStorage.getItem("currentOrder");
   if(!orderStr){
-    // 若沒有資料，就顯示無訂單
-    document.getElementById("orderInfo").innerText = "目前沒有可顯示的訂單。";
+    alert("目前沒有訂單可顯示");
     return;
   }
 
-  let orderData = JSON.parse(orderStr);
-  let orderId = orderData.orderId;
-  let items = orderData.items;  // 這就是完整的 {品名: {price, quantity, remark}, ...}
-
-  // 1. 顯示訂單編號
-  let orderInfoDiv = document.getElementById("orderInfo");
-  orderInfoDiv.innerText = "訂單編號：" + orderId;
-
-  // 2. 顯示訂單列表
+  let orders = JSON.parse(orderStr);
   let tbody = document.getElementById("orderDetails");
   let total = 0;
 
-  // 逐筆產生表格列
-  for(let itemName in items){
-    let data = items[itemName];
+  for(let itemName in orders){
+    let data = orders[itemName];
     let subTotal = data.price * data.quantity;
     total += subTotal;
     let tr = document.createElement("tr");
@@ -150,7 +61,6 @@ window.onload = function(){
     tbody.appendChild(tr);
   }
 
-  // 3. 顯示總金額
   document.getElementById("totalPrice").innerText = total;
 };
 </script>
