@@ -5,7 +5,7 @@
   <title>訂單管理 - 葉阿姨點餐系統</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* 保持原先 UI 樣式 */
+    /* 與主頁相同的基本樣式 */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
@@ -24,58 +24,59 @@
       font-size: 24px;
       color: #333;
     }
+    /* 訂單區域與主頁訂單列表風格相同 */
     .order-container {
-      max-width: 800px;
+      max-width: 600px;
       margin: 0 auto;
-      padding: 10px;
+      padding: 0 10px;
     }
     .order-block {
-      background: #fff;
+      background-color: #fff;
       border: 1px solid #aaa;
       margin-bottom: 20px;
       padding: 10px;
       text-align: left;
     }
-    .order-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
-    }
-    .order-header h3 {
+    .order-block h3 {
       margin: 0;
       font-size: 20px;
     }
     .order-list {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 10px;
+      margin-top: 10px;
     }
-    .order-list th, .order-list td {
+    .order-list th,
+    .order-list td {
       border: 1px solid #aaa;
       padding: 8px;
       font-size: 16px;
     }
     .order-list th {
-      background: #ddd;
+      background-color: #ddd;
+      color: #333;
     }
     .total-price {
       font-size: 18px;
       text-align: right;
       margin-top: 5px;
     }
+    /* 底部動作按鈕區：左右排列 */
     .actions {
-      margin: 20px;
+      display: flex;
+      justify-content: space-between;
+      margin: 20px auto;
+      max-width: 600px;
     }
     .menu-button {
-      font-size: 18px;
-      padding: 10px 20px;
-      margin: 5px;
+      font-size: 20px;
+      padding: 14px 22px;
       cursor: pointer;
       border: none;
       background-color: #555;
       color: #fff;
       transition: background-color 0.2s;
+      width: 48%;
     }
     .menu-button:hover {
       background-color: #333;
@@ -88,55 +89,54 @@
   </header>
 
   <div class="order-container" id="orderContainer">
-    <!-- 依序產生多筆訂單區塊 -->
+    <!-- 此處依序產生訂單區塊 -->
   </div>
 
+  <!-- 底部動作按鈕區：左側「返回 Menu」，右側「重置編號」 -->
   <div class="actions">
     <button class="menu-button" onclick="goBackMenu()">返回 Menu</button>
-    <!-- 新增「重置編號」按鈕 -->
     <button class="menu-button" onclick="resetOrderNumber()">重置編號</button>
   </div>
 
   <script>
+    // 返回主頁
     function goBackMenu(){
       window.location.href = "index.html";
     }
-
-    // 重置訂單編號：將 localStorage 中 orderNumberCounter 設為 1
+    // 重置訂單編號計數器（使下一筆訂單從 001 開始）
     function resetOrderNumber(){
       if(confirm("是否確定重置訂單編號？這將把下一筆訂單編號重置為 001。")){
         localStorage.setItem("orderNumberCounter", 1);
         alert("訂單編號已重置。");
       }
     }
-
+    // 當頁面載入時，從 localStorage 讀取 allOrders 陣列
     window.onload = function(){
       let ordersStr = localStorage.getItem("allOrders");
       let orderContainer = document.getElementById("orderContainer");
-
       if(!ordersStr) {
         orderContainer.innerHTML = "<p>目前沒有訂單</p>";
         return;
       }
-
       let allOrders = JSON.parse(ordersStr);
       if(allOrders.length === 0) {
         orderContainer.innerHTML = "<p>目前沒有訂單</p>";
         return;
       }
-
-      // 逐筆產生訂單區塊
       allOrders.forEach(function(order, index){
         let orderBlock = document.createElement("div");
         orderBlock.className = "order-block";
-
-        // 訂單 Header：顯示訂單編號及刪除按鈕
+        
+        // 訂單 Header：顯示訂單編號和刪除按鈕
         let headerDiv = document.createElement("div");
-        headerDiv.className = "order-header";
+        headerDiv.style.display = "flex";
+        headerDiv.style.justifyContent = "space-between";
+        headerDiv.style.alignItems = "center";
         let orderIdHeader = document.createElement("h3");
         orderIdHeader.innerText = "訂單編號：" + order.orderId;
         let deleteBtn = document.createElement("button");
         deleteBtn.className = "menu-button";
+        deleteBtn.style.width = "auto";
         deleteBtn.innerText = "刪除訂單";
         deleteBtn.onclick = function(){
           deleteOrder(index);
@@ -161,22 +161,21 @@
         `;
         let tbody = table.querySelector("tbody");
         let total = 0;
-        for(let itemName in order.items){
+        for(let itemName in order.items) {
           let item = order.items[itemName];
-          let subTotal = item.price * item.quantity;
-          total += subTotal;
-          let tr = document.createElement("tr");
-          tr.innerHTML = `
+          let itemTotal = item.price * item.quantity;
+          total += itemTotal;
+          let row = document.createElement("tr");
+          row.innerHTML = `
             <td>${itemName}</td>
             <td>${item.quantity}</td>
             <td>${item.remark || ""}</td>
-            <td>$${subTotal}</td>
+            <td>$${itemTotal}</td>
           `;
-          tbody.appendChild(tr);
+          tbody.appendChild(row);
         }
         orderBlock.appendChild(table);
 
-        // 顯示訂單總金額
         let totalDiv = document.createElement("div");
         totalDiv.className = "total-price";
         totalDiv.innerText = "總金額：$" + total;
@@ -185,8 +184,7 @@
         orderContainer.appendChild(orderBlock);
       });
     };
-
-    // 刪除單筆訂單：從陣列中移除後更新 localStorage 並重新載入頁面
+    // 刪除單筆訂單，更新 allOrders 陣列後重載頁面
     function deleteOrder(index){
       let ordersStr = localStorage.getItem("allOrders");
       if(!ordersStr) return;
