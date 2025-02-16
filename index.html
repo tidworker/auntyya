@@ -66,8 +66,12 @@
       font-size: 22px;
       margin-top: 10px;
     }
+    /* 動作按鈕容器：使用 Flex，左右對齊 */
     .actions {
-      margin: 20px 0;
+      display: flex;
+      justify-content: space-between;
+      margin: 20px auto;
+      max-width: 600px;
     }
     /* Modal 共用樣式 */
     .modal,
@@ -214,6 +218,9 @@
       .counter input {
         width: 50px;
       }
+      .actions {
+        flex-direction: column;
+      }
     }
   </style>
 </head>
@@ -248,11 +255,11 @@
   <div class="total-price">
     總金額: $<span id="totalPrice">0</span>
   </div>
+
+  <!-- 底部動作按鈕區：查看訂單在左，完成訂單在右 -->
   <div class="actions">
-    <!-- 查看目前訂單（預覽 currentOrder） -->
     <button class="menu-button" onclick="goToOrderPage()">查看目前訂單</button>
-    <!-- 完成訂單，產生新訂單後加入 allOrders 陣列 -->
-    <button class="menu-button" onclick="completeOrder()">完成訂單 (跳轉至 order.html)</button>
+    <button class="menu-button" onclick="completeOrder()">完成訂單</button>
   </div>
 
   <!-- 多步驟點餐 Modal -->
@@ -385,33 +392,11 @@
   <script>
     /* ===================== 1) 資料設定 ===================== */
     const subTypes = {
-      "蔥油餅": {
-        "加蛋": 30,
-        "不加蛋": 20
-      },
-      "麵線": {
-        "大腸麵線": 50,
-        "肉羹麵線": 50,
-        "綜合麵線": 50,
-        "清麵線": 40,
-        "純麵線": 40
-      },
-      "炒麵": {
-        "大炒麵": 40,
-        "小炒麵": 30,
-        "荷包蛋": 15
-      },
-      "飲料": {
-        "豆漿": 15,
-        "米漿": 15,
-        "紅茶": 10,
-        "奶茶": 15
-      },
-      "熱湯": {
-        "貢丸湯": 35,
-        "肉羹湯": 35,
-        "綜合湯": 35
-      }
+      "蔥油餅": { "加蛋": 30, "不加蛋": 20 },
+      "麵線": { "大腸麵線": 50, "肉羹麵線": 50, "綜合麵線": 50, "清麵線": 40 },
+      "炒麵": { "大炒麵": 40, "小炒麵": 30, "荷包蛋": 15 },
+      "飲料": { "豆漿": 15, "米漿": 15, "紅茶": 10, "奶茶": 15 },
+      "熱湯": { "貢丸湯": 35, "肉羹湯": 35, "綜合湯": 35 }
     };
 
     let flows = {
@@ -697,11 +682,11 @@
         orderTable.innerHTML += row;
       }
       document.getElementById("totalPrice").innerText = totalPrice;
-      // 同步目前點餐資料至 localStorage (供預覽用)
+      // 同步目前點餐資料供預覽用
       localStorage.setItem("currentOrder", JSON.stringify(orders));
     }
 
-    // 新增：取得下一個訂單編號（固定三位數，從001開始）
+    // 取得下一個訂單編號（固定三位數，從 001 開始）
     function getNextOrderNumber() {
       let counter = localStorage.getItem("orderNumberCounter");
       if(!counter) {
@@ -716,14 +701,14 @@
     }
 
     function completeOrder() {
-      // 取得下一個訂單編號（例如 "001", "002", …）
+      // 取得下一個訂單編號（如 "001", "002", …）
       let orderNumber = getNextOrderNumber();
       // 組成新訂單物件
       let newOrder = {
         orderId: orderNumber,
         items: orders
       };
-      // 讀取現有的所有訂單（若無則建立空陣列）
+      // 讀取現有所有訂單（若無則建立空陣列）
       let allOrders = JSON.parse(localStorage.getItem("allOrders")) || [];
       allOrders.push(newOrder);
       localStorage.setItem("allOrders", JSON.stringify(allOrders));
