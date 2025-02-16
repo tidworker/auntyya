@@ -5,7 +5,7 @@
   <title>訂單管理 - 葉阿姨點餐系統</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* 保持原先 UI 設計 */
+    /* 保持原先 UI 樣式 */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
@@ -51,8 +51,7 @@
       border-collapse: collapse;
       margin-bottom: 10px;
     }
-    .order-list th,
-    .order-list td {
+    .order-list th, .order-list td {
       border: 1px solid #aaa;
       padding: 8px;
       font-size: 16px;
@@ -89,20 +88,28 @@
   </header>
 
   <div class="order-container" id="orderContainer">
-    <!-- 依序產生多筆訂單 -->
+    <!-- 依序產生多筆訂單區塊 -->
   </div>
 
   <div class="actions">
     <button class="menu-button" onclick="goBackMenu()">返回 Menu</button>
+    <!-- 新增「重置編號」按鈕 -->
+    <button class="menu-button" onclick="resetOrderNumber()">重置編號</button>
   </div>
 
   <script>
-    // 回主選單
     function goBackMenu(){
       window.location.href = "index.html";
     }
 
-    // 當頁面載入時，讀取 localStorage 中的 "allOrders"
+    // 重置訂單編號：將 localStorage 中 orderNumberCounter 設為 1
+    function resetOrderNumber(){
+      if(confirm("是否確定重置訂單編號？這將把下一筆訂單編號重置為 001。")){
+        localStorage.setItem("orderNumberCounter", 1);
+        alert("訂單編號已重置。");
+      }
+    }
+
     window.onload = function(){
       let ordersStr = localStorage.getItem("allOrders");
       let orderContainer = document.getElementById("orderContainer");
@@ -153,7 +160,6 @@
           <tbody></tbody>
         `;
         let tbody = table.querySelector("tbody");
-
         let total = 0;
         for(let itemName in order.items){
           let item = order.items[itemName];
