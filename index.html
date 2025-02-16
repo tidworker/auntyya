@@ -24,27 +24,27 @@
       font-size: 24px;
       color: #333;
     }
+    /* 主選單按鈕區：改為一行一行排列 */
     .menu-container {
       margin: 20px auto;
-      display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
       max-width: 600px;
     }
     .menu-button {
+      display: block;
+      width: 100%;
       font-size: 20px;
-      padding: 14px 22px;
-      margin: 5px;
+      padding: 14px;
+      margin: 5px 0;
       cursor: pointer;
       border: none;
       background-color: #555;
       color: #fff;
-      border-radius: 0;
       transition: background-color 0.2s;
     }
     .menu-button:hover {
       background-color: #333;
     }
+    /* 訂單列表 */
     .order-list {
       margin: 20px auto;
       width: 90%;
@@ -66,14 +66,27 @@
       font-size: 22px;
       margin-top: 10px;
     }
-    /* 動作按鈕容器：使用 Flex，左右對齊 */
+    /* 底部動作按鈕區：左右排列 */
     .actions {
       display: flex;
       justify-content: space-between;
       margin: 20px auto;
       max-width: 600px;
     }
-    /* Modal 共用樣式 */
+    .menu-button-action {
+      font-size: 20px;
+      padding: 14px 22px;
+      cursor: pointer;
+      border: none;
+      background-color: #555;
+      color: #fff;
+      transition: background-color 0.2s;
+      width: 48%;
+    }
+    .menu-button-action:hover {
+      background-color: #333;
+    }
+    /* Modal 與其他區塊保持原有設定 */
     .modal,
     .modal-cust {
       display: none;
@@ -112,7 +125,6 @@
       padding: 10px 20px;
       margin: 5px;
       border: none;
-      border-radius: 0;
       background-color: #666;
       color: #fff;
       cursor: pointer;
@@ -135,7 +147,6 @@
       background-color: #888;
       color: #fff;
       border: none;
-      border-radius: 0;
     }
     .counter button:hover {
       background-color: #666;
@@ -176,7 +187,6 @@
       font-size: 20px;
       cursor: pointer;
       border: none;
-      border-radius: 0;
       background-color: #ccc;
       color: #333;
       transition: background-color 0.2s;
@@ -193,34 +203,9 @@
       height: 40px;
       line-height: 40px;
       border: 1px solid #999;
-      display: inline-block;
       padding: 0 10px;
       box-sizing: border-box;
-      border-radius: 0;
       background-color: #fff;
-    }
-    @media (max-width: 600px) {
-      .menu-button {
-        width: 100%;
-      }
-      .menu-button-sm {
-        width: 45%;
-        margin: 5px 2.5%;
-      }
-      .key-btn {
-        width: 18%;
-        margin: 4px 1%;
-      }
-      .counter button {
-        font-size: 20px;
-        padding: 6px 16px;
-      }
-      .counter input {
-        width: 50px;
-      }
-      .actions {
-        flex-direction: column;
-      }
     }
   </style>
 </head>
@@ -229,7 +214,7 @@
     <h2>葉阿姨點餐系統</h2>
   </header>
 
-  <!-- 主選單按鈕 -->
+  <!-- 主選單按鈕區：一行一行排列 -->
   <div class="menu-container">
     <button class="menu-button" onclick="openModal('蔥油餅')">蔥油餅</button>
     <button class="menu-button" onclick="openModal('麵線')">麵線</button>
@@ -256,10 +241,10 @@
     總金額: $<span id="totalPrice">0</span>
   </div>
 
-  <!-- 底部動作按鈕區：查看訂單在左，完成訂單在右 -->
+  <!-- 底部動作按鈕區：左右排列 -->
   <div class="actions">
-    <button class="menu-button" onclick="goToOrderPage()">查看目前訂單</button>
-    <button class="menu-button" onclick="completeOrder()">完成訂單</button>
+    <button class="menu-button-action" onclick="goToOrderPage()">查看目前訂單</button>
+    <button class="menu-button-action" onclick="completeOrder()">完成訂單</button>
   </div>
 
   <!-- 多步驟點餐 Modal -->
@@ -268,7 +253,7 @@
       <span class="close" onclick="closeModal()">&times;</span>
       <!-- STEP 1: 選擇子選項 -->
       <div id="stepSubType">
-        <h3 id="stepSubTypeTitle" style="margin-bottom: 10px;"></h3>
+        <h3 id="stepSubTypeTitle"></h3>
         <div id="subTypeButtons"></div>
       </div>
       <!-- STEP 2: 數量/飲料總杯數 -->
@@ -334,7 +319,7 @@
             <button onclick="changeValue('soupQuantityInput', 1)">+</button>
           </div>
         </div>
-        <button class="menu-button-sm" onclick="confirmOrder()">確認點餐</button>
+        <div id="confirmContainer"></div>
       </div>
     </div>
   </div>
@@ -407,7 +392,7 @@
       "熱湯": ["SUB_TYPE", "SOUP_QTY"]
     };
 
-    // orders 物件用以儲存目前點餐資料
+    // orders 用來儲存目前點餐資料
     let orders = {};
 
     /* ===================== 2) 多步驟點餐流程 ===================== */
@@ -432,6 +417,9 @@
       document.getElementById("stepSubType").style.display = "block";
       document.getElementById("stepSecond").classList.add("hidden");
       document.getElementById("stepThird").classList.add("hidden");
+      // 清除確認按鈕容器
+      var confirmContainer = document.getElementById("confirmContainer");
+      if (confirmContainer) { confirmContainer.remove(); }
       loadSubTypeButtons(category);
     }
 
@@ -504,6 +492,10 @@
       document.getElementById("drinkIceBlock").classList.add("hidden");
       document.getElementById("soupQuantityBlock").classList.add("hidden");
       document.getElementById("eggBlock").classList.add("hidden");
+      
+      // 移除確認容器
+      var confirmContainer = document.getElementById("confirmContainer");
+      if (confirmContainer) { confirmContainer.remove(); }
 
       let stepKey = currentFlowSteps[currentStepIndex];
       switch(stepKey) {
@@ -517,6 +509,7 @@
           if(["蔥油餅", "麵線", "炒麵"].includes(currentCategory)) {
             document.getElementById("eggBlock").classList.remove("hidden");
           }
+          appendConfirmButton();
           break;
         case "DRINK_TOTAL":
           document.getElementById("stepSecond").classList.remove("hidden");
@@ -525,12 +518,22 @@
         case "DRINK_ICE":
           document.getElementById("stepThird").classList.remove("hidden");
           document.getElementById("drinkIceBlock").classList.remove("hidden");
+          appendConfirmButton();
           break;
         case "SOUP_QTY":
           document.getElementById("stepThird").classList.remove("hidden");
           document.getElementById("soupQuantityBlock").classList.remove("hidden");
+          appendConfirmButton();
           break;
       }
+    }
+
+    function appendConfirmButton() {
+      if(document.getElementById("confirmContainer")) return;
+      var confirmContainer = document.createElement("div");
+      confirmContainer.id = "confirmContainer";
+      confirmContainer.innerHTML = "<br><button class='menu-button-sm' onclick='confirmOrder()'>確認點餐</button>";
+      document.getElementById("stepThird").appendChild(confirmContainer);
     }
 
     function changeValue(inputId, amount, extraCheck="") {
@@ -682,7 +685,6 @@
         orderTable.innerHTML += row;
       }
       document.getElementById("totalPrice").innerText = totalPrice;
-      // 同步目前點餐資料供預覽用
       localStorage.setItem("currentOrder", JSON.stringify(orders));
     }
 
@@ -701,21 +703,16 @@
     }
 
     function completeOrder() {
-      // 取得下一個訂單編號（如 "001", "002", …）
       let orderNumber = getNextOrderNumber();
-      // 組成新訂單物件
       let newOrder = {
         orderId: orderNumber,
         items: orders
       };
-      // 讀取現有所有訂單（若無則建立空陣列）
       let allOrders = JSON.parse(localStorage.getItem("allOrders")) || [];
       allOrders.push(newOrder);
       localStorage.setItem("allOrders", JSON.stringify(allOrders));
-      // 重置目前點餐資料
       orders = {};
       updateOrderList();
-      // 跳轉至訂單管理頁
       window.location.href = "order.html";
     }
 
