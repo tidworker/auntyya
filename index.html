@@ -24,7 +24,7 @@
       font-size: 24px;
       color: #333;
     }
-    /* 主選單按鈕區：改為一行一行排列 */
+    /* 主選單按鈕區：一行一行排列 */
     .menu-container {
       margin: 20px auto;
       max-width: 600px;
@@ -33,7 +33,7 @@
       display: block;
       width: 100%;
       font-size: 20px;
-      padding: 20px;
+      padding: 14px;
       margin: 5px 0;
       cursor: pointer;
       border: none;
@@ -44,7 +44,7 @@
     .menu-button:hover {
       background-color: #333;
     }
-    /* 訂單列表 */
+    /* 訂單列表：移除價格欄位 */
     .order-list {
       margin: 20px auto;
       width: 90%;
@@ -61,10 +61,6 @@
     .order-list th {
       background-color: #ddd;
       color: #333;
-    }
-    .total-price {
-      font-size: 22px;
-      margin-top: 10px;
     }
     /* 底部動作按鈕區：左右排列 */
     .actions {
@@ -214,7 +210,7 @@
     <h2>葉阿姨點餐系統</h2>
   </header>
 
-  <!-- 主選單按鈕區：一行一行排列 -->
+  <!-- 主選單按鈕區（品項） -->
   <div class="menu-container">
     <button class="menu-button" onclick="openModal('蔥油餅')">蔥油餅</button>
     <button class="menu-button" onclick="openModal('麵線')">麵線</button>
@@ -231,15 +227,11 @@
         <th>品項</th>
         <th>數量</th>
         <th>備註</th>
-        <th>價格</th>
         <th>操作</th>
       </tr>
     </thead>
     <tbody id="orderTable"></tbody>
   </table>
-  <div class="total-price">
-    總金額: $<span id="totalPrice">0</span>
-  </div>
 
   <!-- 底部動作按鈕區：左右排列 -->
   <div class="actions">
@@ -319,6 +311,7 @@
             <button onclick="changeValue('soupQuantityInput', 1)">+</button>
           </div>
         </div>
+        <!-- 確認點餐按鈕容器 -->
         <div id="confirmContainer"></div>
       </div>
     </div>
@@ -417,7 +410,7 @@
       document.getElementById("stepSubType").style.display = "block";
       document.getElementById("stepSecond").classList.add("hidden");
       document.getElementById("stepThird").classList.add("hidden");
-      // 清除確認按鈕容器
+      // 清除確認按鈕容器，避免重複插入
       var confirmContainer = document.getElementById("confirmContainer");
       if (confirmContainer) { confirmContainer.remove(); }
       loadSubTypeButtons(category);
@@ -493,7 +486,7 @@
       document.getElementById("soupQuantityBlock").classList.add("hidden");
       document.getElementById("eggBlock").classList.add("hidden");
       
-      // 移除確認容器
+      // 移除已存在的確認按鈕容器
       var confirmContainer = document.getElementById("confirmContainer");
       if (confirmContainer) { confirmContainer.remove(); }
 
@@ -532,6 +525,7 @@
       if(document.getElementById("confirmContainer")) return;
       var confirmContainer = document.createElement("div");
       confirmContainer.id = "confirmContainer";
+      // 插入一個換行後再插入確認按鈕
       confirmContainer.innerHTML = "<br><button class='menu-button-sm' onclick='confirmOrder()'>確認點餐</button>";
       document.getElementById("stepThird").appendChild(confirmContainer);
     }
@@ -665,18 +659,14 @@
 
     function updateOrderList() {
       let orderTable = document.getElementById("orderTable");
-      let totalPrice = 0;
       orderTable.innerHTML = "";
       for(let item in orders) {
-        let { price, quantity, remark } = orders[item];
-        let itemTotal = price * quantity;
-        totalPrice += itemTotal;
+        let { quantity, remark } = orders[item];
         let row = `
           <tr>
             <td>${item}</td>
             <td>${quantity}</td>
             <td>${remark || ""}</td>
-            <td>$${itemTotal}</td>
             <td>
               <button class="menu-button-sm" onclick="openCustomModal('${item}')">客製</button>
             </td>
@@ -684,7 +674,6 @@
         `;
         orderTable.innerHTML += row;
       }
-      document.getElementById("totalPrice").innerText = totalPrice;
       localStorage.setItem("currentOrder", JSON.stringify(orders));
     }
 
