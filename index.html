@@ -249,9 +249,9 @@
     總金額: $<span id="totalPrice">0</span>
   </div>
   <div class="actions">
-    <!-- 查看目前訂單（未完成點餐預覽） -->
+    <!-- 查看目前訂單（預覽 currentOrder） -->
     <button class="menu-button" onclick="goToOrderPage()">查看目前訂單</button>
-    <!-- 完成訂單，產生新訂單後加入多筆訂單陣列 -->
+    <!-- 完成訂單，產生新訂單後加入 allOrders 陣列 -->
     <button class="menu-button" onclick="completeOrder()">完成訂單 (跳轉至 order.html)</button>
   </div>
 
@@ -413,7 +413,6 @@
       }
     };
 
-    // 每個品項的點餐流程
     let flows = {
       "蔥油餅": ["SUB_TYPE", "QUANTITY", "SPICY"],
       "麵線": ["SUB_TYPE", "QUANTITY", "SPICY"],
@@ -459,7 +458,6 @@
       drinkTotal = 1;
       drinkIce = 0;
       soupQty = 1;
-
       let gQ = document.getElementById("generalQuantityInput");
       if(gQ) gQ.value = 1;
       let spI = document.getElementById("spicyInput");
@@ -698,19 +696,33 @@
         orderTable.innerHTML += row;
       }
       document.getElementById("totalPrice").innerText = totalPrice;
-      // 將目前點餐資料同步至 localStorage (供預覽用，可另外區分 key)
+      // 同步目前點餐資料至 localStorage (供預覽用)
       localStorage.setItem("currentOrder", JSON.stringify(orders));
     }
 
+    // 新增：取得下一個訂單編號（固定三位數，從001開始）
+    function getNextOrderNumber() {
+      let counter = localStorage.getItem("orderNumberCounter");
+      if(!counter) {
+        counter = 1;
+      } else {
+        counter = parseInt(counter);
+      }
+      let orderNumber = String(counter).padStart(3, "0");
+      counter++;
+      localStorage.setItem("orderNumberCounter", counter);
+      return orderNumber;
+    }
+
     function completeOrder() {
-      // 產生訂單編號（以時間戳記方式）
-      let orderId = "order-" + new Date().getTime();
+      // 取得下一個訂單編號（例如 "001", "002", …）
+      let orderNumber = getNextOrderNumber();
       // 組成新訂單物件
       let newOrder = {
-        orderId: orderId,
+        orderId: orderNumber,
         items: orders
       };
-      // 讀取現有所有訂單，若無則建立空陣列
+      // 讀取現有的所有訂單（若無則建立空陣列）
       let allOrders = JSON.parse(localStorage.getItem("allOrders")) || [];
       allOrders.push(newOrder);
       localStorage.setItem("allOrders", JSON.stringify(allOrders));
@@ -721,7 +733,6 @@
       window.location.href = "order.html";
     }
 
-    // 查看目前訂單按鈕
     function goToOrderPage() {
       window.location.href = "order.html";
     }
