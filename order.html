@@ -51,17 +51,34 @@
       border-collapse: collapse;
       margin-top: 10px;
     }
-    .order-list th, .order-list td {
+    .order-list th,
+    .order-list td {
       border: 1px solid #aaa;
       padding: 8px;
       font-size: 16px;
       text-align: center;
+      /* 防止文字選取 */
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
     }
     .order-list th {
       background: #ddd;
       color: #333;
     }
-    /* 外帶/內用資訊將顯示在表格下方 */
+    /* 點擊產品名稱時切換淡紅色 */
+    .faded {
+      color: #ff6666;
+    }
+    /* 顯示總金額 */
+    .total-price {
+      font-size: 18px;
+      text-align: right;
+      margin-top: 5px;
+      font-weight: bold;
+    }
+    /* 外帶/內用資訊 */
     .order-type {
       margin-top: 10px;
       font-size: 16px;
@@ -94,7 +111,7 @@
     .menu-button:hover {
       background-color: #333;
     }
-    /* 備註設定視窗 */
+    /* 備註設定 Modal */
     .note-modal {
       display: none;
       position: fixed;
@@ -154,7 +171,7 @@
   </header>
 
   <div class="order-container" id="orderContainer">
-    <!-- 訂單將在此處顯示 -->
+    <!-- 訂單內容將在此處生成 -->
   </div>
 
   <div class="actions">
@@ -162,7 +179,7 @@
     <button class="menu-button" onclick="resetOrderNumber()">重置編號</button>
   </div>
 
-  <!-- 備註設定視窗（Note Modal） -->
+  <!-- 備註設定 Modal -->
   <div id="noteModal" class="note-modal">
     <div class="note-modal-content">
       <span class="close-note" onclick="closeNoteModal()">&times;</span>
@@ -194,18 +211,18 @@
 
   <script>
     let currentOrderIndex = null;
-
-    function goBackMenu() {
+    
+    function goBackMenu(){
       window.location.href = "index.html";
     }
     function resetOrderNumber(){
-      if(confirm("是否確定重置訂單編號？")) {
+      if(confirm("是否確定重置訂單編號？")){
         localStorage.setItem("orderNumberCounter", 1);
         alert("訂單編號已重置。");
       }
     }
     
-    function toggleOrderType() {
+    function toggleOrderType(){
       let isTakeout = document.getElementById("takeout").checked;
       document.getElementById("takeoutOption").style.display = isTakeout ? "block" : "none";
       document.getElementById("dineinOption").style.display = isTakeout ? "none" : "block";
@@ -213,7 +230,6 @@
     
     function openNoteModal(index){
       currentOrderIndex = index;
-      // 讀取該筆訂單若有設定過備註資訊，則更新Modal的預設值
       let ordersStr = localStorage.getItem("allOrders");
       if(ordersStr){
         let allOrders = JSON.parse(ordersStr);
@@ -231,7 +247,6 @@
           document.getElementById("dineinOption").style.display = "none";
           document.getElementById("pickupTime").value = order.pickupTime || "";
         } else {
-          // 若無設定，預設外帶
           document.getElementById("takeout").checked = true;
           document.getElementById("dinein").checked = false;
           document.getElementById("takeoutOption").style.display = "block";
@@ -265,7 +280,7 @@
       let ordersStr = localStorage.getItem("allOrders");
       let orderContainer = document.getElementById("orderContainer");
       orderContainer.innerHTML = "";
-      if(!ordersStr || JSON.parse(ordersStr).length === 0) {
+      if(!ordersStr || JSON.parse(ordersStr).length === 0){
         orderContainer.innerHTML = "<p>目前沒有訂單</p>";
         return;
       }
@@ -283,18 +298,36 @@
         
         let table = document.createElement("table");
         table.className = "order-list";
-        table.innerHTML = `<thead><tr><th>品項</th><th>數量</th><th>備註</th><th>小計</th></tr></thead><tbody></tbody>`;
+        table.innerHTML = `<thead>
+          <tr>
+            <th>品項</th>
+            <th>數量</th>
+            <th>備註</th>
+            <th>小計</th>
+          </tr>
+        </thead><tbody></tbody>`;
         let tbody = table.querySelector("tbody");
-        for(let itemName in order.items) {
+        let orderTotal = 0;
+        for(let itemName in order.items){
           let item = order.items[itemName];
+          let subTotal = item.price * item.quantity;
+          orderTotal += subTotal;
           let row = document.createElement("tr");
-          row.innerHTML = `<td>${itemName}</td><td>${item.quantity}</td><td>${item.remark || "-"}</td><td>$${item.price * item.quantity}</td>`;
+          row.innerHTML = `<td onclick="this.classList.toggle('faded')">${itemName}</td>
+                           <td>${item.quantity}</td>
+                           <td>${item.remark || "-"}</td>
+                           <td>$${subTotal}</td>`;
           tbody.appendChild(row);
         }
-        table.appendChild(tbody);
         orderBlock.appendChild(table);
         
-        // 若該筆訂單有設定外帶/內用資訊則在表格下方顯示
+        // 顯示總金額
+        let totalDiv = document.createElement("div");
+        totalDiv.className = "total-price";
+        totalDiv.innerText = "總金額：$" + orderTotal;
+        orderBlock.appendChild(totalDiv);
+        
+        // 顯示外帶/內用資訊（若有設定）
         if(order.orderType){
           let noteDiv = document.createElement("div");
           noteDiv.className = "order-type " + (order.orderType === "外帶" ? "takeout" : "dinein");
