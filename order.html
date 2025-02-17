@@ -5,7 +5,7 @@
   <title>訂單管理 - 葉阿姨點餐系統</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* 與主頁相同的基本樣式 */
+    /* 基本樣式 */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
@@ -24,7 +24,6 @@
       font-size: 24px;
       color: #333;
     }
-    /* 訂單區域與主頁訂單列表風格相同 */
     .order-container {
       max-width: 600px;
       margin: 0 auto;
@@ -37,7 +36,13 @@
       padding: 10px;
       text-align: left;
     }
-    .order-block h3 {
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px;
+    }
+    .order-header h3 {
       margin: 0;
       font-size: 20px;
     }
@@ -46,20 +51,28 @@
       border-collapse: collapse;
       margin-top: 10px;
     }
-    .order-list th,
-    .order-list td {
+    .order-list th, .order-list td {
       border: 1px solid #aaa;
       padding: 8px;
       font-size: 16px;
+      text-align: center;
     }
     .order-list th {
-      background-color: #ddd;
+      background: #ddd;
       color: #333;
     }
-    .total-price {
-      font-size: 18px;
-      text-align: right;
-      margin-top: 5px;
+    /* 外帶/內用資訊將顯示在表格下方 */
+    .order-type {
+      margin-top: 10px;
+      font-size: 16px;
+      padding: 8px;
+      text-align: center;
+    }
+    .takeout {
+      background-color: #ffcccc;
+    }
+    .dinein {
+      background-color: #cce5ff;
     }
     /* 底部動作按鈕區：左右排列 */
     .actions {
@@ -81,6 +94,58 @@
     .menu-button:hover {
       background-color: #333;
     }
+    /* 備註設定視窗 */
+    .note-modal {
+      display: none;
+      position: fixed;
+      z-index: 10000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      overflow-y: auto;
+    }
+    .note-modal-content {
+      background-color: #f9f9f9;
+      margin: 15% auto;
+      padding: 20px;
+      width: 300px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    .close-note {
+      position: absolute;
+      right: 10px;
+      top: 5px;
+      font-size: 24px;
+      color: #f00;
+      cursor: pointer;
+    }
+    .note-modal label {
+      font-size: 16px;
+      margin-right: 5px;
+    }
+    .note-modal input[type="time"],
+    .note-modal select {
+      font-size: 16px;
+      padding: 4px;
+      margin-bottom: 10px;
+    }
+    .note-modal button {
+      font-size: 16px;
+      padding: 6px 12px;
+      border: none;
+      background-color: #555;
+      color: #fff;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      margin-top: 10px;
+    }
+    .note-modal button:hover {
+      background-color: #333;
+    }
   </style>
 </head>
 <body>
@@ -89,110 +154,169 @@
   </header>
 
   <div class="order-container" id="orderContainer">
-    <!-- 此處依序產生訂單區塊 -->
+    <!-- 訂單將在此處顯示 -->
   </div>
 
-  <!-- 底部動作按鈕區：左側「返回 Menu」，右側「重置編號」 -->
   <div class="actions">
     <button class="menu-button" onclick="goBackMenu()">返回 Menu</button>
     <button class="menu-button" onclick="resetOrderNumber()">重置編號</button>
   </div>
 
+  <!-- 備註設定視窗（Note Modal） -->
+  <div id="noteModal" class="note-modal">
+    <div class="note-modal-content">
+      <span class="close-note" onclick="closeNoteModal()">&times;</span>
+      <h3>設定備註</h3>
+      <div>
+        <input type="radio" id="takeout" name="orderType" value="外帶" checked onclick="toggleOrderType()">
+        <label for="takeout">外帶</label>
+        <input type="radio" id="dinein" name="orderType" value="內用" onclick="toggleOrderType()">
+        <label for="dinein">內用</label>
+      </div>
+      <div id="takeoutOption">
+        <label>取餐時間：</label>
+        <input type="time" id="pickupTime">
+      </div>
+      <div id="dineinOption" style="display:none;">
+        <label>桌號：</label>
+        <select id="tableNumber">
+          <option value="R1">R1</option>
+          <option value="R2">R2</option>
+          <option value="M1">M1</option>
+          <option value="M2">M2</option>
+          <option value="M3">M3</option>
+          <option value="L1">L1</option>
+        </select>
+      </div>
+      <button onclick="saveNoteInfo()">儲存</button>
+    </div>
+  </div>
+
   <script>
-    // 返回主頁
-    function goBackMenu(){
+    let currentOrderIndex = null;
+
+    function goBackMenu() {
       window.location.href = "index.html";
     }
-    // 重置訂單編號計數器（使下一筆訂單從 001 開始）
     function resetOrderNumber(){
-      if(confirm("是否確定重置訂單編號？這將把下一筆訂單編號重置為 001。")){
+      if(confirm("是否確定重置訂單編號？")) {
         localStorage.setItem("orderNumberCounter", 1);
         alert("訂單編號已重置。");
       }
     }
-    // 當頁面載入時，從 localStorage 讀取 allOrders 陣列
-    window.onload = function(){
+    
+    function toggleOrderType() {
+      let isTakeout = document.getElementById("takeout").checked;
+      document.getElementById("takeoutOption").style.display = isTakeout ? "block" : "none";
+      document.getElementById("dineinOption").style.display = isTakeout ? "none" : "block";
+    }
+    
+    function openNoteModal(index){
+      currentOrderIndex = index;
+      // 讀取該筆訂單若有設定過備註資訊，則更新Modal的預設值
+      let ordersStr = localStorage.getItem("allOrders");
+      if(ordersStr){
+        let allOrders = JSON.parse(ordersStr);
+        let order = allOrders[index];
+        if(order.orderType === "內用"){
+          document.getElementById("dinein").checked = true;
+          document.getElementById("takeout").checked = false;
+          document.getElementById("dineinOption").style.display = "block";
+          document.getElementById("takeoutOption").style.display = "none";
+          document.getElementById("tableNumber").value = order.tableNumber || "R1";
+        } else if(order.orderType === "外帶"){
+          document.getElementById("takeout").checked = true;
+          document.getElementById("dinein").checked = false;
+          document.getElementById("takeoutOption").style.display = "block";
+          document.getElementById("dineinOption").style.display = "none";
+          document.getElementById("pickupTime").value = order.pickupTime || "";
+        } else {
+          // 若無設定，預設外帶
+          document.getElementById("takeout").checked = true;
+          document.getElementById("dinein").checked = false;
+          document.getElementById("takeoutOption").style.display = "block";
+          document.getElementById("dineinOption").style.display = "none";
+        }
+      }
+      document.getElementById("noteModal").style.display = "block";
+    }
+    
+    function closeNoteModal(){
+      document.getElementById("noteModal").style.display = "none";
+    }
+    
+    function saveNoteInfo(){
+      let allOrders = JSON.parse(localStorage.getItem("allOrders"));
+      let order = allOrders[currentOrderIndex];
+      if(document.getElementById("takeout").checked){
+        order.orderType = "外帶";
+        order.pickupTime = document.getElementById("pickupTime").value;
+      } else {
+        order.orderType = "內用";
+        order.tableNumber = document.getElementById("tableNumber").value;
+      }
+      allOrders[currentOrderIndex] = order;
+      localStorage.setItem("allOrders", JSON.stringify(allOrders));
+      closeNoteModal();
+      loadOrders();
+    }
+    
+    function loadOrders(){
       let ordersStr = localStorage.getItem("allOrders");
       let orderContainer = document.getElementById("orderContainer");
-      if(!ordersStr) {
+      orderContainer.innerHTML = "";
+      if(!ordersStr || JSON.parse(ordersStr).length === 0) {
         orderContainer.innerHTML = "<p>目前沒有訂單</p>";
         return;
       }
       let allOrders = JSON.parse(ordersStr);
-      if(allOrders.length === 0) {
-        orderContainer.innerHTML = "<p>目前沒有訂單</p>";
-        return;
-      }
-      allOrders.forEach(function(order, index){
+      allOrders.forEach((order, index) => {
         let orderBlock = document.createElement("div");
         orderBlock.className = "order-block";
         
-        // 訂單 Header：顯示訂單編號和刪除按鈕
         let headerDiv = document.createElement("div");
-        headerDiv.style.display = "flex";
-        headerDiv.style.justifyContent = "space-between";
-        headerDiv.style.alignItems = "center";
-        let orderIdHeader = document.createElement("h3");
-        orderIdHeader.innerText = "訂單編號：" + order.orderId;
-        let deleteBtn = document.createElement("button");
-        deleteBtn.className = "menu-button";
-        deleteBtn.style.width = "auto";
-        deleteBtn.innerText = "刪除訂單";
-        deleteBtn.onclick = function(){
-          deleteOrder(index);
-        };
-        headerDiv.appendChild(orderIdHeader);
-        headerDiv.appendChild(deleteBtn);
+        headerDiv.className = "order-header";
+        headerDiv.innerHTML = `<h3>訂單編號：${order.orderId}</h3>
+          <button onclick="openNoteModal(${index})">備註</button>
+          <button onclick="deleteOrder(${index})">刪除訂單</button>`;
         orderBlock.appendChild(headerDiv);
-
-        // 建立訂單明細表格
+        
         let table = document.createElement("table");
         table.className = "order-list";
-        table.innerHTML = `
-          <thead>
-            <tr>
-              <th>品項</th>
-              <th>數量</th>
-              <th>備註</th>
-              <th>小計</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        `;
+        table.innerHTML = `<thead><tr><th>品項</th><th>數量</th><th>備註</th><th>小計</th></tr></thead><tbody></tbody>`;
         let tbody = table.querySelector("tbody");
-        let total = 0;
         for(let itemName in order.items) {
           let item = order.items[itemName];
-          let itemTotal = item.price * item.quantity;
-          total += itemTotal;
           let row = document.createElement("tr");
-          row.innerHTML = `
-            <td>${itemName}</td>
-            <td>${item.quantity}</td>
-            <td>${item.remark || ""}</td>
-            <td>$${itemTotal}</td>
-          `;
+          row.innerHTML = `<td>${itemName}</td><td>${item.quantity}</td><td>${item.remark || "-"}</td><td>$${item.price * item.quantity}</td>`;
           tbody.appendChild(row);
         }
+        table.appendChild(tbody);
         orderBlock.appendChild(table);
-
-        let totalDiv = document.createElement("div");
-        totalDiv.className = "total-price";
-        totalDiv.innerText = "總金額：$" + total;
-        orderBlock.appendChild(totalDiv);
-
+        
+        // 若該筆訂單有設定外帶/內用資訊則在表格下方顯示
+        if(order.orderType){
+          let noteDiv = document.createElement("div");
+          noteDiv.className = "order-type " + (order.orderType === "外帶" ? "takeout" : "dinein");
+          if(order.orderType === "外帶"){
+            noteDiv.innerText = `外帶，取餐時間：${order.pickupTime || "未設定"}`;
+          } else {
+            noteDiv.innerText = `內用，桌號：${order.tableNumber || "未設定"}`;
+          }
+          orderBlock.appendChild(noteDiv);
+        }
         orderContainer.appendChild(orderBlock);
       });
-    };
-    // 刪除單筆訂單，更新 allOrders 陣列後重載頁面
+    }
+    
     function deleteOrder(index){
-      let ordersStr = localStorage.getItem("allOrders");
-      if(!ordersStr) return;
-      let allOrders = JSON.parse(ordersStr);
+      let allOrders = JSON.parse(localStorage.getItem("allOrders"));
       allOrders.splice(index, 1);
       localStorage.setItem("allOrders", JSON.stringify(allOrders));
-      window.location.reload();
+      loadOrders();
     }
+    
+    window.onload = loadOrders;
   </script>
 </body>
 </html>
