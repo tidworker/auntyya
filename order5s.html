@@ -36,6 +36,7 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 10px;
+      padding: 5px;
     }
     .order-header h3 {
       margin: 0;
@@ -114,6 +115,9 @@
       let allOrders = JSON.parse(ordersStr);
       // 僅顯示前三筆訂單
       let visibleOrders = allOrders.slice(0, 3);
+      // 定義標題底色輪替陣列
+      const headerColors = ["#ffcccc", "#ffffcc", "#ccffcc"];
+      
       visibleOrders.forEach((order, orderIndex) => {
         // 將 order.items 轉為陣列：[ [itemName, item], ... ]
         let itemsArr = Object.entries(order.items);
@@ -125,21 +129,21 @@
           let orderBlock = document.createElement("div");
           orderBlock.className = "order-block";
           
-          // 第一個區塊顯示完整訂單標題與刪除按鈕，其餘區塊僅顯示續
+          // 建立訂單標題 headerDiv
+          let headerDiv = document.createElement("div");
+          headerDiv.className = "order-header";
+          // 設定背景色：輪替使用 headerColors 陣列
+          headerDiv.style.backgroundColor = headerColors[orderIndex % headerColors.length];
+          
           if(i === 0){
-            let headerDiv = document.createElement("div");
-            headerDiv.className = "order-header";
             headerDiv.innerHTML = `<h3>訂單編號：${order.orderId}</h3>
               <button onclick="deleteOrder(${orderIndex})">刪除訂單</button>`;
-            orderBlock.appendChild(headerDiv);
           } else {
-            let headerDiv = document.createElement("div");
-            headerDiv.className = "order-header";
             headerDiv.innerHTML = `<h3>訂單編號：${order.orderId} (續)</h3>`;
-            orderBlock.appendChild(headerDiv);
           }
+          orderBlock.appendChild(headerDiv);
           
-          // 建立品項表格（僅顯示此組 5 筆品項，不再顯示小計欄位）
+          // 建立品項表格（僅顯示此組 5 筆品項，不顯示小計欄位）
           let table = document.createElement("table");
           table.className = "order-list";
           table.innerHTML = `<thead>
