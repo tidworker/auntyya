@@ -9,30 +9,19 @@
     body {
       font-family: Arial, sans-serif;
       margin: 0;
-      padding: 0;
+      padding: 10px;
       text-align: center;
       background-color: #f0f0f0;
       color: #333;
     }
-    header {
-      background: #ddd;
-      padding: 15px 0;
-      margin-bottom: 20px;
-    }
-    header h2 {
-      margin: 0;
-      font-size: 24px;
-      color: #333;
-    }
-    /* 訂單容器：採用 Flex 佈局，自動換行 */
+    /* 訂單容器：使用 Flex 佈局，平均分配各個區塊 */
     .order-container {
       display: flex;
       flex-wrap: wrap;
       gap: 20px;
-      padding: 10px;
-      justify-content: center;
+      justify-content: space-evenly;
     }
-    /* 訂單區塊：固定寬度，寬畫面時一行最多顯示 3 筆 */
+    /* 訂單區塊：每個區塊最多顯示 5 筆品項 */
     .order-block {
       background-color: #fff;
       border: 1px solid #aaa;
@@ -46,7 +35,7 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 5px;
+      margin-bottom: 10px;
     }
     .order-header h3 {
       margin: 0;
@@ -55,7 +44,7 @@
     .order-list {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
+      margin-bottom: 10px;
     }
     .order-list th, .order-list td {
       border: 1px solid #aaa;
@@ -75,10 +64,8 @@
     .total-price {
       font-size: 18px;
       text-align: right;
-      margin-top: 5px;
       font-weight: bold;
     }
-    /* 外帶/內用資訊 */
     .order-type {
       margin-top: 10px;
       font-size: 16px;
@@ -91,11 +78,7 @@
     .dinein {
       background-color: #cce5ff;
     }
-    /* 高解析度裝置調整 */
     @media screen and (min-width: 1080px) {
-      header h2 {
-        font-size: 32px;
-      }
       .order-header h3 {
         font-size: 28px;
       }
@@ -114,17 +97,12 @@
   </style>
 </head>
 <body>
-  <header>
-    <h2>訂單管理</h2>
-  </header>
-
-  <!-- 訂單內容 -->
+  <!-- 移除標題列，僅顯示訂單內容 -->
   <div class="order-container" id="orderContainer">
-    <!-- 只顯示前三筆訂單，超過部分隱藏，待前面訂單完成後自動顯示 -->
+    <!-- 只顯示前三筆訂單（拆分成多個區塊，每區最多 5 筆品項） -->
   </div>
 
   <script>
-    // 載入訂單並更新頁面
     function loadOrders(){
       let ordersStr = localStorage.getItem("allOrders");
       let orderContainer = document.getElementById("orderContainer");
@@ -136,75 +114,83 @@
       let allOrders = JSON.parse(ordersStr);
       // 僅顯示前三筆訂單
       let visibleOrders = allOrders.slice(0, 3);
-      visibleOrders.forEach((order, index) => {
-        let orderBlock = document.createElement("div");
-        orderBlock.className = "order-block";
-        
-        // 訂單標題與刪除訂單按鈕
-        let headerDiv = document.createElement("div");
-        headerDiv.className = "order-header";
-        headerDiv.innerHTML = `<h3>訂單編號：${order.orderId}</h3>
-          <button onclick="deleteOrder(${index})">刪除訂單</button>`;
-        orderBlock.appendChild(headerDiv);
-        
-        // 訂單明細表格
-        let table = document.createElement("table");
-        table.className = "order-list";
-        table.innerHTML = `<thead>
-          <tr>
-            <th>品項</th>
-            <th>數量</th>
-            <th>備註</th>
-            <th>小計</th>
-          </tr>
-        </thead><tbody></tbody>`;
-        let tbody = table.querySelector("tbody");
-        let orderTotal = 0;
-        for(let itemName in order.items){
-          let item = order.items[itemName];
-          let subTotal = item.price * item.quantity;
-          orderTotal += subTotal;
-          let row = document.createElement("tr");
-          row.innerHTML = `<td onclick="this.classList.toggle('faded')">${itemName}</td>
-                           <td>${item.quantity}</td>
-                           <td>${item.remark || "-"}</td>
-                           <td>$${subTotal}</td>`;
-          tbody.appendChild(row);
-        }
-        orderBlock.appendChild(table);
-        
-        // 總金額
-        let totalDiv = document.createElement("div");
-        totalDiv.className = "total-price";
-        totalDiv.innerText = "總金額：$" + orderTotal;
-        orderBlock.appendChild(totalDiv);
-        
-        // 訂單類型資訊（外帶僅顯示取餐時間）
-        if(order.orderType){
-          let typeDiv = document.createElement("div");
-          typeDiv.className = "order-type " + (order.orderType === "外帶" ? "takeout" : "dinein");
-          if(order.orderType === "外帶"){
-            typeDiv.innerText = `外帶，取餐時間：${order.pickupTime || "未設定"}`;
+      visibleOrders.forEach((order, orderIndex) => {
+        // 將 order.items 轉為陣列：[ [itemName, item], ... ]
+        let itemsArr = Object.entries(order.items);
+        // 計算總金額
+        let orderTotal = itemsArr.reduce((sum, [_, item]) => sum + item.price * item.quantity, 0);
+        // 拆分成每組最多 5 筆品項
+        for(let i = 0; i < itemsArr.length; i += 5){
+          let chunk = itemsArr.slice(i, i + 5);
+          let orderBlock = document.createElement("div");
+          orderBlock.className = "order-block";
+          
+          // 第一個區塊顯示完整訂單標題與刪除按鈕，其餘區塊僅顯示續
+          if(i === 0){
+            let headerDiv = document.createElement("div");
+            headerDiv.className = "order-header";
+            headerDiv.innerHTML = `<h3>訂單編號：${order.orderId}</h3>
+              <button onclick="deleteOrder(${orderIndex})">刪除訂單</button>`;
+            orderBlock.appendChild(headerDiv);
           } else {
-            typeDiv.innerText = `內用，桌號：${order.tableNumber || "未設定"}`;
+            let headerDiv = document.createElement("div");
+            headerDiv.className = "order-header";
+            headerDiv.innerHTML = `<h3>訂單編號：${order.orderId} (續)</h3>`;
+            orderBlock.appendChild(headerDiv);
           }
-          orderBlock.appendChild(typeDiv);
+          
+          // 建立品項表格（僅顯示此組 5 筆品項，不再顯示小計欄位）
+          let table = document.createElement("table");
+          table.className = "order-list";
+          table.innerHTML = `<thead>
+            <tr>
+              <th>品項</th>
+              <th>數量</th>
+              <th>備註</th>
+            </tr>
+          </thead><tbody></tbody>`;
+          let tbody = table.querySelector("tbody");
+          chunk.forEach(([itemName, item]) => {
+            let row = document.createElement("tr");
+            row.innerHTML = `<td onclick="this.classList.toggle('faded')">${itemName}</td>
+                             <td>${item.quantity}</td>
+                             <td>${item.remark || "-"}</td>`;
+            tbody.appendChild(row);
+          });
+          orderBlock.appendChild(table);
+          
+          // 僅在第一個區塊顯示總金額與訂單類型資訊
+          if(i === 0){
+            let totalDiv = document.createElement("div");
+            totalDiv.className = "total-price";
+            totalDiv.innerText = "總金額：$" + orderTotal;
+            orderBlock.appendChild(totalDiv);
+            
+            if(order.orderType){
+              let typeDiv = document.createElement("div");
+              typeDiv.className = "order-type " + (order.orderType === "外帶" ? "takeout" : "dinein");
+              if(order.orderType === "外帶"){
+                typeDiv.innerText = `外帶，取餐時間：${order.pickupTime || "未設定"}`;
+              } else {
+                typeDiv.innerText = `內用，桌號：${order.tableNumber || "未設定"}`;
+              }
+              orderBlock.appendChild(typeDiv);
+            }
+          }
+          
+          orderContainer.appendChild(orderBlock);
         }
-        
-        orderContainer.appendChild(orderBlock);
       });
     }
     
-    // 刪除訂單：注意此 index 參數對應的是可見訂單在原始陣列中的位置（前三筆）
-    function deleteOrder(visibleIndex){
+    // 刪除訂單（visibleOrders 中的索引與 allOrders 中對應相同）
+    function deleteOrder(orderIndex){
       let allOrders = JSON.parse(localStorage.getItem("allOrders"));
-      // 由於 visibleOrders = allOrders.slice(0, 3)，故 visibleIndex 與 allOrders 中的索引相同
-      allOrders.splice(visibleIndex, 1);
+      allOrders.splice(orderIndex, 1);
       localStorage.setItem("allOrders", JSON.stringify(allOrders));
       loadOrders();
     }
     
-    // 每 5 秒自動更新訂單
     setInterval(loadOrders, 5000);
     window.onload = loadOrders;
   </script>
