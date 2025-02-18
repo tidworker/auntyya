@@ -44,7 +44,7 @@
     .menu-button:hover {
       background-color: #333;
     }
-    /* 訂單列表：移除價格欄位 */
+    /* 訂單列表 */
     .order-list {
       margin: 20px auto;
       width: 90%;
@@ -61,6 +61,14 @@
     .order-list th {
       background-color: #ddd;
       color: #333;
+    }
+    /* 總金額區塊 (左右置中) */
+    #totalAmount {
+      margin: 10px auto;
+      font-size: 20px;
+      font-weight: bold;
+      text-align: center;
+      max-width: 600px;
     }
     /* 底部動作按鈕區：左右排列 */
     .actions {
@@ -82,7 +90,7 @@
     .menu-button-action:hover {
       background-color: #333;
     }
-    /* Modal 與其他區塊保持原有設定 */
+    /* Modal 與其他區塊 */
     .modal,
     .modal-cust {
       display: none;
@@ -209,7 +217,7 @@
   <header>
     <h2>葉阿姨點餐系統</h2>
   </header>
-
+  
   <!-- 主選單按鈕區（品項） -->
   <div class="menu-container">
     <button class="menu-button" onclick="openModal('蔥油餅')">蔥油餅</button>
@@ -218,7 +226,7 @@
     <button class="menu-button" onclick="openModal('飲料')">飲料</button>
     <button class="menu-button" onclick="openModal('熱湯')">熱湯</button>
   </div>
-
+  
   <!-- 訂單列表 -->
   <h3>訂單列表</h3>
   <table class="order-list">
@@ -227,18 +235,19 @@
         <th>品項</th>
         <th>數量</th>
         <th>備註</th>
-        <th>操作</th>
       </tr>
     </thead>
     <tbody id="orderTable"></tbody>
   </table>
-
+  <!-- 顯示總金額 (左右置中) -->
+  <div id="totalAmount">總金額: $0</div>
+  
   <!-- 底部動作按鈕區：左右排列 -->
   <div class="actions">
     <button class="menu-button-action" onclick="goToOrderPage()">查看目前訂單</button>
     <button class="menu-button-action" onclick="completeOrder()">完成訂單</button>
   </div>
-
+  
   <!-- 多步驟點餐 Modal -->
   <div id="mainModal" class="modal">
     <div class="modal-content">
@@ -316,7 +325,7 @@
       </div>
     </div>
   </div>
-
+  
   <!-- 客製(備註) Modal -->
   <div id="customModal" class="modal-cust">
     <div class="modal-content-cust">
@@ -362,11 +371,11 @@
         <button class="menu-button-sm" onclick="clearRemark()">清除</button>
         <button class="menu-button-sm" onclick="backspaceRemark()">退格</button>
         <button class="menu-button-sm" onclick="confirmRemark()">確定</button>
-        <button class="menu-button-sm" style="background-color:#900; color:white;" onclick="deleteItemInCustom()">刪除</button>
+        <button class="menu-button-sm" style="background-color:#900; color:white;" onclick="deleteItemInCustom()">刪除品項</button>
       </div>
     </div>
   </div>
-
+  
   <script>
     /* ===================== 1) 資料設定 ===================== */
     const subTypes = {
@@ -485,7 +494,7 @@
       document.getElementById("drinkIceBlock").classList.add("hidden");
       document.getElementById("soupQuantityBlock").classList.add("hidden");
       document.getElementById("eggBlock").classList.add("hidden");
-      
+        
       // 移除已存在的確認按鈕容器
       var confirmContainer = document.getElementById("confirmContainer");
       if (confirmContainer) { confirmContainer.remove(); }
@@ -582,6 +591,7 @@
       }
     }
 
+    // 修改後的 confirmOrder 函式，將加辣、荷包蛋、冰/溫資訊移至備註欄位
     function confirmOrder() {
       let gQ = document.getElementById("generalQuantityInput");
       if(gQ) generalQuantity = parseInt(gQ.value) || 1;
@@ -599,45 +609,43 @@
       let finalItemName = "";
       let finalQuantity = 1;
       let extraCost = eggQty * 15;
+      let remark = "";  // 用來存放備註資訊
+
       switch(currentCategory) {
         case "蔥油餅":
           finalItemName = (selectedSubType === "加蛋") ? "蔥油餅加蛋" : "蔥油餅";
-          if(spicyQty > 0) finalItemName += ` (加辣x${spicyQty})`;
-          if(eggQty > 0) finalItemName += ` (荷包蛋x${eggQty})`;
           finalQuantity = generalQuantity;
-          addToOrder(finalItemName, selectedPrice + extraCost, finalQuantity);
+          if(spicyQty > 0) remark += `加辣x${spicyQty} `;
+          if(eggQty > 0) remark += `荷包蛋x${eggQty}`;
+          addToOrder(finalItemName, selectedPrice + extraCost, finalQuantity, remark.trim());
           break;
+
         case "麵線":
           finalItemName = selectedSubType;
-          if(spicyQty > 0) finalItemName += ` (加辣x${spicyQty})`;
-          if(eggQty > 0) finalItemName += ` (荷包蛋x${eggQty})`;
           finalQuantity = generalQuantity;
-          addToOrder(finalItemName, selectedPrice + extraCost, finalQuantity);
+          if(spicyQty > 0) remark += `加辣x${spicyQty} `;
+          if(eggQty > 0) remark += `荷包蛋x${eggQty}`;
+          addToOrder(finalItemName, selectedPrice + extraCost, finalQuantity, remark.trim());
           break;
+
         case "炒麵":
           finalItemName = selectedSubType;
-          if(spicyQty > 0) finalItemName += ` (加辣x${spicyQty})`;
-          if(eggQty > 0) finalItemName += ` (荷包蛋x${eggQty})`;
           finalQuantity = generalQuantity;
-          addToOrder(finalItemName, selectedPrice + extraCost, finalQuantity);
+          if(spicyQty > 0) remark += `加辣x${spicyQty} `;
+          if(eggQty > 0) remark += `荷包蛋x${eggQty}`;
+          addToOrder(finalItemName, selectedPrice + extraCost, finalQuantity, remark.trim());
           break;
+
         case "飲料":
-          let warmCount = drinkTotal - drinkIce;
-          if(warmCount < 0) warmCount = 0;
-          let icePart = (drinkIce > 0) ? `冰${drinkIce}` : "";
-          let warmPart = (warmCount > 0) ? `溫${warmCount}` : "";
-          if(icePart && warmPart) {
-            finalItemName = `${selectedSubType} (${icePart}, ${warmPart})`;
-          } else if(icePart) {
-            finalItemName = `${selectedSubType} (${icePart})`;
-          } else if(warmPart) {
-            finalItemName = `${selectedSubType} (${warmPart})`;
-          } else {
-            finalItemName = selectedSubType;
-          }
+          finalItemName = selectedSubType;
           finalQuantity = drinkTotal;
-          addToOrder(finalItemName, selectedPrice, finalQuantity);
+          let warmCount = drinkTotal - drinkIce;
+          // 輸出格式：先顯示溫，再顯示冰，例如「溫×1 冰×3」
+          if(warmCount > 0) remark += `溫×${warmCount} `;
+          if(drinkIce > 0) remark += `冰×${drinkIce}`;
+          addToOrder(finalItemName, selectedPrice, finalQuantity, remark.trim());
           break;
+
         case "熱湯":
           finalItemName = selectedSubType;
           finalQuantity = soupQty;
@@ -647,12 +655,18 @@
       closeModal();
     }
 
-    function addToOrder(itemName, unitPrice, quantity) {
+    // 修改後的 addToOrder 函式，支援備註參數
+    function addToOrder(itemName, unitPrice, quantity, remark = "") {
       if(!itemName || !unitPrice) return;
       if(orders[itemName]) {
         orders[itemName].quantity += quantity;
+        if(remark) {
+          orders[itemName].remark = orders[itemName].remark
+            ? orders[itemName].remark + " " + remark
+            : remark;
+        }
       } else {
-        orders[itemName] = { price: unitPrice, quantity: quantity, remark: "" };
+        orders[itemName] = { price: unitPrice, quantity: quantity, remark: remark };
       }
       updateOrderList();
     }
@@ -660,20 +674,21 @@
     function updateOrderList() {
       let orderTable = document.getElementById("orderTable");
       orderTable.innerHTML = "";
+      let total = 0;
       for(let item in orders) {
-        let { quantity, remark } = orders[item];
+        let { price, quantity, remark } = orders[item];
+        total += price * quantity;
         let row = `
           <tr>
-            <td>${item}</td>
+            <td onclick="openCustomModal('${item}')" style="cursor: pointer;">${item}</td>
             <td>${quantity}</td>
             <td>${remark || ""}</td>
-            <td>
-              <button class="menu-button-sm" onclick="openCustomModal('${item}')">客製</button>
-            </td>
           </tr>
         `;
         orderTable.innerHTML += row;
       }
+      // 更新總金額顯示
+      document.getElementById("totalAmount").innerText = "總金額: $" + total;
       localStorage.setItem("currentOrder", JSON.stringify(orders));
     }
 
@@ -709,8 +724,9 @@
       window.location.href = "order.html";
     }
 
-    /* ===================== 3) 客製(備註) Modal 與 刪除功能 ===================== */
+    /* ===================== 3) 客製(備註) Modal ===================== */
     let currentItemForCust = null;
+    // 點選品項名稱觸發客製
     function openCustomModal(item) {
       currentItemForCust = item;
       let remark = orders[item]?.remark || "";
@@ -743,6 +759,7 @@
       }
       closeCustomModal();
     }
+    // 新增刪除品項的功能
     function deleteItemInCustom() {
       if(currentItemForCust && orders[currentItemForCust]) {
         delete orders[currentItemForCust];
