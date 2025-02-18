@@ -24,17 +24,23 @@
       font-size: 24px;
       color: #333;
     }
+    /* 訂單容器：採用 Flex 佈局，自動換行 */
     .order-container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 0 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      padding: 10px;
+      justify-content: center;
     }
+    /* 訂單區塊：固定寬度，寬畫面時一行最多顯示 3 筆 */
     .order-block {
       background-color: #fff;
       border: 1px solid #aaa;
-      margin-bottom: 20px;
       padding: 10px;
       text-align: left;
+      width: calc(33.33% - 20px);
+      box-sizing: border-box;
+      min-width: 280px;
     }
     .order-header {
       display: flex;
@@ -56,10 +62,6 @@
       padding: 8px;
       font-size: 16px;
       text-align: center;
-      /* 防止文字被選取 */
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
       user-select: none;
     }
     .order-list th {
@@ -76,7 +78,7 @@
       margin-top: 5px;
       font-weight: bold;
     }
-    /* 外帶/內用資訊顯示在表格下方 */
+    /* 外帶/內用資訊 */
     .order-type {
       margin-top: 10px;
       font-size: 16px;
@@ -89,118 +91,10 @@
     .dinein {
       background-color: #cce5ff;
     }
-    /* 底部動作按鈕區：左右排列 */
-    .actions {
-      display: flex;
-      justify-content: space-between;
-      margin: 20px auto;
-      max-width: 600px;
-    }
-    .menu-button {
-      font-size: 20px;
-      padding: 14px 22px;
-      cursor: pointer;
-      border: none;
-      background-color: #555;
-      color: #fff;
-      transition: background-color 0.2s;
-      width: 48%;
-    }
-    .menu-button:hover {
-      background-color: #333;
-    }
-    /* 備註設定 Modal */
-    .note-modal {
-      display: none;
-      position: fixed;
-      z-index: 10000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.5);
-      overflow-y: auto;
-    }
-    .note-modal-content {
-      background-color: #f9f9f9;
-      margin: 15% auto;
-      padding: 20px;
-      width: 300px;
-      text-align: center;
-      position: relative;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    }
-    .close-note {
-      position: absolute;
-      right: 10px;
-      top: 5px;
-      font-size: 24px;
-      color: #f00;
-      cursor: pointer;
-    }
-    .note-modal label {
-      font-size: 16px;
-      margin-right: 5px;
-    }
-    .note-modal input[type="time"],
-    .note-modal select {
-      font-size: 16px;
-      padding: 4px;
-      margin-bottom: 10px;
-    }
-    .note-modal button {
-      font-size: 16px;
-      padding: 6px 12px;
-      border: none;
-      background-color: #555;
-      color: #fff;
-      cursor: pointer;
-      transition: background-color 0.2s;
-      margin-top: 10px;
-    }
-    .note-modal button:hover {
-      background-color: #333;
-    }
-    /* Alarm Modal：鬧鐘提示 */
-    .alarm-modal {
-      display: none;
-      position: fixed;
-      z-index: 11000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.5);
-      overflow-y: auto;
-    }
-    .alarm-modal-content {
-      background-color: #f9f9f9;
-      margin: 15% auto;
-      padding: 20px;
-      width: 300px;
-      text-align: center;
-      position: relative;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    }
-    .close-alarm {
-      position: absolute;
-      right: 10px;
-      top: 5px;
-      font-size: 24px;
-      color: #f00;
-      cursor: pointer;
-    }
-    /* 電腦直向1920x1080優化 */
-    @media screen and (orientation: portrait) and (min-width: 1080px) and (min-height: 1920px) {
-      .order-container {
-        max-width: 80%;
-      }
+    /* 高解析度裝置調整 */
+    @media screen and (min-width: 1080px) {
       header h2 {
         font-size: 32px;
-      }
-      .menu-button {
-        font-size: 24px;
-        padding: 20px 30px;
       }
       .order-header h3 {
         font-size: 28px;
@@ -216,12 +110,7 @@
         font-size: 22px;
         padding: 10px;
       }
-      .note-modal-content {
-        width: 350px;
-      }
     }
-    
-    /* 自動刷新：每5秒刷新一次訂單列表 */
   </style>
 </head>
 <body>
@@ -229,135 +118,14 @@
     <h2>訂單管理</h2>
   </header>
 
+  <!-- 訂單內容 -->
   <div class="order-container" id="orderContainer">
-    <!-- 訂單內容將在此處生成 -->
-  </div>
-
-  <div class="actions">
-    <button class="menu-button" onclick="goBackMenu()">返回 Menu</button>
-    <button class="menu-button" onclick="resetOrderNumber()">重置編號</button>
-  </div>
-
-  <!-- 備註設定 Modal -->
-  <div id="noteModal" class="note-modal">
-    <div class="note-modal-content">
-      <span class="close-note" onclick="closeNoteModal()">&times;</span>
-      <h3>設定備註</h3>
-      <div>
-        <input type="radio" id="takeout" name="orderType" value="外帶" checked onclick="toggleOrderType()">
-        <label for="takeout">外帶</label>
-        <input type="radio" id="dinein" name="orderType" value="內用" onclick="toggleOrderType()">
-        <label for="dinein">內用</label>
-      </div>
-      <div id="takeoutOption">
-        <label>取餐時間：</label>
-        <input type="time" id="pickupTime">
-      </div>
-      <div id="dineinOption" style="display:none;">
-        <label>桌號：</label>
-        <select id="tableNumber">
-          <option value="R1">R1</option>
-          <option value="R2">R2</option>
-          <option value="M1">M1</option>
-          <option value="M2">M2</option>
-          <option value="M3">M3</option>
-          <option value="L1">L1</option>
-        </select>
-      </div>
-      <button onclick="saveNoteInfo()">儲存</button>
-    </div>
-  </div>
-
-  <!-- Alarm Modal：鬧鐘提示視窗 -->
-  <div id="alarmModal" class="alarm-modal">
-    <div class="alarm-modal-content">
-      <span class="close-alarm" onclick="stopContinuousAlarm()">&times;</span>
-      <h3 id="alarmMessage">鬧鐘響起！</h3>
-      <button onclick="stopContinuousAlarm()">關閉鬧鐘</button>
-    </div>
+    <!-- 只顯示前三筆訂單，超過部分隱藏，待前面訂單完成後自動顯示 -->
   </div>
 
   <script>
-    let currentOrderIndex = null;
-    let alarmTimers = [];   // 儲存排程定時器的 ID
-    let alarmInterval = null; // 持續鬧鐘的 interval ID
-
-    function goBackMenu(){
-      window.location.href = "index.html";
-    }
-    function resetOrderNumber(){
-      if(confirm("是否確定重置訂單編號？")){
-        localStorage.setItem("orderNumberCounter", 1);
-        alert("訂單編號已重置。");
-      }
-    }
-    
-    function toggleOrderType(){
-      let isTakeout = document.getElementById("takeout").checked;
-      document.getElementById("takeoutOption").style.display = isTakeout ? "block" : "none";
-      document.getElementById("dineinOption").style.display = isTakeout ? "none" : "block";
-    }
-    
-    function openNoteModal(index){
-      currentOrderIndex = index;
-      let ordersStr = localStorage.getItem("allOrders");
-      if(ordersStr){
-        let allOrders = JSON.parse(ordersStr);
-        let order = allOrders[index];
-        if(order.orderType === "內用"){
-          document.getElementById("dinein").checked = true;
-          document.getElementById("takeout").checked = false;
-          document.getElementById("dineinOption").style.display = "block";
-          document.getElementById("takeoutOption").style.display = "none";
-          document.getElementById("tableNumber").value = order.tableNumber || "R1";
-        } else if(order.orderType === "外帶"){
-          document.getElementById("takeout").checked = true;
-          document.getElementById("dinein").checked = false;
-          document.getElementById("takeoutOption").style.display = "block";
-          document.getElementById("dineinOption").style.display = "none";
-          document.getElementById("pickupTime").value = order.pickupTime || "";
-        } else {
-          document.getElementById("takeout").checked = true;
-          document.getElementById("dinein").checked = false;
-          document.getElementById("takeoutOption").style.display = "block";
-          document.getElementById("dineinOption").style.display = "none";
-        }
-      }
-      document.getElementById("noteModal").style.display = "block";
-    }
-    
-    function closeNoteModal(){
-      document.getElementById("noteModal").style.display = "none";
-    }
-    
-    function saveNoteInfo(){
-      let allOrders = JSON.parse(localStorage.getItem("allOrders"));
-      let order = allOrders[currentOrderIndex];
-      if(document.getElementById("takeout").checked){
-        order.orderType = "外帶";
-        order.pickupTime = document.getElementById("pickupTime").value;
-      } else {
-        order.orderType = "內用";
-        order.tableNumber = document.getElementById("tableNumber").value;
-      }
-      allOrders[currentOrderIndex] = order;
-      localStorage.setItem("allOrders", JSON.stringify(allOrders));
-      closeNoteModal();
-      loadOrders();
-      if(order.orderType === "外帶" && order.pickupTime){
-        scheduleAlarmForOrder(order);
-      }
-    }
-    
+    // 載入訂單並更新頁面
     function loadOrders(){
-      // 自動刷新：每次載入前先清除先前排程的鬧鐘
-      alarmTimers.forEach(id => clearTimeout(id));
-      alarmTimers = [];
-      if(alarmInterval){
-        clearInterval(alarmInterval);
-        alarmInterval = null;
-      }
-      
       let ordersStr = localStorage.getItem("allOrders");
       let orderContainer = document.getElementById("orderContainer");
       orderContainer.innerHTML = "";
@@ -366,17 +134,20 @@
         return;
       }
       let allOrders = JSON.parse(ordersStr);
-      allOrders.forEach((order, index) => {
+      // 僅顯示前三筆訂單
+      let visibleOrders = allOrders.slice(0, 3);
+      visibleOrders.forEach((order, index) => {
         let orderBlock = document.createElement("div");
         orderBlock.className = "order-block";
         
+        // 訂單標題與刪除訂單按鈕
         let headerDiv = document.createElement("div");
         headerDiv.className = "order-header";
         headerDiv.innerHTML = `<h3>訂單編號：${order.orderId}</h3>
-          <button onclick="openNoteModal(${index})">備註</button>
           <button onclick="deleteOrder(${index})">刪除訂單</button>`;
         orderBlock.appendChild(headerDiv);
         
+        // 訂單明細表格
         let table = document.createElement("table");
         table.className = "order-list";
         table.innerHTML = `<thead>
@@ -402,123 +173,39 @@
         }
         orderBlock.appendChild(table);
         
+        // 總金額
         let totalDiv = document.createElement("div");
         totalDiv.className = "total-price";
         totalDiv.innerText = "總金額：$" + orderTotal;
         orderBlock.appendChild(totalDiv);
         
+        // 訂單類型資訊（外帶僅顯示取餐時間）
         if(order.orderType){
-          let noteDiv = document.createElement("div");
-          noteDiv.className = "order-type " + (order.orderType === "外帶" ? "takeout" : "dinein");
+          let typeDiv = document.createElement("div");
+          typeDiv.className = "order-type " + (order.orderType === "外帶" ? "takeout" : "dinein");
           if(order.orderType === "外帶"){
-            let extraMinutes;
-            if(orderTotal <= 300){
-              extraMinutes = 10;
-            } else {
-              extraMinutes = 10 + Math.floor((orderTotal - 300) / 200) * 5;
-            }
-            let [pickupHour, pickupMinute] = order.pickupTime.split(":").map(Number);
-            let now = new Date();
-            let pickupDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), pickupHour, pickupMinute, 0);
-            let adjustedPickupDate = new Date(pickupDate.getTime() - extraMinutes * 60000);
-            let formattedAlarmTime = adjustedPickupDate.toTimeString().slice(0,5);
-            noteDiv.innerText = `外帶，取餐時間：${order.pickupTime || "未設定"} （鬧鈴時間：${formattedAlarmTime}）`;
+            typeDiv.innerText = `外帶，取餐時間：${order.pickupTime || "未設定"}`;
           } else {
-            noteDiv.innerText = `內用，桌號：${order.tableNumber || "未設定"}`;
+            typeDiv.innerText = `內用，桌號：${order.tableNumber || "未設定"}`;
           }
-          orderBlock.appendChild(noteDiv);
+          orderBlock.appendChild(typeDiv);
         }
         
         orderContainer.appendChild(orderBlock);
-        
-        if(order.orderType === "外帶" && order.pickupTime){
-          scheduleAlarmForOrder(order);
-        }
       });
     }
     
-    function deleteOrder(index){
+    // 刪除訂單：注意此 index 參數對應的是可見訂單在原始陣列中的位置（前三筆）
+    function deleteOrder(visibleIndex){
       let allOrders = JSON.parse(localStorage.getItem("allOrders"));
-      allOrders.splice(index, 1);
+      // 由於 visibleOrders = allOrders.slice(0, 3)，故 visibleIndex 與 allOrders 中的索引相同
+      allOrders.splice(visibleIndex, 1);
       localStorage.setItem("allOrders", JSON.stringify(allOrders));
       loadOrders();
     }
     
-    // 鬧鐘功能：根據訂單總金額計算提前時間
-    function scheduleAlarmForOrder(order){
-      // order.pickupTime 格式 "HH:MM"
-      let [pickupHour, pickupMinute] = order.pickupTime.split(":").map(Number);
-      let now = new Date();
-      let pickupDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), pickupHour, pickupMinute, 0);
-      
-      let orderTotal = 0;
-      for(let itemName in order.items){
-        let item = order.items[itemName];
-        orderTotal += item.price * item.quantity;
-      }
-      
-      // 計算提前時間：若總金額 ≤ 300，提前10分鐘；超過300，每多200元再提前5分鐘
-      let extraMinutes;
-      if(orderTotal <= 300){
-        extraMinutes = 10;
-      } else {
-        extraMinutes = 10 + Math.floor((orderTotal - 300) / 200) * 5;
-      }
-      
-      let adjustedPickupDate = new Date(pickupDate.getTime() - extraMinutes * 60000);
-      let diff = adjustedPickupDate - now;
-      if(diff < 0) diff = 0;
-      let timerId = setTimeout(() => {
-        startContinuousAlarm(order);
-      }, diff);
-      alarmTimers.push(timerId);
-    }
-    
-    // 開始持續鬧鐘：播放「三短一長」模式
-    function startContinuousAlarm(order){
-      if(alarmInterval) return;
-      let alarmModal = document.getElementById("alarmModal");
-      let alarmMessage = document.getElementById("alarmMessage");
-      alarmMessage.innerText = `外帶訂單 ${order.orderId} 已準備好取餐！`;
-      alarmModal.style.display = "block";
-      alarmInterval = setInterval(playPatternAlarm, 3000);
-    }
-    
-    // 停止鬧鐘
-    function stopContinuousAlarm(){
-      if(alarmInterval){
-        clearInterval(alarmInterval);
-        alarmInterval = null;
-      }
-      document.getElementById("alarmModal").style.display = "none";
-    }
-    
-    // 播放「三短一長」模式：三個短 beep（0.2秒），一個長 beep（1.0秒）
-    function playPatternAlarm(){
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      let now = audioCtx.currentTime;
-      function scheduleBeep(start, duration, frequency = 1200, gainVal = 0.5){
-        let osc = audioCtx.createOscillator();
-        let gainNode = audioCtx.createGain();
-        osc.type = "square";
-        osc.frequency.setValueAtTime(frequency, start);
-        gainNode.gain.setValueAtTime(gainVal, start);
-        osc.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        osc.start(start);
-        osc.stop(start + duration);
-      }
-      // 三個短 beep：每個0.2秒，間隔0.2秒
-      scheduleBeep(now, 0.2);
-      scheduleBeep(now + 0.4, 0.2);
-      scheduleBeep(now + 0.8, 0.2);
-      // 一個長 beep：1.0秒，從1.2秒開始
-      scheduleBeep(now + 1.2, 1.0);
-    }
-    
-    // 自動刷新訂單內容，每5秒刷新一次
+    // 每 5 秒自動更新訂單
     setInterval(loadOrders, 5000);
-    
     window.onload = loadOrders;
   </script>
 </body>
