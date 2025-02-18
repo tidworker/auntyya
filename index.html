@@ -24,7 +24,7 @@
       font-size: 24px;
       color: #333;
     }
-    /* 主選單按鈕區：一行一行排列 */
+    /* 主選單按鈕區 */
     .menu-container {
       margin: 20px auto;
       max-width: 600px;
@@ -70,7 +70,7 @@
       text-align: center;
       max-width: 600px;
     }
-    /* 底部動作按鈕區：左右排列 */
+    /* 底部動作按鈕區 */
     .actions {
       display: flex;
       justify-content: space-between;
@@ -218,7 +218,7 @@
     <h2>葉阿姨點餐系統</h2>
   </header>
   
-  <!-- 主選單按鈕區（品項） -->
+  <!-- 主選單按鈕區 -->
   <div class="menu-container">
     <button class="menu-button" onclick="openModal('蔥油餅')">蔥油餅</button>
     <button class="menu-button" onclick="openModal('麵線')">麵線</button>
@@ -242,7 +242,7 @@
   <!-- 顯示總金額 (左右置中) -->
   <div id="totalAmount">總金額: $0</div>
   
-  <!-- 底部動作按鈕區：左右排列 -->
+  <!-- 底部動作按鈕區 -->
   <div class="actions">
     <button class="menu-button-action" onclick="goToOrderPage()">查看目前訂單</button>
     <button class="menu-button-action" onclick="completeOrder()">完成訂單</button>
@@ -395,6 +395,7 @@
     };
 
     // orders 用來儲存目前點餐資料
+    // 若該品項包含荷包蛋，eggCost 會單獨存放（不乘以數量）
     let orders = {};
 
     /* ===================== 2) 多步驟點餐流程 ===================== */
@@ -419,7 +420,7 @@
       document.getElementById("stepSubType").style.display = "block";
       document.getElementById("stepSecond").classList.add("hidden");
       document.getElementById("stepThird").classList.add("hidden");
-      // 清除確認按鈕容器，避免重複插入
+      // 清除確認按鈕容器
       var confirmContainer = document.getElementById("confirmContainer");
       if (confirmContainer) { confirmContainer.remove(); }
       loadSubTypeButtons(category);
@@ -534,7 +535,6 @@
       if(document.getElementById("confirmContainer")) return;
       var confirmContainer = document.createElement("div");
       confirmContainer.id = "confirmContainer";
-      // 插入一個換行後再插入確認按鈕
       confirmContainer.innerHTML = "<br><button class='menu-button-sm' onclick='confirmOrder()'>確認點餐</button>";
       document.getElementById("stepThird").appendChild(confirmContainer);
     }
@@ -591,7 +591,7 @@
       }
     }
 
-    // 修改後的 confirmOrder 函式，將加辣、荷包蛋、冰/溫資訊移至備註欄位
+    // 修改後的 confirmOrder，將 eggCost 變數宣告在 switch 外部，避免重複宣告
     function confirmOrder() {
       let gQ = document.getElementById("generalQuantityInput");
       if(gQ) generalQuantity = parseInt(gQ.value) || 1;
@@ -608,8 +608,8 @@
 
       let finalItemName = "";
       let finalQuantity = 1;
-      let extraCost = eggQty * 15;
-      let remark = "";  // 用來存放備註資訊
+      let remark = "";  // 備註資訊
+      let eggCost = 0;  // 單獨計算荷包蛋費用，不乘上品項數量
 
       switch(currentCategory) {
         case "蔥油餅":
@@ -617,56 +617,58 @@
           finalQuantity = generalQuantity;
           if(spicyQty > 0) remark += `加辣x${spicyQty} `;
           if(eggQty > 0) remark += `荷包蛋x${eggQty}`;
-          addToOrder(finalItemName, selectedPrice + extraCost, finalQuantity, remark.trim());
+          eggCost = eggQty > 0 ? eggQty * 15 : 0;
+          addToOrder(finalItemName, selectedPrice, finalQuantity, eggCost, remark.trim());
           break;
-
         case "麵線":
           finalItemName = selectedSubType;
           finalQuantity = generalQuantity;
           if(spicyQty > 0) remark += `加辣x${spicyQty} `;
           if(eggQty > 0) remark += `荷包蛋x${eggQty}`;
-          addToOrder(finalItemName, selectedPrice + extraCost, finalQuantity, remark.trim());
+          eggCost = eggQty > 0 ? eggQty * 15 : 0;
+          addToOrder(finalItemName, selectedPrice, finalQuantity, eggCost, remark.trim());
           break;
-
         case "炒麵":
           finalItemName = selectedSubType;
           finalQuantity = generalQuantity;
           if(spicyQty > 0) remark += `加辣x${spicyQty} `;
           if(eggQty > 0) remark += `荷包蛋x${eggQty}`;
-          addToOrder(finalItemName, selectedPrice + extraCost, finalQuantity, remark.trim());
+          eggCost = eggQty > 0 ? eggQty * 15 : 0;
+          addToOrder(finalItemName, selectedPrice, finalQuantity, eggCost, remark.trim());
           break;
-
         case "飲料":
           finalItemName = selectedSubType;
           finalQuantity = drinkTotal;
           let warmCount = drinkTotal - drinkIce;
-          // 輸出格式：先顯示溫，再顯示冰，例如「溫×1 冰×3」
           if(warmCount > 0) remark += `溫×${warmCount} `;
           if(drinkIce > 0) remark += `冰×${drinkIce}`;
-          addToOrder(finalItemName, selectedPrice, finalQuantity, remark.trim());
+          addToOrder(finalItemName, selectedPrice, finalQuantity, 0, remark.trim());
           break;
-
         case "熱湯":
           finalItemName = selectedSubType;
           finalQuantity = soupQty;
-          addToOrder(finalItemName, selectedPrice, finalQuantity);
+          addToOrder(finalItemName, selectedPrice, finalQuantity, 0, "");
           break;
       }
       closeModal();
     }
 
-    // 修改後的 addToOrder 函式，支援備註參數
-    function addToOrder(itemName, unitPrice, quantity, remark = "") {
+    // 修改後的 addToOrder，新增 eggCost 參數
+    function addToOrder(itemName, unitPrice, quantity, eggCost = 0, remark = "") {
       if(!itemName || !unitPrice) return;
       if(orders[itemName]) {
         orders[itemName].quantity += quantity;
+        // 若該品項尚未設定 eggCost，且這次有 eggCost，則設定之
+        if(eggCost > 0 && !orders[itemName].eggCost) {
+          orders[itemName].eggCost = eggCost;
+        }
         if(remark) {
           orders[itemName].remark = orders[itemName].remark
             ? orders[itemName].remark + " " + remark
             : remark;
         }
       } else {
-        orders[itemName] = { price: unitPrice, quantity: quantity, remark: remark };
+        orders[itemName] = { price: unitPrice, quantity: quantity, eggCost: eggCost, remark: remark };
       }
       updateOrderList();
     }
@@ -676,8 +678,9 @@
       orderTable.innerHTML = "";
       let total = 0;
       for(let item in orders) {
-        let { price, quantity, remark } = orders[item];
+        let { price, quantity, eggCost, remark } = orders[item];
         total += price * quantity;
+        if(eggCost) total += eggCost;
         let row = `
           <tr>
             <td onclick="openCustomModal('${item}')" style="cursor: pointer;">${item}</td>
@@ -687,12 +690,11 @@
         `;
         orderTable.innerHTML += row;
       }
-      // 更新總金額顯示
       document.getElementById("totalAmount").innerText = "總金額: $" + total;
       localStorage.setItem("currentOrder", JSON.stringify(orders));
     }
 
-    // 取得下一個訂單編號（固定三位數，從 001 開始）
+    // 取得下一個訂單編號（固定三位數）
     function getNextOrderNumber() {
       let counter = localStorage.getItem("orderNumberCounter");
       if(!counter) {
@@ -726,7 +728,6 @@
 
     /* ===================== 3) 客製(備註) Modal ===================== */
     let currentItemForCust = null;
-    // 點選品項名稱觸發客製
     function openCustomModal(item) {
       currentItemForCust = item;
       let remark = orders[item]?.remark || "";
@@ -759,7 +760,6 @@
       }
       closeCustomModal();
     }
-    // 新增刪除品項的功能
     function deleteItemInCustom() {
       if(currentItemForCust && orders[currentItemForCust]) {
         delete orders[currentItemForCust];
