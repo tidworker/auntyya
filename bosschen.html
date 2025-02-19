@@ -2,43 +2,87 @@
 <html>
 <head>
   <meta charset="UTF-8">
+  <!-- Meta viewport 讓頁面符合手機螢幕 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>訂單報表產生器</title>
   <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
+      margin: 0;
+    }
+    h1 {
+      text-align: center;
+    }
+    form, #report, #downloadBtn {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    form div {
+      margin-bottom: 8px;
+      display: flex;
+      flex-direction: column;
+    }
+    label {
+      margin-bottom: 4px;
+    }
+    input[type="date"],
+    input[type="number"] {
+      padding: 6px;
+      font-size: 1rem;
+    }
+    button {
+      padding: 8px 12px;
+      font-size: 1rem;
+      margin-top: 10px;
+    }
     table {
       border-collapse: collapse;
       margin-top: 20px;
       width: 100%;
       text-align: center;
+      font-size: 0.9rem;
     }
     table, th, td {
       border: 1px solid #333;
       padding: 8px;
     }
-    th { background-color: #f0f0f0; }
-    form div { margin-bottom: 8px; }
-    #downloadBtn { margin-top: 10px; }
-    /* 總金額列背景設為淺灰色 */
-    #overallTotalRow { background-color: #f0f0f0; font-weight: bold; }
-    
-    /* Modal 視窗樣式 */
+    th {
+      background-color: #f0f0f0;
+    }
+    #overallTotalRow {
+      background-color: #f0f0f0;
+      font-weight: bold;
+    }
+    /* Modal 調整 */
     #modalOverlay {
       display: none;
       position: fixed;
       top: 0; left: 0;
-      width: 100%; height: 100%;
+      width: 100%;
+      height: 100%;
       background: rgba(0,0,0,0.5);
       justify-content: center;
       align-items: center;
+      padding: 10px;
+      box-sizing: border-box;
     }
     #modal {
       background: #fff;
       padding: 20px;
       border-radius: 5px;
-      min-width: 300px;
+      width: 100%;
+      max-width: 400px;
     }
-    #modal h2 { margin-top: 0; }
-    #modal form div { margin-bottom: 10px; }
-    #modal button { margin-right: 10px; }
+    #modal form div {
+      margin-bottom: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    #modal button {
+      margin-right: 10px;
+    }
   </style>
 </head>
 <body>
@@ -73,7 +117,6 @@
       <label for="milkTeaQty">奶茶 (單價 15):</label>
       <input type="number" id="milkTeaQty" value="1" min="0" required onchange="saveDefaultQuantities()">
     </div>
-    <br>
     <button type="button" onclick="generateReport()">生成報表</button>
   </form>
 
@@ -111,9 +154,11 @@
           <label for="modalMilkTeaQty">奶茶:</label>
           <input type="number" id="modalMilkTeaQty" min="0" required>
         </div>
-        <button type="button" onclick="saveOrder()">儲存修改</button>
-        <button type="button" onclick="deleteOrder()">刪除訂單</button>
-        <button type="button" onclick="closeModal()">取消</button>
+        <div style="display: flex; flex-wrap: wrap;">
+          <button type="button" onclick="saveOrder()">儲存修改</button>
+          <button type="button" onclick="deleteOrder()">刪除訂單</button>
+          <button type="button" onclick="closeModal()">取消</button>
+        </div>
       </form>
     </div>
   </div>
@@ -158,10 +203,9 @@
       // 依日期區間產生訂單，每日建立一列
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         const isoDate = d.toISOString().split("T")[0];
-        // 若該日期尚未存在訂單資料，依星期判斷預設值
+        // 若該日期尚未存在訂單資料，根據是否星期一預設休假
         if (!orders[isoDate]) {
           if (d.getDay() === 1) {
-            // 星期一預設為休假
             orders[isoDate] = { isHoliday: true, noodles: 0, eggPancake: 0, friedNoodles: 0, redTea: 0, milkTea: 0 };
           } else {
             orders[isoDate] = { isHoliday: false, ...defaultQuantities };
@@ -175,11 +219,9 @@
         let rowContent = "";
 
         if (orders[isoDate].isHoliday) {
-          // 若為休假，產品欄位以合併單元格顯示「休假」，金額為 0
           rowContent = `<td colspan="5">休假</td><td>0</td>`;
           dailyTotalAmount = 0;
         } else {
-          // 非休假則顯示各品項訂購數量與金額計算
           dailyTotalAmount =
             orders[isoDate].noodles * prices.noodles +
             orders[isoDate].eggPancake * prices.eggPancake +
@@ -252,15 +294,15 @@
       const day = d.getDate().toString().padStart(2, "0");
       const weekday = weekdays[d.getDay()];
       document.getElementById("modalDate").textContent = `${month}/${day}/${weekday}`;
-      
+
       // 若該日期尚未存在訂單資料（理論上不會發生），則初始化
       if (!orders[isoDate]) {
         orders[isoDate] = { isHoliday: false, ...getDefaultQuantities() };
       }
-      
+
       // 填入當日訂單資料
       document.getElementById("modalIsHoliday").checked = orders[isoDate].isHoliday;
-      toggleModalInputs(); // 根據休假狀態停用或啟用數字輸入欄
+      toggleModalInputs();
       document.getElementById("modalNoodlesQty").value = orders[isoDate].noodles;
       document.getElementById("modalEggPancakeQty").value = orders[isoDate].eggPancake;
       document.getElementById("modalFriedNoodlesQty").value = orders[isoDate].friedNoodles;
