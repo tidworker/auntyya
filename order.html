@@ -161,35 +161,6 @@
     .note-modal button:hover {
       background-color: #333;
     }
-    /* Alarm Modal：鬧鐘持續響起時的提示 */
-    .alarm-modal {
-      display: none;
-      position: fixed;
-      z-index: 11000;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background-color: rgba(0,0,0,0.5);
-      overflow-y: auto;
-    }
-    .alarm-modal-content {
-      background-color: #f9f9f9;
-      margin: 15% auto;
-      padding: 20px;
-      width: 300px;
-      text-align: center;
-      position: relative;
-      box-shadow: 0 0 10px rgba(0,0,0,0.3);
-    }
-    .close-alarm {
-      position: absolute;
-      right: 10px;
-      top: 5px;
-      font-size: 24px;
-      color: #f00;
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
@@ -236,19 +207,8 @@
     </div>
   </div>
 
-  <!-- Alarm Modal：鬧鐘提示視窗 -->
-  <div id="alarmModal" class="alarm-modal">
-    <div class="alarm-modal-content">
-      <span class="close-alarm" onclick="stopContinuousAlarm()">&times;</span>
-      <h3 id="alarmMessage">鬧鐘響起！</h3>
-      <button onclick="stopContinuousAlarm()">關閉鬧鐘</button>
-    </div>
-  </div>
-
   <script>
     let currentOrderIndex = null;
-    let alarmTimers = [];   // 用來儲存排程定時器的 ID
-    let alarmInterval = null; // 持續鬧鐘的 interval ID
 
     function goBackMenu(){
       window.location.href = "index.html";
@@ -312,20 +272,9 @@
       localStorage.setItem("allOrders", JSON.stringify(allOrders));
       closeNoteModal();
       loadOrders();
-      if(order.orderType === "外帶" && order.pickupTime){
-        scheduleAlarmForOrder(order);
-      }
     }
     
     function loadOrders(){
-      // 清除先前排程的鬧鐘
-      alarmTimers.forEach(timerId => clearTimeout(timerId));
-      alarmTimers = [];
-      if(alarmInterval){
-        clearInterval(alarmInterval);
-        alarmInterval = null;
-      }
-      
       let ordersStr = localStorage.getItem("allOrders");
       let orderContainer = document.getElementById("orderContainer");
       orderContainer.innerHTML = "";
@@ -379,19 +328,8 @@
           let noteDiv = document.createElement("div");
           noteDiv.className = "order-type " + (order.orderType === "外帶" ? "takeout" : "dinein");
           if(order.orderType === "外帶"){
-            // 計算提前鬧鐘時間：若總金額 ≤ 300，提前10分鐘；超過300，每200加5分鐘
-            let extraMinutes;
-            if(orderTotal <= 300){
-              extraMinutes = 10;
-            } else {
-              extraMinutes = 10 + Math.floor((orderTotal - 300) / 200) * 5;
-            }
-            let [pickupHour, pickupMinute] = order.pickupTime.split(":").map(Number);
-            let now = new Date();
-            let pickupDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), pickupHour, pickupMinute, 0);
-            let adjustedPickupDate = new Date(pickupDate.getTime() - extraMinutes * 60000);
-            let formattedAlarmTime = adjustedPickupDate.toTimeString().slice(0,5);
-            noteDiv.innerText = `外帶，取餐時間：${order.pickupTime || "未設定"} （鬧鈴時間：${formattedAlarmTime}）`;
+            // 外帶僅顯示取餐時間（不再顯示鬧鈴時間）
+            noteDiv.innerText = `外帶，取餐時間：${order.pickupTime || "未設定"}`;
           } else {
             noteDiv.innerText = `內用，桌號：${order.tableNumber || "未設定"}`;
           }
@@ -399,10 +337,6 @@
         }
         
         orderContainer.appendChild(orderBlock);
-        
-        if(order.orderType === "外帶" && order.pickupTime){
-          scheduleAlarmForOrder(order);
-        }
       });
     }
     
@@ -411,76 +345,6 @@
       allOrders.splice(index, 1);
       localStorage.setItem("allOrders", JSON.stringify(allOrders));
       loadOrders();
-    }
-    
-    // 鬧鐘功能：根據訂單總金額計算提前時間
-    function scheduleAlarmForOrder(order){
-      // order.pickupTime 格式 "HH:MM"
-      let [pickupHour, pickupMinute] = order.pickupTime.split(":").map(Number);
-      let now = new Date();
-      let pickupDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), pickupHour, pickupMinute, 0);
-      
-      let orderTotal = 0;
-      for(let itemName in order.items){
-        let item = order.items[itemName];
-        orderTotal += item.price * item.quantity;
-      }
-      let extraMinutes;
-      if(orderTotal <= 300){
-        extraMinutes = 10;
-      } else {
-        extraMinutes = 10 + Math.floor((orderTotal - 300) / 200) * 5;
-      }
-      
-      let adjustedPickupDate = new Date(pickupDate.getTime() - extraMinutes * 60000);
-      let diff = adjustedPickupDate - now;
-      if(diff < 0) diff = 0;
-      let timerId = setTimeout(() => {
-        startContinuousAlarm(order);
-      }, diff);
-      alarmTimers.push(timerId);
-    }
-    
-    // 開始持續鬧鐘：播放「三短一長」模式的鬧鐘聲
-    function startContinuousAlarm(order){
-      if(alarmInterval) return;
-      let alarmModal = document.getElementById("alarmModal");
-      let alarmMessage = document.getElementById("alarmMessage");
-      alarmMessage.innerText = `外帶訂單 ${order.orderId} 已準備好取餐！`;
-      alarmModal.style.display = "block";
-      alarmInterval = setInterval(playPatternAlarm, 3000);
-    }
-    
-    // 停止持續鬧鐘
-    function stopContinuousAlarm(){
-      if(alarmInterval){
-        clearInterval(alarmInterval);
-        alarmInterval = null;
-      }
-      document.getElementById("alarmModal").style.display = "none";
-    }
-    
-    // 播放「三短一長」鬧鐘聲：三個短 beep（0.2秒），一個長 beep（1.0秒）
-    function playPatternAlarm(){
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      let now = audioCtx.currentTime;
-      function scheduleBeep(start, duration, frequency=1200, gainVal=0.5){
-        let osc = audioCtx.createOscillator();
-        let gainNode = audioCtx.createGain();
-        osc.type = "square";
-        osc.frequency.setValueAtTime(frequency, start);
-        gainNode.gain.setValueAtTime(gainVal, start);
-        osc.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        osc.start(start);
-        osc.stop(start + duration);
-      }
-      // 三個短 beep：0.2秒各，間隔0.2秒
-      scheduleBeep(now, 0.2);
-      scheduleBeep(now + 0.4, 0.2);
-      scheduleBeep(now + 0.8, 0.2);
-      // 一個長 beep：1.0秒，從1.2秒開始
-      scheduleBeep(now + 1.2, 1.0);
     }
     
     window.onload = loadOrders;
