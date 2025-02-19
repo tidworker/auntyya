@@ -32,7 +32,7 @@
       padding: 6px;
       font-size: 1rem;
     }
-    /* 統一按鈕樣式 */
+    /* 兩個按鈕採用相同的樣式 */
     .btn {
       width: 100%;
       max-width: 600px;
@@ -84,8 +84,15 @@
       display: flex;
       flex-direction: column;
     }
-    #modal button {
-      margin-right: 10px;
+    /* Modal 中的按鈕區塊，使用換行避免誤按 */
+    .modal-btns {
+      text-align: center;
+    }
+    .modal-btns button {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+      font-size: 1rem;
     }
   </style>
 </head>
@@ -124,14 +131,11 @@
     <button type="button" class="btn" onclick="generateReport()">生成報表</button>
   </form>
 
-  <!-- 插入空行 -->
-  <br>
-  
-  <!-- 下載按鈕，樣式與生成報表按鈕相同 -->
-  <button id="downloadBtn" type="button" class="btn" onclick="downloadReport()">下載表格 JPG</button>
-
   <!-- 報表區域 -->
   <div id="report"></div>
+
+  <!-- 下載按鈕放在報表下方 -->
+  <button id="downloadBtn" type="button" class="btn" onclick="downloadReport()">下載表格 JPG</button>
 
   <!-- Modal 視窗，用於修改/刪除當日訂單 -->
   <div id="modalOverlay">
@@ -162,9 +166,11 @@
           <label for="modalMilkTeaQty">奶茶:</label>
           <input type="number" id="modalMilkTeaQty" min="0" required>
         </div>
-        <div style="display: flex; flex-wrap: wrap;">
+        <div class="modal-btns">
           <button type="button" onclick="saveOrder()">儲存修改</button>
+          <br>
           <button type="button" onclick="deleteOrder()">刪除訂單</button>
+          <br>
           <button type="button" onclick="closeModal()">取消</button>
         </div>
       </form>
