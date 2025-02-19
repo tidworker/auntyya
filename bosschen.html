@@ -84,7 +84,7 @@
       display: flex;
       flex-direction: column;
     }
-    /* Modal 中的按鈕區塊，使用換行避免誤按 */
+    /* Modal 中的按鈕區塊，採獨立換行 */
     .modal-btns {
       text-align: center;
     }
@@ -137,7 +137,7 @@
   <!-- 下載按鈕放在報表下方 -->
   <button id="downloadBtn" type="button" class="btn" onclick="downloadReport()">下載表格 JPG</button>
 
-  <!-- Modal 視窗，用於修改/刪除當日訂單 -->
+  <!-- Modal 視窗，用於修改當日訂單 -->
   <div id="modalOverlay">
     <div id="modal">
       <h2 id="modalDate"></h2>
@@ -169,8 +169,6 @@
         <div class="modal-btns">
           <button type="button" onclick="saveOrder()">儲存修改</button>
           <br>
-          <button type="button" onclick="deleteOrder()">刪除訂單</button>
-          <br>
           <button type="button" onclick="closeModal()">取消</button>
         </div>
       </form>
@@ -180,6 +178,14 @@
   <!-- 引入 html2canvas 函式庫 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
+    // 自訂一個取得本地日期字串的函式
+    function getLocalDateString(date) {
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const day = date.getDate().toString().padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
     // 固定單價設定（僅用於計算金額）
     const prices = {
       noodles: 50,
@@ -285,7 +291,7 @@
       localStorage.setItem("defaultQuantities", JSON.stringify(defaults));
     }
 
-    // 載入 localStorage 中的預設數量
+    // 載入 localStorage 中的預設數量，並設定結束日期預設為今天（以當地時間）
     window.addEventListener("DOMContentLoaded", function() {
       const storedDefaults = localStorage.getItem("defaultQuantities");
       if (storedDefaults) {
@@ -296,6 +302,9 @@
         document.getElementById("redTeaQty").value = defaults.redTea;
         document.getElementById("milkTeaQty").value = defaults.milkTea;
       }
+      // 設定結束日期預設為今天（使用本地日期）
+      const today = getLocalDateString(new Date());
+      document.getElementById("endDate").value = today;
     });
 
     // --- Modal 功能 ---
@@ -360,14 +369,6 @@
         orders[currentEditDate].redTea = parseInt(document.getElementById("modalRedTeaQty").value, 10);
         orders[currentEditDate].milkTea = parseInt(document.getElementById("modalMilkTeaQty").value, 10);
       }
-      generateReport();
-      closeModal();
-    }
-
-    // 刪除當日訂單，並更新報表
-    function deleteOrder() {
-      if (!currentEditDate) return;
-      delete orders[currentEditDate];
       generateReport();
       closeModal();
     }
