@@ -14,7 +14,7 @@
     h1 {
       text-align: center;
     }
-    form, #report, #downloadBtn {
+    form, #report {
       width: 100%;
       max-width: 600px;
       margin: 0 auto;
@@ -32,10 +32,14 @@
       padding: 6px;
       font-size: 1rem;
     }
-    button {
+    /* 統一按鈕樣式 */
+    .btn {
+      width: 100%;
+      max-width: 600px;
+      display: block;
+      margin: 10px auto;
       padding: 8px 12px;
       font-size: 1rem;
-      margin-top: 10px;
     }
     table {
       border-collapse: collapse;
@@ -117,13 +121,17 @@
       <label for="milkTeaQty">奶茶 (單價 15):</label>
       <input type="number" id="milkTeaQty" value="1" min="0" required onchange="saveDefaultQuantities()">
     </div>
-    <button type="button" onclick="generateReport()">生成報表</button>
+    <button type="button" class="btn" onclick="generateReport()">生成報表</button>
   </form>
+
+  <!-- 插入空行 -->
+  <br>
+  
+  <!-- 下載按鈕，樣式與生成報表按鈕相同 -->
+  <button id="downloadBtn" type="button" class="btn" onclick="downloadReport()">下載表格 JPG</button>
 
   <!-- 報表區域 -->
   <div id="report"></div>
-  <!-- 下載按鈕 -->
-  <button id="downloadBtn" type="button" onclick="downloadReport()">下載表格 JPG</button>
 
   <!-- Modal 視窗，用於修改/刪除當日訂單 -->
   <div id="modalOverlay">
