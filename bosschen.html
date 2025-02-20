@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <!-- Meta viewport 讓頁面符合手機螢幕 -->
+  <!-- 以本地裝置寬度與初始縮放 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>訂單報表產生器</title>
   <style>
@@ -21,18 +21,18 @@
     }
     form div {
       margin-bottom: 8px;
-      display: flex;
-      flex-direction: column;
     }
     label {
+      display: block;
       margin-bottom: 4px;
     }
     input[type="date"],
     input[type="number"] {
       padding: 6px;
       font-size: 1rem;
+      width: 100%;
+      box-sizing: border-box;
     }
-    /* 兩個按鈕採用相同的樣式 */
     .btn {
       width: 100%;
       max-width: 600px;
@@ -59,6 +59,13 @@
       background-color: #f0f0f0;
       font-weight: bold;
     }
+    /* 報表摘要區：下方空一行 */
+    #balanceSummary {
+      text-align: center;
+      font-weight: bold;
+      margin-top: 10px;
+      white-space: pre-line;
+    }
     /* Modal 調整 */
     #modalOverlay {
       display: none;
@@ -81,10 +88,8 @@
     }
     #modal form div {
       margin-bottom: 10px;
-      display: flex;
-      flex-direction: column;
     }
-    /* Modal 中的按鈕區塊，採獨立換行 */
+    /* Modal 中按鈕區，按鈕獨立換行 */
     .modal-btns {
       text-align: center;
     }
@@ -101,11 +106,19 @@
   <form id="reportForm">
     <div>
       <label for="startDate">開始日期:</label>
-      <input type="date" id="startDate" required>
+      <input type="date" id="startDate" placeholder="若空白，則只輸出結束日資料">
     </div>
     <div>
       <label for="endDate">結束日期:</label>
       <input type="date" id="endDate" required>
+    </div>
+    <div>
+      <label for="balanceInput">餘額:</label>
+      <input type="number" id="balanceInput" placeholder="無">
+    </div>
+    <div>
+      <label for="advanceInput">預收:</label>
+      <input type="number" id="advanceInput" placeholder="無">
     </div>
     <h2>產品設定 (預設數量)</h2>
     <div>
@@ -131,13 +144,9 @@
     <button type="button" class="btn" onclick="generateReport()">生成報表</button>
   </form>
 
-  <!-- 報表區域 -->
   <div id="report"></div>
-
-  <!-- 下載按鈕放在報表下方 -->
   <button id="downloadBtn" type="button" class="btn" onclick="downloadReport()">下載表格 JPG</button>
 
-  <!-- Modal 視窗，用於修改當日訂單 -->
   <div id="modalOverlay">
     <div id="modal">
       <h2 id="modalDate"></h2>
@@ -175,10 +184,9 @@
     </div>
   </div>
 
-  <!-- 引入 html2canvas 函式庫 -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
-    // 自訂一個取得本地日期字串的函式
+    // 以本地時間取得 yyyy-mm-dd 格式字串
     function getLocalDateString(date) {
       const year = date.getFullYear();
       const month = (date.getMonth() + 1).toString().padStart(2, "0");
@@ -186,7 +194,6 @@
       return `${year}-${month}-${day}`;
     }
 
-    // 固定單價設定（僅用於計算金額）
     const prices = {
       noodles: 50,
       eggPancake: 30,
@@ -195,23 +202,20 @@
       milkTea: 15
     };
 
-    // 用來儲存每天訂單資料，key 為 ISO 日期格式 (YYYY-MM-DD)
-    // 結構：{ isHoliday: boolean, noodles: number, eggPancake: number, friedNoodles: number, redTea: number, milkTea: number }
+    // 訂單資料結構：{ isHoliday, noodles, eggPancake, friedNoodles, redTea, milkTea }
     const orders = {};
-
-    // 星期縮寫
     const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-    // 目前正在編輯的日期 (ISO 格式)
     let currentEditDate = null;
 
-    // 產生報表：依照選定日期區間建立表格
     function generateReport() {
-      const startDateValue = document.getElementById("startDate").value;
-      const endDateValue = document.getElementById("endDate").value;
-      if (!startDateValue || !endDateValue) {
-        alert("請選擇開始與結束日期");
+      let endDateValue = document.getElementById("endDate").value;
+      let startDateValue = document.getElementById("startDate").value;
+      if (!endDateValue) {
+        alert("請輸入結束日期");
         return;
+      }
+      if (!startDateValue) {
+        startDateValue = endDateValue;
       }
       const startDate = new Date(startDateValue);
       const endDate = new Date(endDateValue);
@@ -219,11 +223,8 @@
       let html = "<table>";
       html += "<tr><th>日期</th><th>麵線</th><th>蛋餅</th><th>炒麵</th><th>紅茶</th><th>奶茶</th><th>金額</th></tr>";
       let overallTotalAmount = 0;
-
-      // 依日期區間產生訂單，每日建立一列
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-        const isoDate = d.toISOString().split("T")[0];
-        // 若該日期尚未存在訂單資料，根據是否星期一預設休假
+        let isoDate = getLocalDateString(d);
         if (!orders[isoDate]) {
           if (d.getDay() === 1) {
             orders[isoDate] = { isHoliday: true, noodles: 0, eggPancake: 0, friedNoodles: 0, redTea: 0, milkTea: 0 };
@@ -237,7 +238,6 @@
         const displayDate = `${month}/${day}/${weekday}`;
         let dailyTotalAmount = 0;
         let rowContent = "";
-
         if (orders[isoDate].isHoliday) {
           rowContent = `<td colspan="5">休假</td><td>0</td>`;
           dailyTotalAmount = 0;
@@ -261,10 +261,26 @@
       }
       html += `<tr id="overallTotalRow"><td colspan="6">總金額:</td><td>${overallTotalAmount}</td></tr>`;
       html += "</table>";
+
+      // 取得餘額與預收，若未輸入則顯示「無」
+      let balanceText = document.getElementById("balanceInput").value.trim();
+      let advanceText = document.getElementById("advanceInput").value.trim();
+      let balanceValue = (balanceText === "") ? 0 : parseFloat(balanceText);
+      let advanceValue = (advanceText === "") ? 0 : parseFloat(advanceText);
+      let balanceDisplay = (balanceText === "") ? "無" : balanceValue;
+      let advanceDisplay = (advanceText === "") ? "無" : advanceValue;
+      let finalBalance = (balanceValue + advanceValue) - overallTotalAmount;
+      const startDisplay = `${(startDate.getMonth()+1).toString().padStart(2,"0")}/${startDate.getDate().toString().padStart(2,"0")}`;
+      const endDisplay = `${(endDate.getMonth()+1).toString().padStart(2,"0")}/${endDate.getDate().toString().padStart(2,"0")}`;
+      let summaryHtml = `<div id="balanceSummary" style="margin-top:10px;">`;
+      summaryHtml += `${startDisplay} 餘額：${(balanceDisplay==="無"?"無":balanceDisplay+"元")}<br>`;
+      summaryHtml += `${endDisplay} 預收：${(advanceDisplay==="無"?"無":advanceDisplay+"元")}<br>`;
+      summaryHtml += `結餘：${finalBalance}元`;
+      summaryHtml += `</div><br>`;
+      html += summaryHtml;
       document.getElementById("report").innerHTML = html;
     }
 
-    // 下載報表為 JPG 圖檔
     function downloadReport() {
       html2canvas(document.getElementById("report")).then(canvas => {
         const link = document.createElement("a");
@@ -274,7 +290,6 @@
       });
     }
 
-    // 取得預設數量（從表單取得數值）
     function getDefaultQuantities() {
       return {
         noodles: parseInt(document.getElementById("noodlesQty").value, 10),
@@ -285,13 +300,11 @@
       };
     }
 
-    // 儲存預設數量到 localStorage
     function saveDefaultQuantities() {
       const defaults = getDefaultQuantities();
       localStorage.setItem("defaultQuantities", JSON.stringify(defaults));
     }
 
-    // 載入 localStorage 中的預設數量，並設定結束日期預設為今天（以當地時間）
     window.addEventListener("DOMContentLoaded", function() {
       const storedDefaults = localStorage.getItem("defaultQuantities");
       if (storedDefaults) {
@@ -302,14 +315,10 @@
         document.getElementById("redTeaQty").value = defaults.redTea;
         document.getElementById("milkTeaQty").value = defaults.milkTea;
       }
-      // 設定結束日期預設為今天（使用本地日期）
       const today = getLocalDateString(new Date());
       document.getElementById("endDate").value = today;
     });
 
-    // --- Modal 功能 ---
-
-    // 點選日期列後開啟 Modal，初始化當日訂單資料
     function openModal(isoDate) {
       currentEditDate = isoDate;
       const d = new Date(isoDate);
@@ -317,13 +326,9 @@
       const day = d.getDate().toString().padStart(2, "0");
       const weekday = weekdays[d.getDay()];
       document.getElementById("modalDate").textContent = `${month}/${day}/${weekday}`;
-
-      // 若該日期尚未存在訂單資料（理論上不會發生），則初始化
       if (!orders[isoDate]) {
         orders[isoDate] = { isHoliday: false, ...getDefaultQuantities() };
       }
-
-      // 填入當日訂單資料
       document.getElementById("modalIsHoliday").checked = orders[isoDate].isHoliday;
       toggleModalInputs();
       document.getElementById("modalNoodlesQty").value = orders[isoDate].noodles;
@@ -331,11 +336,9 @@
       document.getElementById("modalFriedNoodlesQty").value = orders[isoDate].friedNoodles;
       document.getElementById("modalRedTeaQty").value = orders[isoDate].redTea;
       document.getElementById("modalMilkTeaQty").value = orders[isoDate].milkTea;
-      
       document.getElementById("modalOverlay").style.display = "flex";
     }
 
-    // 根據休假複選框狀態，停用或啟用 Modal 中的數字輸入欄
     function toggleModalInputs() {
       const isHoliday = document.getElementById("modalIsHoliday").checked;
       document.getElementById("modalNoodlesQty").disabled = isHoliday;
@@ -345,13 +348,11 @@
       document.getElementById("modalMilkTeaQty").disabled = isHoliday;
     }
 
-    // 關閉 Modal
     function closeModal() {
       document.getElementById("modalOverlay").style.display = "none";
       currentEditDate = null;
     }
 
-    // 儲存 Modal 修改後的數值，更新該日訂單資料
     function saveOrder() {
       if (!currentEditDate) return;
       const isHoliday = document.getElementById("modalIsHoliday").checked;
