@@ -59,20 +59,19 @@
       background-color: #f0f0f0;
       font-weight: bold;
     }
-    /* 報表摘要區：下方空一行 */
+    /* 報表摘要區 */
     #balanceSummary {
       text-align: center;
       font-weight: bold;
       margin-top: 10px;
       white-space: pre-line;
     }
-    /* Modal 調整 */
+    /* Modal (訂單) */
     #modalOverlay {
       display: none;
       position: fixed;
       top: 0; left: 0;
-      width: 100%;
-      height: 100%;
+      width: 100%; height: 100%;
       background: rgba(0,0,0,0.5);
       justify-content: center;
       align-items: center;
@@ -89,11 +88,41 @@
     #modal form div {
       margin-bottom: 10px;
     }
-    /* Modal 中按鈕區，按鈕獨立換行 */
     .modal-btns {
       text-align: center;
     }
     .modal-btns button {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+      font-size: 1rem;
+    }
+    /* Modal (餘額/預收調整) */
+    #balanceModalOverlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    #balanceModal {
+      background: #fff;
+      padding: 20px;
+      border-radius: 5px;
+      width: 100%;
+      max-width: 400px;
+    }
+    #balanceModal form div {
+      margin-bottom: 10px;
+    }
+    .balance-modal-btns {
+      text-align: center;
+    }
+    .balance-modal-btns button {
       width: 100%;
       margin-bottom: 10px;
       padding: 8px;
@@ -147,6 +176,7 @@
   <div id="report"></div>
   <button id="downloadBtn" type="button" class="btn" onclick="downloadReport()">下載表格 JPG</button>
 
+  <!-- Modal (訂單修改) -->
   <div id="modalOverlay">
     <div id="modal">
       <h2 id="modalDate"></h2>
@@ -179,6 +209,28 @@
           <button type="button" onclick="saveOrder()">儲存修改</button>
           <br>
           <button type="button" onclick="closeModal()">取消</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal (餘額/預收調整) -->
+  <div id="balanceModalOverlay">
+    <div id="balanceModal">
+      <h2>調整餘額與預收</h2>
+      <form id="balanceForm">
+        <div>
+          <label for="modalBalance">餘額:</label>
+          <input type="number" id="modalBalance" placeholder="無">
+        </div>
+        <div>
+          <label for="modalAdvance">預收:</label>
+          <input type="number" id="modalAdvance" placeholder="無">
+        </div>
+        <div class="balance-modal-btns">
+          <button type="button" onclick="saveBalance()">儲存</button>
+          <br>
+          <button type="button" onclick="closeBalanceModal()">取消</button>
         </div>
       </form>
     </div>
@@ -265,6 +317,7 @@
       // 取得餘額與預收，若未輸入則顯示「無」
       let balanceText = document.getElementById("balanceInput").value.trim();
       let advanceText = document.getElementById("advanceInput").value.trim();
+      // 若空字串，計算時視為 0，但顯示「無」
       let balanceValue = (balanceText === "") ? 0 : parseFloat(balanceText);
       let advanceValue = (advanceText === "") ? 0 : parseFloat(advanceText);
       let balanceDisplay = (balanceText === "") ? "無" : balanceValue;
@@ -273,11 +326,12 @@
       const startDisplay = `${(startDate.getMonth()+1).toString().padStart(2,"0")}/${startDate.getDate().toString().padStart(2,"0")}`;
       const endDisplay = `${(endDate.getMonth()+1).toString().padStart(2,"0")}/${endDate.getDate().toString().padStart(2,"0")}`;
       let summaryHtml = `<div id="balanceSummary" style="margin-top:10px;">`;
-      summaryHtml += `${startDisplay} 餘額：${(balanceDisplay==="無"?"無":balanceDisplay+"元")}<br>`;
-      summaryHtml += `${endDisplay} 預收：${(advanceDisplay==="無"?"無":advanceDisplay+"元")}<br>`;
-      summaryHtml += `結餘：${finalBalance}元`;
+      summaryHtml += `<span onclick="openBalanceModal()">${startDisplay} 餘額：${(balanceDisplay==="無"?"無":balanceDisplay+"元")}</span><br>`;
+      summaryHtml += `<span onclick="openBalanceModal()">${endDisplay} 預收：${(advanceDisplay==="無"?"無":advanceDisplay+"元")}</span><br>`;
+      summaryHtml += `結餘：${(balanceText === "" && advanceText === "") ? "無" : finalBalance+"元"}`;
       summaryHtml += `</div><br>`;
       html += summaryHtml;
+
       document.getElementById("report").innerHTML = html;
     }
 
@@ -319,6 +373,7 @@
       document.getElementById("endDate").value = today;
     });
 
+    // Modal (訂單修改)
     function openModal(isoDate) {
       currentEditDate = isoDate;
       const d = new Date(isoDate);
@@ -372,6 +427,24 @@
       }
       generateReport();
       closeModal();
+    }
+
+    // Modal (餘額/預收調整)
+    function openBalanceModal() {
+      // 將目前餘額與預收值填入 modalBalance 與 modalAdvance
+      document.getElementById("modalBalance").value = document.getElementById("balanceInput").value;
+      document.getElementById("modalAdvance").value = document.getElementById("advanceInput").value;
+      document.getElementById("balanceModalOverlay").style.display = "flex";
+    }
+    function closeBalanceModal() {
+      document.getElementById("balanceModalOverlay").style.display = "none";
+    }
+    function saveBalance() {
+      // 儲存後更新主表單中的餘額與預收欄位，然後重建報表
+      document.getElementById("balanceInput").value = document.getElementById("modalBalance").value;
+      document.getElementById("advanceInput").value = document.getElementById("modalAdvance").value;
+      generateReport();
+      closeBalanceModal();
     }
   </script>
 </body>
