@@ -76,7 +76,7 @@
 
 <h1>編輯資料庫 (edit.html)</h1>
 
-<!-- 返回主頁 (index.html) -->
+<!-- 返回主頁 (voicesetting.html) -->
 <div class="top-bar">
   <button class="back-btn">
     <a href="voicesetting.html">返回主頁</a>
@@ -105,7 +105,7 @@ window.addEventListener("DOMContentLoaded", () => {
   // (menuItems 結構: [ { name, price, synonyms:[] }, ... ])
   let menuItems = JSON.parse(localStorage.getItem("menuItems")) || [];
 
-  // (customWords 結構: [ { base, synonyms:[] }, ... ])
+  // (customWords 結構: [ { base }, ... ])
   let customWords = JSON.parse(localStorage.getItem("customWords")) || [];
 
   // 2. 儲存函式
@@ -117,13 +117,13 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // 3. DOM 取得
-  const menuItemsContent= document.getElementById("menu-items-content");
-  const clearMenuItemsBtn= document.getElementById("clear-menuitems-btn");
+  const menuItemsContent = document.getElementById("menu-items-content");
+  const clearMenuItemsBtn = document.getElementById("clear-menuitems-btn");
 
-  const customWordsContent= document.getElementById("custom-words-content");
-  const clearCustomWordsBtn= document.getElementById("clear-customwords-btn");
+  const customWordsContent = document.getElementById("custom-words-content");
+  const clearCustomWordsBtn = document.getElementById("clear-customwords-btn");
 
-  // 4. 建立一個更新介面的函式
+  // 4. 更新介面
   function updateView() {
     // (a) 餐點
     menuItemsContent.innerHTML = "";
@@ -177,24 +177,23 @@ window.addEventListener("DOMContentLoaded", () => {
         saveBtn.textContent = "儲存";
         saveBtn.onclick = () => {
           const newName = nameInput.value.trim();
-          const newPrice= parseFloat(priceInput.value);
+          const newPrice = parseFloat(priceInput.value);
           if(!newName || isNaN(newPrice)){
             alert("請輸入正確名稱 / 價格");
             return;
           }
-          item.name= newName;
-          item.price= newPrice;
-          // 同樣把逗號分隔的字串轉為陣列
-          let arr= synInput.value.split(",").map(s=> s.trim()).filter(x=> x);
-          item.synonyms= [...new Set(arr)]; // 去重
+          item.name = newName;
+          item.price = newPrice;
+          let arr = synInput.value.split(",").map(s => s.trim()).filter(x => x);
+          item.synonyms = [...new Set(arr)]; // 去重
           saveMenuItems();
           updateView();
         };
 
-        const cancelBtn= document.createElement("button");
-        cancelBtn.textContent= "取消";
-        cancelBtn.onclick=()=>{
-          editArea.style.display= "none";
+        const cancelBtn = document.createElement("button");
+        cancelBtn.textContent = "取消";
+        cancelBtn.onclick = () => {
+          editArea.style.display = "none";
         };
 
         editArea.appendChild(saveBtn);
@@ -202,19 +201,33 @@ window.addEventListener("DOMContentLoaded", () => {
 
         box.appendChild(editArea);
 
-        // 「編輯」按鈕
+        // 編輯按鈕
         const editBtn = document.createElement("button");
-        editBtn.textContent="編輯";
-        editBtn.onclick=()=>{
-          editArea.style.display=(editArea.style.display==="none")?"block":"none";
+        editBtn.textContent = "編輯";
+        editBtn.onclick = () => {
+          editArea.style.display = (editArea.style.display === "none") ? "block" : "none";
         };
         box.appendChild(editBtn);
+
+        // 刪除按鈕
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "刪除";
+        deleteBtn.style.backgroundColor = "#e74c3c";
+        deleteBtn.style.color = "#fff";
+        deleteBtn.onclick = () => {
+          if (confirm("確定要刪除這筆餐點資料嗎？此操作無法復原！")) {
+            menuItems.splice(idx, 1);
+            saveMenuItems();
+            updateView();
+          }
+        };
+        box.appendChild(deleteBtn);
 
         menuItemsContent.appendChild(box);
       });
     }
 
-    // (b) 客製詞
+    // (b) 客製詞 (僅包含 base)
     customWordsContent.innerHTML = "";
     if (customWords.length === 0) {
       customWordsContent.textContent = "目前沒有任何客製詞。";
@@ -223,63 +236,72 @@ window.addEventListener("DOMContentLoaded", () => {
         const box = document.createElement("div");
         box.className = "item-box";
 
-        const info= document.createElement("div");
-        info.innerHTML= `
-          <strong>客製詞${i+1}：</strong> ${cw.base}<br>
-          <em>同音字：</em> ${cw.synonyms.join(", ")}
+        const info = document.createElement("div");
+        info.innerHTML = `
+          <strong>客製詞${i+1}：</strong> ${cw.base}
         `;
         box.appendChild(info);
 
-        const editArea= document.createElement("div");
-        editArea.className="edit-area";
-        editArea.style.display="none";
+        // 編輯區(預設隱藏)
+        const editArea = document.createElement("div");
+        editArea.className = "edit-area";
+        editArea.style.display = "none";
 
-        const baseInput= document.createElement("input");
-        baseInput.type="text";
-        baseInput.value= cw.base;
-
-        const syn2Input= document.createElement("input");
-        syn2Input.type="text";
-        syn2Input.value= cw.synonyms.join(", ");
+        // 只有一個輸入框，修改 base
+        const baseInput = document.createElement("input");
+        baseInput.type = "text";
+        baseInput.value = cw.base;
 
         editArea.appendChild(document.createTextNode("Base:"));
         editArea.appendChild(baseInput);
         editArea.appendChild(document.createElement("br"));
 
-        editArea.appendChild(document.createTextNode("同音字(逗號分隔):"));
-        editArea.appendChild(syn2Input);
-        editArea.appendChild(document.createElement("br"));
-
-        const saveBtn= document.createElement("button");
-        saveBtn.textContent="儲存";
-        saveBtn.onclick=()=>{
-          const newBase= baseInput.value.trim();
-          if(!newBase){
+        // 儲存 & 取消
+        const saveBtn = document.createElement("button");
+        saveBtn.textContent = "儲存";
+        saveBtn.onclick = () => {
+          const newBase = baseInput.value.trim();
+          if (!newBase) {
             alert("請輸入客製詞 base");
             return;
           }
-          cw.base= newBase;
-          let arr= syn2Input.value.split(",").map(s=> s.trim()).filter(x=> x);
-          cw.synonyms=[...new Set(arr)];
+          cw.base = newBase;
           saveCustomWords();
           updateView();
         };
-        const cancelBtn= document.createElement("button");
-        cancelBtn.textContent="取消";
-        cancelBtn.onclick=()=>{
-          editArea.style.display="none";
+
+        const cancelBtn = document.createElement("button");
+        cancelBtn.textContent = "取消";
+        cancelBtn.onclick = () => {
+          editArea.style.display = "none";
         };
+
         editArea.appendChild(saveBtn);
         editArea.appendChild(cancelBtn);
 
         box.appendChild(editArea);
 
-        const editBtn= document.createElement("button");
-        editBtn.textContent="編輯";
-        editBtn.onclick=()=>{
-          editArea.style.display=(editArea.style.display==="none")?"block":"none";
+        // 編輯按鈕
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "編輯";
+        editBtn.onclick = () => {
+          editArea.style.display = (editArea.style.display === "none") ? "block" : "none";
         };
         box.appendChild(editBtn);
+
+        // 刪除按鈕
+        const deleteBtn = document.createElement("button");
+        deleteBtn.textContent = "刪除";
+        deleteBtn.style.backgroundColor = "#e74c3c";
+        deleteBtn.style.color = "#fff";
+        deleteBtn.onclick = () => {
+          if (confirm("確定要刪除這筆客製詞資料嗎？此操作無法復原！")) {
+            customWords.splice(i, 1);
+            saveCustomWords();
+            updateView();
+          }
+        };
+        box.appendChild(deleteBtn);
 
         customWordsContent.appendChild(box);
       });
@@ -288,19 +310,19 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // 5. 清空功能
   clearMenuItemsBtn.addEventListener("click", () => {
-    const sure= confirm("確定要清空所有餐點嗎？此操作無法復原！");
-    if(sure){
+    const sure = confirm("確定要清空所有餐點嗎？此操作無法復原！");
+    if (sure) {
       localStorage.removeItem("menuItems");
-      menuItems=[];
+      menuItems = [];
       updateView();
       alert("餐點已清空。");
     }
   });
-  clearCustomWordsBtn.addEventListener("click", ()=>{
-    const sure= confirm("確定要清空所有客製詞嗎？此操作無法復原！");
-    if(sure){
+  clearCustomWordsBtn.addEventListener("click", () => {
+    const sure = confirm("確定要清空所有客製詞嗎？此操作無法復原！");
+    if (sure) {
       localStorage.removeItem("customWords");
-      customWords=[];
+      customWords = [];
       updateView();
       alert("客製詞已清空。");
     }
