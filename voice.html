@@ -2,8 +2,11 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>獨立點餐系統 (使用已學習的資料庫)</title>
+  <!-- 1) 加入 viewport，讓手機顯示原始比例 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>獨立點餐系統 (已學習的資料庫) - RWD</title>
   <style>
+    /* 基本排版設定 */
     body {
       font-family: sans-serif;
       margin: 20px;
@@ -17,24 +20,9 @@
       margin-bottom: 20px;
       border-radius: 8px;
     }
-    label {
-      display: inline-block;
-      width: 90px;
-      margin-right: 5px;
-    }
     button {
       margin: 5px 5px 5px 0;
       cursor: pointer;
-    }
-    #order-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    #order-table th, #order-table td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: left;
     }
     .output {
       margin-top: 10px;
@@ -47,11 +35,41 @@
       color: green;
       font-weight: bold;
     }
+    /* 表格相關設定 */
+    #order-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    #order-table th, #order-table td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    /* 2) 讓表格在小螢幕可左右捲動 */
+    .table-wrapper {
+      width: 100%;
+      overflow-x: auto;  /* 超過螢幕寬度時顯示橫向捲軸 */
+    }
+
+    /* 3) Media Query：螢幕小於 600px 時的調整 */
+    @media (max-width: 600px) {
+      body {
+        margin: 10px;
+      }
+      .section {
+        padding: 10px;
+      }
+      #order-table th, #order-table td {
+        padding: 6px;
+        font-size: 14px; /* 字體略縮小 */
+      }
+    }
   </style>
 </head>
 <body>
 
-<h1>獨立點餐系統 (使用已學習的資料庫)</h1>
+<h1>獨立點餐系統 (使用已學習的資料庫) - RWD 版</h1>
 
 <!-- 點餐 (使用語音) -->
 <div class="section">
@@ -65,31 +83,37 @@
 <!-- 已點清單 (表格) -->
 <div class="section">
   <h2>已點餐點</h2>
-  <table id="order-table">
-    <thead>
-      <tr>
-        <th>餐點名稱</th>
-        <th>數量</th>
-        <th>單價</th>
-        <th>小計</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- 動態產生 -->
-    </tbody>
-  </table>
+  <!-- 4) 用 wrapper 包起來，讓 table 能在小螢幕上橫向捲動 -->
+  <div class="table-wrapper">
+    <table id="order-table">
+      <thead>
+        <tr>
+          <th>餐點名稱</th>
+          <th>數量</th>
+          <th>單價</th>
+          <th>小計</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 動態產生 -->
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <script>
-// 1. 讀取 LocalStorage 中的 menuItems (與原先學習頁使用同一key)
+/** 
+ * 1. 讀取 localStorage 裏的 menuItems (需在同網域、同樣 key: "menuItems")
+ *    確保已在其他頁面(如 index.html)中做過餐點/相似詞的新增或訓練
+ */
 let menuItems = JSON.parse(localStorage.getItem("menuItems")) || [];
 
-// 2. DOM 取得
+/** 2. DOM 取得 */
 const voiceInputBtn = document.getElementById("voice-input-btn");
 const voiceOutput = document.getElementById("voice-output");
 const orderTableBody = document.querySelector("#order-table tbody");
 
-// 3. 語音輸入
+/** 3. 點餐 (語音輸入) */
 voiceInputBtn.addEventListener("click", () => {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
@@ -119,7 +143,7 @@ voiceInputBtn.addEventListener("click", () => {
   recognition.start();
 });
 
-// 4. 根據輸入內容判斷餐點並自動顯示於表格
+/** 4. 自動匹配餐點並新增表格 (不手動學習或選擇) */
 function handleOrderByInput(userInput) {
   if (!userInput) {
     voiceOutput.textContent = "未偵測到任何語音輸入。";
@@ -127,32 +151,26 @@ function handleOrderByInput(userInput) {
     return;
   }
 
-  // 解析份數(含簡易中文數字)
   const quantity = parseQuantity(userInput);
-
-  // 嘗試部分比對(或完整比對) => 回傳所有可能符合的餐點
   const matched = findMatches(userInput);
 
   if (matched.length === 1) {
-    // 唯一匹配 -> 直接加入表格
+    // 唯一匹配 => 直接加入表格
     const item = matched[0];
     const totalPrice = item.price * quantity;
     addTableRow(item.name, quantity, item.price, totalPrice);
 
     voiceOutput.textContent = `已自動辨識為「${item.name}」，數量: ${quantity}，小計: NT$${totalPrice}`;
-
   } else if (matched.length === 0) {
-    // 0筆 => 無法判定
-    voiceOutput.textContent = "無法匹配任何餐點，請重新輸入/說明。";
+    voiceOutput.textContent = "無法匹配任何餐點，請重新輸入。";
     voiceOutput.classList.add("error");
   } else {
-    // 多筆 => 無法自動判定
     voiceOutput.textContent = "找到多筆符合，無法自動判定。請更精確描述。";
     voiceOutput.classList.add("error");
   }
 }
 
-// 5. 將項目新增至表格
+/** 5. 新增一筆到訂單表格 */
 function addTableRow(name, qty, price, total) {
   const tr = document.createElement("tr");
 
@@ -175,13 +193,10 @@ function addTableRow(name, qty, price, total) {
   orderTableBody.appendChild(tr);
 }
 
-// 6. 比對邏輯：若 userInput 包含某餐點的 synonym，即視為匹配
+/** 6. 找出所有匹配: userInput 中 "包含" item.synonyms */
 function findMatches(userInput) {
-  // 可以先做 exact match 檢查 => 若只要 partial match，亦可直接 partial
-  // 這裡為示範，直接做 "部分比對" (includes)
   const results = [];
   for (let item of menuItems) {
-    // synonyms 可能包含多個字詞
     for (let syn of item.synonyms) {
       if (userInput.includes(syn)) {
         results.push(item);
@@ -192,7 +207,7 @@ function findMatches(userInput) {
   return results;
 }
 
-// 7. 份數解析：支援阿拉伯數字 + 簡易中文 (1～99)
+/** 7. 份數解析 (阿拉伯數字 + 簡易中文數字) */
 function parseQuantity(input) {
   // 先試阿拉伯數字
   const arabicMatch = input.match(/(\d+)\s*(份|顆|個|碗|杯|串)?/);
@@ -207,7 +222,7 @@ function parseQuantity(input) {
     const val = convertChineseNumberToInt(cnMatch[0]);
     if (val > 0) return val;
   }
-  // 都沒有 => 預設 1
+  // 預設 1
   return 1;
 }
 
