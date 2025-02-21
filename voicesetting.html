@@ -77,9 +77,12 @@
   <label for="custom-base-input">客製詞 (base):</label>
   <input type="text" id="custom-base-input" placeholder="如：辣">
 
+  <!-- 刪除原本的同音字輸入 -->
+  <!--
   <label for="custom-syn-input">同音字 (逗號分隔):</label>
   <input type="text" id="custom-syn-input" placeholder="如：臘, 拉">
-  
+  -->
+
   <button id="add-custom-btn">新增客製詞</button>
   <div class="output" id="custom-output"></div>
 </div>
@@ -115,8 +118,8 @@ window.addEventListener("DOMContentLoaded", () => {
   // menuItems: [ { name, price, synonyms:[] }, ... ]
   let menuItems = JSON.parse(localStorage.getItem("menuItems")) || [];
 
-  // customWords: [ { base, synonyms:[] }, ... ]
-  let customWords= JSON.parse(localStorage.getItem("customWords")) || [];
+  // customWords: [ { base }, ... ]
+  let customWords = JSON.parse(localStorage.getItem("customWords")) || [];
 
   // 2. 儲存函式
   function saveMenuItems(){
@@ -128,90 +131,81 @@ window.addEventListener("DOMContentLoaded", () => {
 
   // 3. DOM 取得
   // (餐點)
-  const addItemBtn= document.getElementById("add-item-btn");
-  const itemNameInput= document.getElementById("item-name");
-  const itemPriceInput= document.getElementById("item-price");
-  const settingOutput= document.getElementById("setting-output");
+  const addItemBtn = document.getElementById("add-item-btn");
+  const itemNameInput = document.getElementById("item-name");
+  const itemPriceInput = document.getElementById("item-price");
+  const settingOutput = document.getElementById("setting-output");
 
   // (客製詞)
-  const customBaseInput= document.getElementById("custom-base-input");
-  const customSynInput= document.getElementById("custom-syn-input");
-  const addCustomBtn= document.getElementById("add-custom-btn");
-  const customOutput= document.getElementById("custom-output");
+  const customBaseInput = document.getElementById("custom-base-input");
+  // 刪除 customSynInput 的取得
+  const addCustomBtn = document.getElementById("add-custom-btn");
+  const customOutput = document.getElementById("custom-output");
 
   // (點餐)
-  const orderInput= document.getElementById("order-input");
-  const voiceInputBtn= document.getElementById("voice-input-btn");
-  const orderBtn= document.getElementById("order-btn");
-  const orderOutput= document.getElementById("order-output");
+  const orderInput = document.getElementById("order-input");
+  const voiceInputBtn = document.getElementById("voice-input-btn");
+  const orderBtn = document.getElementById("order-btn");
+  const orderOutput = document.getElementById("order-output");
 
   // (備份/還原)
-  const downloadBackupBtn= document.getElementById("download-backup-btn");
-  const uploadBackupBtn= document.getElementById("upload-backup-btn");
-  const uploadBackupInput= document.getElementById("upload-backup-input");
-  const backupOutput= document.getElementById("backup-output");
+  const downloadBackupBtn = document.getElementById("download-backup-btn");
+  const uploadBackupBtn = document.getElementById("upload-backup-btn");
+  const uploadBackupInput = document.getElementById("upload-backup-input");
+  const backupOutput = document.getElementById("backup-output");
 
   // ===== 4. 新增餐點 =====
-  addItemBtn.addEventListener("click", ()=>{
-    const name= itemNameInput.value.trim();
-    const price= parseFloat(itemPriceInput.value);
-    if(!name|| isNaN(price)){
-      settingOutput.textContent="請輸入正確的餐點名稱與價格。";
+  addItemBtn.addEventListener("click", () => {
+    const name = itemNameInput.value.trim();
+    const price = parseFloat(itemPriceInput.value);
+    if(!name || isNaN(price)){
+      settingOutput.textContent = "請輸入正確的餐點名稱與價格。";
       settingOutput.classList.add("error");
       return;
     }
     settingOutput.classList.remove("error");
-    const newItem={
+    const newItem = {
       name,
       price,
-      synonyms:[name]
+      synonyms: [name]
     };
     menuItems.push(newItem);
     saveMenuItems();
-    settingOutput.textContent=`已新增餐點：${name}, 價格：${price}`;
-    itemNameInput.value="";
-    itemPriceInput.value="";
+    settingOutput.textContent = `已新增餐點：${name}, 價格：${price}`;
+    itemNameInput.value = "";
+    itemPriceInput.value = "";
   });
 
-  // ===== 5. 新增客製詞 (base, synonyms) =====
-  addCustomBtn.addEventListener("click", ()=>{
-    const base= customBaseInput.value.trim();
-    const synStr= customSynInput.value.trim();
+  // ===== 5. 新增客製詞 (僅保留 base) =====
+  addCustomBtn.addEventListener("click", () => {
+    const base = customBaseInput.value.trim();
     if(!base){
-      customOutput.textContent="請輸入客製詞 (base)";
+      customOutput.textContent = "請輸入客製詞 (base)";
       customOutput.classList.add("error");
       return;
     }
     customOutput.classList.remove("error");
-    let synArr=[];
-    if(synStr){
-      synArr= synStr.split(",").map(s=> s.trim()).filter(x=> x);
-    }
-    const newCW={
-      base,
-      synonyms: synArr
-    };
+    const newCW = { base };
     customWords.push(newCW);
     saveCustomWords();
-    customOutput.textContent=`已新增客製詞：「${base}」, 同音字: ${synArr.join(", ")||"無"}`;
-    customBaseInput.value="";
-    customSynInput.value="";
+    customOutput.textContent = `已新增客製詞：「${base}」`;
+    customBaseInput.value = "";
   });
 
   // ===== 6. 點餐 (含語音 / 無匹配 -> 手動選擇 + 學習) =====
   orderBtn.addEventListener("click", handleOrderInput);
   function handleOrderInput(){
-    const userInput= orderInput.value.trim();
-    orderOutput.innerHTML="";
+    const userInput = orderInput.value.trim();
+    orderOutput.innerHTML = "";
     if(!userInput){
-      orderOutput.textContent="請輸入想點的餐點(可含客製詞)";
+      orderOutput.textContent = "請輸入想點的餐點(可含客製詞)";
       orderOutput.classList.add("error");
       return;
     }
     orderOutput.classList.remove("error");
 
     // 部分比對
-    let matchedItems=[];
+    let matchedItems = [];
     for(let item of menuItems){
       for(let syn of item.synonyms){
         if(userInput.includes(syn)){
@@ -220,43 +214,43 @@ window.addEventListener("DOMContentLoaded", () => {
         }
       }
     }
-    if(matchedItems.length===1){
-      // 單筆
-      const item= matchedItems[0];
-      orderOutput.innerHTML=`已匹配到餐點：<span class="highlight">${item.name}</span>`;
-    } else if(matchedItems.length===0){
-      // 無匹配 => 手動
+    if(matchedItems.length === 1){
+      // 單筆匹配
+      const item = matchedItems[0];
+      orderOutput.innerHTML = `已匹配到餐點：<span class="highlight">${item.name}</span>`;
+    } else if(matchedItems.length === 0){
+      // 無匹配 => 手動選擇並學習
       askUserToSelectItem(userInput);
     } else {
-      // 多筆
-      orderOutput.textContent="找到多個相似餐點，請再輸入更精確名稱！";
+      // 多筆匹配
+      orderOutput.textContent = "找到多個相似餐點，請再輸入更精確名稱！";
       orderOutput.classList.add("error");
     }
-    orderInput.value="";
+    orderInput.value = "";
   }
   function askUserToSelectItem(userInput){
-    orderOutput.innerHTML=`
+    orderOutput.innerHTML = `
       系統無法判定，請手動選取您想點的餐點：<br>
     `;
-    const selectElem= document.createElement("select");
-    menuItems.forEach((item, idx)=>{
-      const opt= document.createElement("option");
-      opt.value= idx;
-      opt.textContent=`${item.name} (NT$${item.price})`;
+    const selectElem = document.createElement("select");
+    menuItems.forEach((item, idx) => {
+      const opt = document.createElement("option");
+      opt.value = idx;
+      opt.textContent = `${item.name} (NT$${item.price})`;
       selectElem.appendChild(opt);
     });
     orderOutput.appendChild(selectElem);
 
-    const confirmBtn= document.createElement("button");
-    confirmBtn.textContent="確認";
-    confirmBtn.onclick=()=>{
-      const chosenIndex= parseInt(selectElem.value,10);
-      const chosenItem= menuItems[chosenIndex];
+    const confirmBtn = document.createElement("button");
+    confirmBtn.textContent = "確認";
+    confirmBtn.onclick = () => {
+      const chosenIndex = parseInt(selectElem.value, 10);
+      const chosenItem = menuItems[chosenIndex];
       if(!chosenItem.synonyms.includes(userInput)){
         chosenItem.synonyms.push(userInput);
         saveMenuItems();
       }
-      orderOutput.innerHTML=`
+      orderOutput.innerHTML = `
         已將「<span class="highlight">${userInput}</span>」學習為
         <span class="highlight">${chosenItem.name}</span> 的新相似詞！
       `;
@@ -265,87 +259,87 @@ window.addEventListener("DOMContentLoaded", () => {
   }
 
   // 語音輸入
-  voiceInputBtn.addEventListener("click", ()=>{
-    const SpeechRecognition= window.SpeechRecognition||window.webkitSpeechRecognition;
+  voiceInputBtn.addEventListener("click", () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if(!SpeechRecognition){
       alert("您的瀏覽器不支援語音辨識。");
       return;
     }
-    const recognition= new SpeechRecognition();
-    recognition.lang="zh-TW";
-    recognition.interimResults=false;
-    recognition.onstart=()=>{
-      orderOutput.textContent="語音辨識中，請開始說話...";
+    const recognition = new SpeechRecognition();
+    recognition.lang = "zh-TW";
+    recognition.interimResults = false;
+    recognition.onstart = () => {
+      orderOutput.textContent = "語音辨識中，請開始說話...";
       orderOutput.classList.remove("error");
     };
-    recognition.onerror=(e)=>{
-      orderOutput.textContent="語音辨識錯誤："+ e.error;
+    recognition.onerror = (e) => {
+      orderOutput.textContent = "語音辨識錯誤：" + e.error;
       orderOutput.classList.add("error");
     };
-    recognition.onresult=(e)=>{
-      const transcript= e.results[0][0].transcript;
-      orderInput.value= transcript;
-      orderOutput.textContent="語音輸入結果："+ transcript;
+    recognition.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      orderInput.value = transcript;
+      orderOutput.textContent = "語音輸入結果：" + transcript;
     };
     recognition.start();
   });
 
   // ===== 7. 資料庫備份 / 還原 =====
-  downloadBackupBtn.addEventListener("click", ()=>{
-    const data= { menuItems, customWords };
-    const jsonStr= JSON.stringify(data,null,2);
-    const blob= new Blob([jsonStr], { type:"text/plain" });
-    const url= URL.createObjectURL(blob);
-    const a= document.createElement("a");
-    a.href= url;
-    const now= new Date();
-    const timestamp= now.toISOString().replace(/[:.]/g,"-");
-    a.download=`database-backup-${timestamp}.txt`;
+  downloadBackupBtn.addEventListener("click", () => {
+    const data = { menuItems, customWords };
+    const jsonStr = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonStr], { type:"text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const now = new Date();
+    const timestamp = now.toISOString().replace(/[:.]/g, "-");
+    a.download = `database-backup-${timestamp}.txt`;
     document.body.appendChild(a);
     a.click();
     URL.revokeObjectURL(url);
     a.remove();
-    backupOutput.textContent="已下載資料庫備份檔。";
+    backupOutput.textContent = "已下載資料庫備份檔。";
     backupOutput.classList.remove("error");
   });
 
-  uploadBackupBtn.addEventListener("click", ()=>{
-    const file= uploadBackupInput.files[0];
+  uploadBackupBtn.addEventListener("click", () => {
+    const file = uploadBackupInput.files[0];
     if(!file){
-      backupOutput.textContent="請先選擇要上傳的備份檔。";
+      backupOutput.textContent = "請先選擇要上傳的備份檔。";
       backupOutput.classList.add("error");
       return;
     }
     backupOutput.classList.remove("error");
-    backupOutput.textContent="上傳中...";
-    const reader= new FileReader();
-    reader.onload=(e)=>{
+    backupOutput.textContent = "上傳中...";
+    const reader = new FileReader();
+    reader.onload = (e) => {
       try{
-        const text= e.target.result;
-        const obj= JSON.parse(text);
+        const text = e.target.result;
+        const obj = JSON.parse(text);
         if(!obj.menuItems || !obj.customWords){
-          backupOutput.textContent="上傳檔案不符合預期格式(缺少 menuItems 或 customWords)。";
+          backupOutput.textContent = "上傳檔案不符合預期格式(缺少 menuItems 或 customWords)。";
           backupOutput.classList.add("error");
           return;
         }
-        menuItems= obj.menuItems;
-        customWords= obj.customWords;
+        menuItems = obj.menuItems;
+        customWords = obj.customWords;
         localStorage.setItem("menuItems", JSON.stringify(menuItems));
         localStorage.setItem("customWords", JSON.stringify(customWords));
-        backupOutput.textContent="已成功上傳並建立資料庫！";
+        backupOutput.textContent = "已成功上傳並建立資料庫！";
         backupOutput.classList.remove("error");
-      }catch(err){
+      } catch(err){
         console.error(err);
-        backupOutput.textContent="上傳檔案解析失敗，請確認檔案內容。";
+        backupOutput.textContent = "上傳檔案解析失敗，請確認檔案內容。";
         backupOutput.classList.add("error");
       }
     };
-    reader.onerror=(err)=>{
+    reader.onerror = (err) => {
       console.error(err);
-      backupOutput.textContent="檔案讀取失敗，請重試。";
+      backupOutput.textContent = "檔案讀取失敗，請重試。";
       backupOutput.classList.add("error");
     };
-    reader.readAsText(file,"utf-8");
+    reader.readAsText(file, "utf-8");
   });
 });
 </script>
