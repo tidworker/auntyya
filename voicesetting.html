@@ -2,8 +2,11 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <title>點餐系統 - 確認過的模糊詞下次不再詢問</title>
+  <!-- 1) RWD 必備，讓行動裝置不預設縮放 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>點餐系統 (主頁面) - RWD 版</title>
   <style>
+    /* 基本排版設定 */
     body {
       font-family: sans-serif;
       margin: 20px;
@@ -17,19 +20,6 @@
       margin-bottom: 20px;
       border-radius: 8px;
     }
-    label {
-      display: inline-block;
-      width: 90px;
-      margin-right: 5px;
-    }
-    input[type="text"], input[type="number"] {
-      width: 200px;
-      margin-bottom: 10px;
-    }
-    button {
-      margin: 5px 5px 5px 0;
-      cursor: pointer;
-    }
     .output {
       margin-top: 10px;
       color: #333;
@@ -40,6 +30,24 @@
     }
     .error {
       color: red;
+    }
+
+    /* 移除固定寬度，讓 label / input 能自動縮放或換行 */
+    label {
+      display: block;
+      margin: 5px 0 2px;
+      font-weight: bold;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      max-width: 300px; /* 給個上限，避免在大螢幕過長 */
+      box-sizing: border-box;
+      margin-bottom: 8px;
+      padding: 6px;
+    }
+    button {
+      margin: 5px 5px 5px 0;
+      cursor: pointer;
     }
 
     /* Modal (彈出視窗) */
@@ -92,11 +100,34 @@
       margin-top: 5px;
       border-radius: 4px;
     }
+
+    /* 2) Media Query：窄螢幕 (小於600px) 一些縮小處理 */
+    @media (max-width: 600px) {
+      body {
+        margin: 10px;
+      }
+      .section {
+        padding: 10px;
+      }
+      #database-modal {
+        width: 90%; /* 窄螢幕時，Modal自適應寬度 */
+        padding: 10px;
+      }
+      .item-box {
+        padding: 6px;
+      }
+      .edit-area {
+        padding: 6px;
+      }
+      button {
+        margin: 3px 3px 3px 0;
+      }
+    }
   </style>
 </head>
 <body>
 
-<h1>點餐系統 - 確認過的模糊詞，下次不再詢問</h1>
+<h1>點餐系統 (主頁面) - RWD 版</h1>
 
 <!-- 查看資料庫按鈕 -->
 <button id="view-database-btn">查看資料庫</button>
@@ -104,14 +135,12 @@
 <!-- 設定 (Setting) -->
 <div class="section">
   <h2>設定 (Setting)</h2>
-  <div>
-    <label for="item-name">餐點名稱:</label>
-    <input type="text" id="item-name" placeholder="如：漢堡">
-  </div>
-  <div>
-    <label for="item-price">價格:</label>
-    <input type="number" id="item-price" placeholder="如：50">
-  </div>
+  <label for="item-name">餐點名稱:</label>
+  <input type="text" id="item-name" placeholder="如：漢堡">
+
+  <label for="item-price">價格:</label>
+  <input type="number" id="item-price" placeholder="如：50">
+
   <button id="add-item-btn">新增餐點</button>
   <div class="output" id="setting-output"></div>
 </div>
@@ -119,16 +148,15 @@
 <!-- 點餐 (Order) -->
 <div class="section">
   <h2>點餐 (Order)</h2>
-  <div>
-    <label for="order-input">想點的餐點:</label>
-    <input type="text" id="order-input" placeholder="例如：2份薯條 / 兩顆水餃 / 綜合湯">
-    <button id="voice-input-btn">語音輸入</button>
-  </div>
+  <label for="order-input">想點的餐點:</label>
+  <input type="text" id="order-input" placeholder="例如：2份薯條 / 兩顆水餃 / 綜合湯">
+  <button id="voice-input-btn">語音輸入</button>
+
   <button id="order-btn">點餐</button>
   <div class="output" id="order-output"></div>
 </div>
 
-<!-- Modal: 查看/編輯資料庫 -->
+<!-- Modal (查看/編輯資料庫) -->
 <div id="modal-overlay">
   <div id="database-modal">
     <button id="close-modal-btn">關閉</button>
@@ -139,18 +167,26 @@
 </div>
 
 <script>
-//--------------------------------------------------
-// 1. LocalStorage 模擬「資料庫」
-//--------------------------------------------------
+/**
+ * 在此頁整合了：
+ * - 「設定餐點」(Setting)
+ * - 「點餐」(Order) + [可正確/錯誤、多筆匹配、無匹配手動選擇] + [學習新增相似詞]
+ * - 「查看資料庫」(Modal) + 可編輯名稱、價格、相似詞
+ * - 並加入最基本的 RWD 版型
+ */
+
+//-----------------------------
+// 1. LocalStorage 模擬資料庫
+//-----------------------------
 let menuItems = JSON.parse(localStorage.getItem("menuItems")) || [];
 
 function saveMenuItemsToLocalStorage() {
   localStorage.setItem("menuItems", JSON.stringify(menuItems));
 }
 
-//--------------------------------------------------
+//-----------------------------
 // 2. DOM 取得
-//--------------------------------------------------
+//-----------------------------
 const addItemBtn = document.getElementById("add-item-btn");
 const itemNameInput = document.getElementById("item-name");
 const itemPriceInput = document.getElementById("item-price");
@@ -168,9 +204,9 @@ const modalContent = document.getElementById("modal-content");
 const closeModalBtn = document.getElementById("close-modal-btn");
 const clearDatabaseBtn = document.getElementById("clear-database-btn");
 
-//--------------------------------------------------
+//-----------------------------
 // 3. 新增餐點 (Setting)
-//--------------------------------------------------
+//-----------------------------
 addItemBtn.addEventListener("click", () => {
   const name = itemNameInput.value.trim();
   const price = parseFloat(itemPriceInput.value);
@@ -181,11 +217,11 @@ addItemBtn.addEventListener("click", () => {
   }
   settingOutput.classList.remove("error");
 
-  // 建立新的餐點物件
+  // 建立一個新的餐點物件
   const newItem = {
     name,
     price,
-    synonyms: [name] // 預設把名稱也放入相似詞
+    synonyms: [name] // 預設把名稱也放進相似詞
   };
   menuItems.push(newItem);
   saveMenuItemsToLocalStorage();
@@ -195,9 +231,9 @@ addItemBtn.addEventListener("click", () => {
   itemPriceInput.value = "";
 });
 
-//--------------------------------------------------
-// 4. 點餐：先檢查「完整字串」再檢查「部分比對」
-//--------------------------------------------------
+//-----------------------------
+// 4. 點餐：多筆匹配 + 正確/錯誤 + 手動選擇 + 下次不再詢問
+//-----------------------------
 orderBtn.addEventListener("click", handleOrderInput);
 
 function handleOrderInput() {
@@ -210,13 +246,12 @@ function handleOrderInput() {
   }
   orderOutput.classList.remove("error");
 
-  // 解析份數
   const quantity = parseQuantity(userInput);
 
-  // 第一步：先找「完整字串」匹配
+  // 先找「完整字串」(exact) 的比對
   const exactMatches = findExactMatches(userInput);
   if (exactMatches.length === 1) {
-    // 如果只有一筆完整字串匹配 => 直接加入，不再詢問
+    // 單筆完整匹配 => 直接加入
     const item = exactMatches[0];
     const totalPrice = item.price * quantity;
     orderOutput.innerHTML = `
@@ -227,44 +262,42 @@ function handleOrderInput() {
     orderInput.value = "";
     return;
   } else if (exactMatches.length > 1) {
-    // 多筆完整字串匹配 => 讓使用者挑
-    orderOutput.innerHTML = "偵測到多筆完全匹配，請選擇正確的餐點：<br>";
-    exactMatches.forEach(item => {
-      const btn = document.createElement("button");
-      btn.textContent = item.name;
-      btn.onclick = () => {
-        const totalPrice = item.price * quantity;
-        orderOutput.innerHTML = `
-          已為您加入 <span class="highlight">${quantity}</span> 份
-          <span class="highlight">${item.name}</span>，
-          小計: NT$${totalPrice}
-        `;
-      };
-      orderOutput.appendChild(btn);
-    });
-    // 若使用者認為都不對 => 可再做一個按鈕 "都不對"
-    const noneBtn = document.createElement("button");
-    noneBtn.textContent = "都不對";
-    noneBtn.onclick = () => {
-      handlePartialOrNoMatch(userInput, quantity);
-    };
-    orderOutput.appendChild(noneBtn);
-
+    // 多筆完整匹配 => 請使用者挑
+    showMultipleExactMatches(exactMatches, userInput, quantity);
     orderInput.value = "";
     return;
   }
 
-  // 第二步：若沒找到任何「完整字串」或有衝突 => 進入「部分比對」流程
+  // 若沒找到或多筆衝突 => 進入 部分比對
   handlePartialOrNoMatch(userInput, quantity);
   orderInput.value = "";
 }
 
-/**
- * 若完整字串無法單一判定，才來做「部分比對」：
- *   - 若找到 1 筆 => 詢問「正確 / 錯誤」
- *   - 若找到多筆 => 讓使用者從多筆中挑
- *   - 若找不到 => 請使用者手動選擇
- */
+/** 顯示多筆「完整字串」匹配時的處理 */
+function showMultipleExactMatches(items, userInput, quantity) {
+  orderOutput.innerHTML = "偵測到多筆完全匹配，請選擇正確的餐點：<br>";
+  items.forEach(item => {
+    const btn = document.createElement("button");
+    btn.textContent = item.name;
+    btn.onclick = () => {
+      const totalPrice = item.price * quantity;
+      orderOutput.innerHTML = `
+        已為您加入 <span class="highlight">${quantity}</span> 份
+        <span class="highlight">${item.name}</span>，
+        小計: NT$${totalPrice}
+      `;
+    };
+    orderOutput.appendChild(btn);
+  });
+  const noneBtn = document.createElement("button");
+  noneBtn.textContent = "都不對";
+  noneBtn.onclick = () => {
+    handlePartialOrNoMatch(userInput, quantity);
+  };
+  orderOutput.appendChild(noneBtn);
+}
+
+/** 部分比對 或 無匹配 => 1筆 -> [正確/錯誤], 多筆 -> 列出, 0筆 -> 手動選 */
 function handlePartialOrNoMatch(userInput, quantity) {
   const matchedItems = findPartialMatches(userInput);
   if (matchedItems.length === 0) {
@@ -286,7 +319,7 @@ function handlePartialOrNoMatch(userInput, quantity) {
         <span class="highlight">${item.name}</span>，
         小計: NT$${totalPrice}
       `;
-      // 同時把這次的完整輸入加到 synonyms，下次就變「完整字串」匹配
+      // 同時學習完整字串 => 下次不用再問
       if (!item.synonyms.includes(userInput)) {
         item.synonyms.push(userInput);
         saveMenuItemsToLocalStorage();
@@ -305,7 +338,7 @@ function handlePartialOrNoMatch(userInput, quantity) {
     orderOutput.appendChild(wrongBtn);
 
   } else {
-    // 多筆 => 列出所有，讓使用者點
+    // 多筆 => 列出
     orderOutput.innerHTML = "找到多個可能的餐點，請選擇：<br>";
     matchedItems.forEach(item => {
       const btn = document.createElement("button");
@@ -317,7 +350,7 @@ function handlePartialOrNoMatch(userInput, quantity) {
           <span class="highlight">${item.name}</span>，
           小計: NT$${totalPrice}
         `;
-        // 同時把完整輸入加到 synonyms
+        // 同時學習完整字串
         if (!item.synonyms.includes(userInput)) {
           item.synonyms.push(userInput);
           saveMenuItemsToLocalStorage();
@@ -325,7 +358,6 @@ function handlePartialOrNoMatch(userInput, quantity) {
       };
       orderOutput.appendChild(btn);
     });
-    // 「都不對」
     const noneBtn = document.createElement("button");
     noneBtn.textContent = "都不對";
     noneBtn.onclick = () => {
@@ -335,24 +367,18 @@ function handlePartialOrNoMatch(userInput, quantity) {
   }
 }
 
-/** 
- * 先檢查「完整字串」：若 userInput == 某 item.synonyms 中的一個字串
- */
+//-----------------------------
+// 5. 查找「完整字串」(exact) / 「部分比對」(partial)
+//-----------------------------
 function findExactMatches(userInput) {
   const results = [];
   for (let item of menuItems) {
-    // EXACT: 包含 "=== userInput" 的相似詞
     if (item.synonyms.includes(userInput)) {
       results.push(item);
     }
   }
   return results;
 }
-
-/** 
- * 部分比對：只要 userInput 裡包含某個 synonym，就算符合
- * e.g. "綜合湯" 包含 "綜合"
- */
 function findPartialMatches(userInput) {
   const results = [];
   for (let item of menuItems) {
@@ -366,10 +392,7 @@ function findPartialMatches(userInput) {
   return results;
 }
 
-/** 
- * 若 0 筆比對 or 使用者選擇「錯誤 / 都不對」時，請手動選擇
- * 並把 userInput 視為新的完整字串，加到選定的餐點 synonyms
- */
+/** 0 筆 or 錯誤 => 手動選擇, 並學習整句 */
 function askUserToSelectItem(userInput, quantity) {
   orderOutput.innerHTML = `
     系統無法判定，請手動選取您想點的餐點：<br>
@@ -390,54 +413,48 @@ function askUserToSelectItem(userInput, quantity) {
     const chosenItem = menuItems[chosenIndex];
 
     const totalPrice = chosenItem.price * quantity;
-    // 把完整字串 (userInput) 學習為該餐點的新 synonym
     if (!chosenItem.synonyms.includes(userInput)) {
       chosenItem.synonyms.push(userInput);
       saveMenuItemsToLocalStorage();
     }
-
     orderOutput.innerHTML = `
       已為您加入 <span class="highlight">${quantity}</span> 份
       <span class="highlight">${chosenItem.name}</span> (NT$${totalPrice})！<br>
-      同時學習到「${userInput}」 = 「${chosenItem.name}」。
+      同時學習到「${userInput}」=「${chosenItem.name}」。
     `;
   };
   orderOutput.appendChild(confirmBtn);
 }
 
-//--------------------------------------------------
-// 5. 數量解析 (含簡易中文 1~99)
-//--------------------------------------------------
+//-----------------------------
+// 6. 數量解析(含簡易中文 1~99)
+//-----------------------------
 function parseQuantity(input) {
-  // 先試阿拉伯數字
+  // 阿拉伯數字
   const arabicMatch = input.match(/(\d+)\s*(份|顆|個|碗|杯|串)?/);
   if (arabicMatch) {
     const q = parseInt(arabicMatch[1], 10);
     if (!isNaN(q)) return q;
   }
-  // 再試中文數字
+  // 中文數字
   let str = input.replace(/(份|顆|個|碗|杯|串)/g, '');
   const cnMatch = str.match(/[零一二兩三四五六七八九十]+/);
   if (cnMatch) {
     const val = convertChineseNumberToInt(cnMatch[0]);
     if (val > 0) return val;
   }
-  // 預設 1
+  // 預設1
   return 1;
 }
-
 function convertChineseNumberToInt(cnStr) {
   const cnMap = {
     '零': 0, '一': 1, '二': 2, '兩': 2, '三': 3,
     '四': 4, '五': 5, '六': 6, '七': 7,
     '八': 8, '九': 9
   };
-
   if (cnStr === '十') return 10;
-
   const parts = cnStr.split('十');
   if (parts.length === 1) {
-    // 沒有「十」
     let sum = 0;
     for (let c of cnStr) {
       if (cnMap[c] != null) {
@@ -446,7 +463,6 @@ function convertChineseNumberToInt(cnStr) {
     }
     return sum;
   } else {
-    // 有「十」
     let leftPart = parts[0];
     let rightPart = parts[1] || "";
     let leftVal = 0;
@@ -475,9 +491,9 @@ function convertChineseNumberToInt(cnStr) {
   }
 }
 
-//--------------------------------------------------
-// 6. 語音輸入 (Web Speech API)
-//--------------------------------------------------
+//-----------------------------
+// 7. 語音輸入 (Web Speech API)
+//-----------------------------
 voiceInputBtn.addEventListener("click", () => {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
@@ -493,18 +509,20 @@ voiceInputBtn.addEventListener("click", () => {
   };
   recognition.onerror = (e) => {
     orderOutput.textContent = "語音辨識錯誤：" + e.error;
+    orderOutput.classList.add("error");
   };
   recognition.onresult = (e) => {
     const transcript = e.results[0][0].transcript;
     orderInput.value = transcript;
     orderOutput.textContent = "語音輸入結果：" + transcript;
+    orderOutput.classList.remove("error");
   };
   recognition.start();
 });
 
-//--------------------------------------------------
-// 7. 查看 / 編輯資料庫 (Modal)
-//--------------------------------------------------
+//-----------------------------
+// 8. 查看 / 編輯資料庫 (Modal)
+//-----------------------------
 viewDatabaseBtn.addEventListener("click", () => {
   updateModalContent();
   modalOverlay.style.display = "flex";
@@ -553,12 +571,17 @@ function updateModalContent() {
     const nameInput = document.createElement("input");
     nameInput.type = "text";
     nameInput.value = item.name;
+    nameInput.style.width = "100%";
+
     const priceInput = document.createElement("input");
     priceInput.type = "number";
     priceInput.value = item.price;
+    priceInput.style.width = "100%";
+
     const synInput = document.createElement("input");
     synInput.type = "text";
     synInput.value = item.synonyms.join(", ");
+    synInput.style.width = "100%";
 
     editArea.appendChild(document.createTextNode("名稱:"));
     editArea.appendChild(nameInput);
@@ -587,8 +610,7 @@ function updateModalContent() {
 
       // 解析逗號分隔的相似詞
       const synArr = synInput.value.split(",").map(s => s.trim()).filter(x => x);
-      // 去重
-      item.synonyms = [...new Set(synArr)];
+      item.synonyms = [...new Set(synArr)]; // 去重
 
       saveMenuItemsToLocalStorage();
       updateModalContent(); // 重新渲染
@@ -619,4 +641,4 @@ function updateModalContent() {
 </script>
 
 </body>
-</html>on 
+</html>
