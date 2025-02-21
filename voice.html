@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8" />
-  <title>Order 頁面 - 學習功能 & 「客製」欄位</title>
+  <meta charset="UTF-8">
+  <title>Order 頁面 - 語音點餐 + 學習功能 (無多餘按鈕)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
@@ -19,7 +19,7 @@
       border-radius: 8px;
     }
     button {
-      margin: 5px 5px 5px 0;
+      margin: 5px;
       cursor: pointer;
     }
     .output {
@@ -63,40 +63,31 @@
 </head>
 <body>
 
-<h1>Order 頁面 - 學習功能 &「客製」欄位</h1>
+<h1>Order 頁面 - 語音點餐 + 學習功能</h1>
 
-<!-- 語音點餐 -->
+<!-- 單一按鈕進行語音輸入 -->
 <div class="section">
-  <h2>語音點餐</h2>
+  <h2>語音輸入</h2>
   <button id="voice-input-btn">語音輸入</button>
   <div class="output" id="voice-output"></div>
 </div>
 
-<!-- 點餐輸入 -->
+<!-- 訂單清單 -->
 <div class="section">
-  <h2>點餐 (含客製)</h2>
-  <label for="order-input">請輸入餐點 + 客製內容:</label>
-  <input type="text" id="order-input" placeholder="例如：我要2份漢堡加大辣">
-  <button id="order-btn">點餐</button>
-  <div class="output" id="order-output"></div>
-</div>
-
-<!-- 訂單表格 -->
-<div class="section">
-  <h2>已點清單</h2>
+  <h2>已點餐點</h2>
   <div class="table-wrapper">
     <table id="order-table">
       <thead>
         <tr>
           <th>餐點名稱</th>
-          <th>客製</th> <!-- 原本「客製詞」改為「客製」 -->
+          <th>客製</th> <!-- 原文「客製詞」改為「客製」 -->
           <th>數量</th>
           <th>單價</th>
           <th>小計</th>
         </tr>
       </thead>
       <tbody>
-        <!-- 產生訂單列 -->
+        <!-- 動態新增 -->
       </tbody>
     </table>
   </div>
@@ -104,142 +95,124 @@
 </div>
 
 <script>
-/**
- * 1. 從 localStorage 讀取已學習的 menuItems / customWords (與主頁面共享)
+/** 
+ * 1. 從 localStorage 讀取
+ *    - menuItems: [ { name, price, synonyms:[] }, ... ]
+ *    - customWords: [ "辣", "少冰", ... ]
  */
 let menuItems = JSON.parse(localStorage.getItem("menuItems")) || [];
 let customWords = JSON.parse(localStorage.getItem("customWords")) || [];
 
-/* 儲存回 localStorage */
-function saveMenuItems() {
-  localStorage.setItem("menuItems", JSON.stringify(menuItems));
-}
-
-/* 2. DOM 取得 */
+/** 2. DOM 取得 */
 const voiceInputBtn = document.getElementById("voice-input-btn");
-const orderInput = document.getElementById("order-input");
-const orderBtn = document.getElementById("order-btn");
-const orderOutput = document.getElementById("order-output");
 const voiceOutput = document.getElementById("voice-output");
-
 const orderTableBody = document.querySelector("#order-table tbody");
 const totalAmountSpan = document.getElementById("total-amount");
 
-/* 3. 紀錄總金額 */
+/** 3. 紀錄總金額 */
 let grandTotal = 0;
 
-/* -------------------------------
-   4. 語音輸入 (Web Speech API)
-------------------------------- */
+/** 4. 語音輸入 (觸發點餐流程) */
 voiceInputBtn.addEventListener("click", () => {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
-    alert("您的瀏覽器不支援語音辨識，請使用 Chrome / Edge 等。");
+    alert("您的瀏覽器不支援語音辨識。請使用 Chrome 或其他支援瀏覽器。");
     return;
   }
   const recognition = new SpeechRecognition();
   recognition.lang = "zh-TW";
   recognition.interimResults = false;
-  
+
   recognition.onstart = () => {
     voiceOutput.textContent = "語音辨識中，請開始說話...";
     voiceOutput.classList.remove("error");
   };
-  recognition.onerror = (evt) => {
-    voiceOutput.textContent = "語音辨識錯誤：" + evt.error;
+  recognition.onerror = (e) => {
+    voiceOutput.textContent = "語音辨識錯誤：" + e.error;
     voiceOutput.classList.add("error");
   };
-  recognition.onresult = (evt) => {
-    const transcript = evt.results[0][0].transcript;
-    orderInput.value = transcript;
+  recognition.onresult = (e) => {
+    const transcript = e.results[0][0].transcript;
     voiceOutput.textContent = "語音輸入結果：" + transcript;
+    handleOrderByInput(transcript.trim()); // 直接進入點餐流程
   };
+
   recognition.start();
 });
 
-/* -------------------------------
-   5. 點餐按鈕
-------------------------------- */
-orderBtn.addEventListener("click", handleOrderInput);
+/** 5. 點餐流程 */
+function handleOrderByInput(userInput) {
+  // 先解析主要份數
+  const quantity = parseQuantity(userInput);
 
-function handleOrderInput() {
-  const userInput = orderInput.value.trim();
-  orderOutput.innerHTML = "";
-  if (!userInput) {
-    orderOutput.textContent = "請輸入想點的餐點 (可含客製)";
-    orderOutput.classList.add("error");
-    return;
-  }
-  orderOutput.classList.remove("error");
-
-  // 先解析主要餐點數量
-  const mainQty = parseQuantity(userInput);
-
-  // 查找餐點 (先做部分比對)
+  // 再做「部分比對」檢索餐點
   let matchedItems = findPartialMatches(userInput);
 
   if (matchedItems.length === 1) {
-    // 唯一匹配 -> 直接加入
-    const item = matchedItems[0];
-    addOrderItem(item, mainQty, userInput);
+    // 單筆匹配 -> 直接新增
+    addOrderItem(matchedItems[0], quantity, userInput);
   } else if (matchedItems.length === 0) {
-    // 無匹配 -> 手動選擇 + 學習
-    askUserToSelectItem(userInput, mainQty);
+    // 0 筆 -> 手動選擇 + 學習
+    askUserToSelectItem(userInput, quantity);
   } else {
-    // 多筆 -> 這裡簡化處理，只提示多筆
-    orderOutput.textContent = "找到多個相似餐點，請輸入更精確名稱！";
-    orderOutput.classList.add("error");
+    // 多筆 -> 本範例簡化處理
+    voiceOutput.textContent = "找到多個可能餐點，請再說明更精確一點。";
+    voiceOutput.classList.add("error");
   }
-
-  orderInput.value = "";
 }
 
-/* -------------------------------
-   6. 無匹配 -> 手動選擇 -> 學習
-------------------------------- */
-function askUserToSelectItem(userInput, mainQty) {
-  orderOutput.innerHTML = `
-    系統無法判定「<span class="highlight">${userInput}</span>」，請手動選擇餐點：<br>
+/** 6. 0 筆 => 手動選擇並學習 (無需按鈕，改用 select 的 onchange) */
+function askUserToSelectItem(userInput, quantity) {
+  voiceOutput.innerHTML = `
+    無法判定「<span class="highlight">${userInput}</span>」，請選擇正確餐點：<br>
   `;
 
   const selectElem = document.createElement("select");
+  // 加一個預設提示
+  const defOpt = document.createElement("option");
+  defOpt.value = "";
+  defOpt.textContent = "==請選擇餐點==";
+  selectElem.appendChild(defOpt);
+
   menuItems.forEach((item, idx) => {
     const opt = document.createElement("option");
     opt.value = idx;
     opt.textContent = `${item.name} (NT$${item.price})`;
     selectElem.appendChild(opt);
   });
-  orderOutput.appendChild(selectElem);
 
-  const confirmBtn = document.createElement("button");
-  confirmBtn.textContent = "確認";
-  confirmBtn.onclick = () => {
+  voiceOutput.appendChild(selectElem);
+
+  // 用 select 的 onchange 事件，使用者一旦選了，就立即學習並加入
+  selectElem.addEventListener("change", () => {
+    if (selectElem.value === "") return; // 尚未選取
+
     const chosenIndex = parseInt(selectElem.value, 10);
     const chosenItem = menuItems[chosenIndex];
-    // 將 userInput 當該餐點的新 synonym
+
+    // 學習
     if (!chosenItem.synonyms.includes(userInput)) {
       chosenItem.synonyms.push(userInput);
       saveMenuItems();
     }
-    // 然後直接加入訂單
-    addOrderItem(chosenItem, mainQty, userInput);
-  };
-  orderOutput.appendChild(confirmBtn);
+
+    // 加入表格
+    addOrderItem(chosenItem, quantity, userInput);
+
+    // 重置畫面
+    voiceOutput.innerHTML = "";
+  });
 }
 
-/* -------------------------------
-   7. 新增一筆至訂單表格
-   同時偵測「客製詞」(customWords) 並顯示於「客製」欄
-------------------------------- */
-function addOrderItem(item, mainQty, userInput) {
+/** 7. 加入表格 (含客製偵測) */
+function addOrderItem(item, qty, userInput) {
   // 偵測客製詞
-  const customData = parseAllCustomWords(userInput);
-  const customText = formatCustomData(customData); // e.g. "辣(1)、少糖(2)"
+  const customData = parseAllCustomWords(userInput); // e.g. { "辣":1, "少冰":1 }
+  const customStr = formatCustomData(customData);
 
-  // 計算小計
-  const sub = item.price * mainQty;
+  const subtotal = item.price * qty;
 
-  // 檢查表格中是否已有該餐點
+  // 檢查表格是否已有該餐點
   const existingRow = findRowByName(item.name);
   if (existingRow) {
     // 更新數量 & 小計 & 客製
@@ -248,38 +221,36 @@ function addOrderItem(item, mainQty, userInput) {
     const customCell = existingRow.querySelector(".cell-custom");
 
     const oldQty = parseInt(qtyCell.textContent, 10) || 0;
-    const newQty = oldQty + mainQty;
-
+    const newQty = oldQty + qty;
     qtyCell.textContent = newQty;
 
     const oldSub = parseInt(subCell.textContent, 10) || 0;
     const newSub = item.price * newQty;
     subCell.textContent = newSub;
 
-    // 覆蓋或合併客製；這裡示範直接「以最新一次為主」，也可做累加
-    customCell.textContent = customText;
+    // 這裡簡化 → 覆蓋客製 
+    customCell.textContent = customStr;
 
-    // 更新總金額
     grandTotal = grandTotal - oldSub + newSub;
   } else {
     // 新增一行
     const tr = document.createElement("tr");
 
-    // 餐點名稱
+    // 名稱
     const tdName = document.createElement("td");
     tdName.textContent = item.name;
     tr.appendChild(tdName);
 
-    // 客製 (改為「客製」欄)
+    // 客製 (改為「客製」)
     const tdCustom = document.createElement("td");
     tdCustom.classList.add("cell-custom");
-    tdCustom.textContent = customText;
+    tdCustom.textContent = customStr;
     tr.appendChild(tdCustom);
 
     // 數量
     const tdQty = document.createElement("td");
     tdQty.classList.add("cell-qty");
-    tdQty.textContent = mainQty;
+    tdQty.textContent = qty;
     tr.appendChild(tdQty);
 
     // 單價
@@ -290,27 +261,24 @@ function addOrderItem(item, mainQty, userInput) {
     // 小計
     const tdSub = document.createElement("td");
     tdSub.classList.add("cell-subtotal");
-    tdSub.textContent = sub;
+    tdSub.textContent = subtotal;
     tr.appendChild(tdSub);
 
     orderTableBody.appendChild(tr);
-    grandTotal += sub;
+    grandTotal += subtotal;
   }
+
   // 更新總金額
   totalAmountSpan.textContent = grandTotal;
-
-  // 顯示提示
-  orderOutput.innerHTML = `
-    已為您加入 <span class="highlight">${mainQty}</span> 份
+  voiceOutput.innerHTML = `
+    已為您加入 <span class="highlight">${qty}</span> 份
     <span class="highlight">${item.name}</span>，
-    客製：<span class="highlight">${customText || "無"}</span>，
-    小計：NT$${sub}
+    客製：<span class="highlight">${customStr || "無"}</span>，
+    小計：NT$${subtotal}
   `;
 }
 
-/* -------------------------------
-   幫助函式：找表格中有無該餐點
-------------------------------- */
+/** 幫助函式：找表格中是否已存在該餐點 */
 function findRowByName(itemName) {
   const rows = orderTableBody.querySelectorAll("tr");
   for (let row of rows) {
@@ -322,23 +290,17 @@ function findRowByName(itemName) {
   return null;
 }
 
-/* -------------------------------
-   偵測所有客製詞(含數量)
-   若要做份數 -> parseCustomWordQuantity
-   這裡示範簡易: 若 userInput.includes(word) => customData[word] = 1
-------------------------------- */
-function parseAllCustomWords(userInput) {
+/** 偵測所有客製詞 (簡單：只要包含就算1) */
+function parseAllCustomWords(input) {
   let result = {};
   for (let w of customWords) {
-    if (userInput.includes(w)) {
-      // 此示範只做 presence，不解析數量 → 皆為1
-      // 如需解析 "兩份辣" => parseCustomWordQuantity
+    if (input.includes(w)) {
       result[w] = 1;
     }
   }
   return result;
 }
-/* 將 { "辣":2, "少糖":1 } => "辣(2)、少糖(1)" */
+/** 將 { "辣":1, "少糖":2 } => "辣(1)、少糖(2)" */
 function formatCustomData(customObj) {
   const parts = [];
   for (let key in customObj) {
@@ -347,9 +309,7 @@ function formatCustomData(customObj) {
   return parts.join("、");
 }
 
-/* -------------------------------
-   解析主要份數 (簡易)
-------------------------------- */
+/** 解析主要份數 (含簡易中文 1~99) */
 function parseQuantity(input) {
   // 先試阿拉伯數字
   const m1 = input.match(/(\d+)\s*(份|顆|個|杯|碗|串)?/);
@@ -367,68 +327,67 @@ function parseQuantity(input) {
   return 1;
 }
 
-/* -------------------------------
-   convertChineseNumberToInt (1~99)
-------------------------------- */
+/** 簡易中文數字 => int (1~99) */
 function convertChineseNumberToInt(cnStr) {
   const cnMap = {
-    '零': 0, '一': 1, '二': 2, '兩': 2, '三': 3,
-    '四': 4, '五': 5, '六': 6, '七': 7,
-    '八': 8, '九': 9
+    '零':0,'一':1,'二':2,'兩':2,'三':3,'四':4,'五':5,
+    '六':6,'七':7,'八':8,'九':9
   };
   if (cnStr === '十') return 10;
   const parts = cnStr.split('十');
-  if (parts.length === 1) {
-    let sum = 0;
+  if (parts.length===1) {
+    let sum=0;
     for (let c of cnStr) {
-      if (cnMap[c] != null) {
-        sum = sum * 10 + cnMap[c];
+      if (cnMap[c]!=null) {
+        sum = sum*10 + cnMap[c];
       }
     }
     return sum;
   } else {
-    let leftPart = parts[0];
-    let rightPart = parts[1] || "";
-    let leftVal = 0;
-    if (leftPart === '') {
-      leftVal = 1;
+    let left = parts[0], right = parts[1]||"";
+    let leftVal=0; 
+    if (left==='') {
+      leftVal=1;
     } else {
-      let sum = 0;
-      for (let c of leftPart) {
-        if (cnMap[c] != null) {
-          sum = sum * 10 + cnMap[c];
+      let sum=0;
+      for(let c of left) {
+        if (cnMap[c]!=null) {
+          sum = sum*10 + cnMap[c];
         }
       }
-      leftVal = sum === 0 ? 1 : sum;
+      leftVal=(sum===0)?1:sum;
     }
-    let rightVal = 0;
-    if (rightPart !== '') {
-      let sum2 = 0;
-      for (let c of rightPart) {
-        if (cnMap[c] != null) {
-          sum2 = sum2 * 10 + cnMap[c];
+    let rightVal=0;
+    if(right!==""){
+      let sum2=0;
+      for(let c of right){
+        if(cnMap[c]!=null) {
+          sum2=sum2*10+cnMap[c];
         }
       }
-      rightVal = sum2;
+      rightVal=sum2;
     }
-    return leftVal * 10 + rightVal;
+    return leftVal*10+rightVal;
   }
 }
 
-/* -------------------------------
-   查找「部分比對」
-------------------------------- */
+/** 部分比對: userInput 包含 item.synonyms */
 function findPartialMatches(userInput) {
-  const results = [];
-  for (let item of menuItems) {
-    for (let syn of item.synonyms) {
-      if (userInput.includes(syn)) {
+  const results=[];
+  for(let item of menuItems){
+    for(let syn of item.synonyms){
+      if(userInput.includes(syn)){
         results.push(item);
         break;
       }
     }
   }
   return results;
+}
+
+/** 儲存回 localStorage (若學習) */
+function saveMenuItems() {
+  localStorage.setItem("menuItems", JSON.stringify(menuItems));
 }
 </script>
 
