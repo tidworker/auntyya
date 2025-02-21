@@ -2,11 +2,10 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <!-- 1) RWD 必備，讓行動裝置不預設縮放 -->
+  <!-- 行動裝置 RWD 必備 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>點餐系統 (主頁面) - RWD 版</title>
+  <title>點餐系統 (主頁面) - 客製詞亦可顯示資料庫</title>
   <style>
-    /* 基本排版設定 */
     body {
       font-family: sans-serif;
       margin: 20px;
@@ -32,7 +31,6 @@
       color: red;
     }
 
-    /* 移除固定寬度，讓 label / input 能自動縮放或換行 */
     label {
       display: block;
       margin: 5px 0 2px;
@@ -40,7 +38,7 @@
     }
     input[type="text"], input[type="number"] {
       width: 100%;
-      max-width: 300px; /* 給個上限，避免在大螢幕過長 */
+      max-width: 300px;
       box-sizing: border-box;
       margin-bottom: 8px;
       padding: 6px;
@@ -64,7 +62,7 @@
       padding: 20px;
       border-radius: 6px;
       width: 400px;
-      max-height: 70vh;
+      max-height: 80vh;
       overflow-y: auto;
       box-shadow: 0 2px 10px rgba(0,0,0,0.3);
       position: relative;
@@ -79,14 +77,6 @@
       right: 10px;
       top: 10px;
     }
-    #clear-database-btn {
-      background-color: #e74c3c; /* 紅色 */
-      color: #fff;
-      border: none;
-      padding: 5px 10px;
-      margin-top: 10px;
-      cursor: pointer;
-    }
     .item-box {
       border: 1px solid #ddd;
       padding: 8px;
@@ -94,14 +84,15 @@
       border-radius: 4px;
       position: relative;
     }
-    .edit-area {
-      background-color: #f8f8f8;
-      padding: 8px;
-      margin-top: 5px;
-      border-radius: 4px;
+
+    /* 縮排一點方便區隔 */
+    .db-section-title {
+      margin: 14px 0 6px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 4px;
     }
 
-    /* 2) Media Query：窄螢幕 (小於600px) 一些縮小處理 */
+    /* 狹窄螢幕 (行動裝置) */
     @media (max-width: 600px) {
       body {
         margin: 10px;
@@ -110,26 +101,17 @@
         padding: 10px;
       }
       #database-modal {
-        width: 90%; /* 窄螢幕時，Modal自適應寬度 */
+        width: 90%;
         padding: 10px;
-      }
-      .item-box {
-        padding: 6px;
-      }
-      .edit-area {
-        padding: 6px;
-      }
-      button {
-        margin: 3px 3px 3px 0;
       }
     }
   </style>
 </head>
 <body>
 
-<h1>點餐系統 (主頁面) - RWD 版</h1>
+<h1>點餐系統 (主頁面)</h1>
 
-<!-- 查看資料庫按鈕 -->
+<!-- 查看資料庫 (同時包含餐點 & 客製詞) -->
 <button id="view-database-btn">查看資料庫</button>
 
 <!-- 設定 (Setting) -->
@@ -145,68 +127,90 @@
   <div class="output" id="setting-output"></div>
 </div>
 
-<!-- 點餐 (Order) -->
+<!-- 客製詞設定 (Custom Keywords) -->
 <div class="section">
-  <h2>點餐 (Order)</h2>
-  <label for="order-input">想點的餐點:</label>
-  <input type="text" id="order-input" placeholder="例如：2份薯條 / 兩顆水餃 / 綜合湯">
-  <button id="voice-input-btn">語音輸入</button>
+  <h2>客製詞設定 (Custom Keywords)</h2>
+  <label for="custom-word-input">客製詞:</label>
+  <input type="text" id="custom-word-input" placeholder="如：辣、少冰、去冰">
+  
+  <button id="add-custom-word-btn">新增客製詞</button>
+  <div class="output" id="custom-word-output"></div>
+</div>
+
+<!-- 簡易點餐 (用於測試) -->
+<div class="section">
+  <h2>簡易點餐測試</h2>
+  <label for="order-input">想點的餐點 (可含客製詞):</label>
+  <input type="text" id="order-input" placeholder="例如：漢堡辣 / 薯條去冰 (?)">
 
   <button id="order-btn">點餐</button>
   <div class="output" id="order-output"></div>
 </div>
 
-<!-- Modal (查看/編輯資料庫) -->
+<!-- Modal (查看 & 管理資料庫) -->
 <div id="modal-overlay">
   <div id="database-modal">
     <button id="close-modal-btn">關閉</button>
-    <h2>已建立的餐點</h2>
-    <div id="modal-content"></div>
-    <button id="clear-database-btn">清空資料庫</button>
+    
+    <!-- 餐點清單 -->
+    <h2 class="db-section-title">已建立的餐點</h2>
+    <div id="menu-items-content"></div>
+    <button id="clear-menuitems-btn" style="background-color:#e74c3c; color:#fff; border:none; padding:5px 10px; cursor:pointer;">
+      清空餐點
+    </button>
+
+    <!-- 客製詞清單 -->
+    <h2 class="db-section-title">已建立的客製詞</h2>
+    <div id="custom-words-content"></div>
+    <button id="clear-customwords-btn" style="background-color:#e74c3c; color:#fff; border:none; padding:5px 10px; cursor:pointer;">
+      清空客製詞
+    </button>
   </div>
 </div>
 
 <script>
-/**
- * 在此頁整合了：
- * - 「設定餐點」(Setting)
- * - 「點餐」(Order) + [可正確/錯誤、多筆匹配、無匹配手動選擇] + [學習新增相似詞]
- * - 「查看資料庫」(Modal) + 可編輯名稱、價格、相似詞
- * - 並加入最基本的 RWD 版型
+/** 
+ * 1. LocalStorage 資料結構
+ *    - menuItems: [ { name, price, synonyms:[] }, ... ]
+ *    - customWords: [ "辣", "去冰", "小辣", ... ]
  */
-
-//-----------------------------
-// 1. LocalStorage 模擬資料庫
-//-----------------------------
 let menuItems = JSON.parse(localStorage.getItem("menuItems")) || [];
+let customWords = JSON.parse(localStorage.getItem("customWords")) || [];
 
-function saveMenuItemsToLocalStorage() {
+// 儲存函式
+function saveMenuItems() {
   localStorage.setItem("menuItems", JSON.stringify(menuItems));
 }
+function saveCustomWords() {
+  localStorage.setItem("customWords", JSON.stringify(customWords));
+}
 
-//-----------------------------
 // 2. DOM 取得
-//-----------------------------
 const addItemBtn = document.getElementById("add-item-btn");
 const itemNameInput = document.getElementById("item-name");
 const itemPriceInput = document.getElementById("item-price");
 const settingOutput = document.getElementById("setting-output");
 
+const customWordInput = document.getElementById("custom-word-input");
+const addCustomWordBtn = document.getElementById("add-custom-word-btn");
+const customWordOutput = document.getElementById("custom-word-output");
+
 const orderInput = document.getElementById("order-input");
 const orderBtn = document.getElementById("order-btn");
 const orderOutput = document.getElementById("order-output");
-const voiceInputBtn = document.getElementById("voice-input-btn");
 
 const viewDatabaseBtn = document.getElementById("view-database-btn");
 const modalOverlay = document.getElementById("modal-overlay");
 const databaseModal = document.getElementById("database-modal");
-const modalContent = document.getElementById("modal-content");
+const menuItemsContent = document.getElementById("menu-items-content");
+const customWordsContent = document.getElementById("custom-words-content");
 const closeModalBtn = document.getElementById("close-modal-btn");
-const clearDatabaseBtn = document.getElementById("clear-database-btn");
+const clearMenuItemsBtn = document.getElementById("clear-menuitems-btn");
+const clearCustomWordsBtn = document.getElementById("clear-customwords-btn");
 
-//-----------------------------
-// 3. 新增餐點 (Setting)
-//-----------------------------
+//-------------------------------
+// 3. 新增餐點
+//-------------------------------
 addItemBtn.addEventListener("click", () => {
   const name = itemNameInput.value.trim();
   const price = parseFloat(itemPriceInput.value);
@@ -217,427 +221,159 @@ addItemBtn.addEventListener("click", () => {
   }
   settingOutput.classList.remove("error");
 
-  // 建立一個新的餐點物件
   const newItem = {
     name,
     price,
-    synonyms: [name] // 預設把名稱也放進相似詞
+    synonyms: [name] // 預設把名稱當成相似詞
   };
   menuItems.push(newItem);
-  saveMenuItemsToLocalStorage();
+  saveMenuItems();
 
   settingOutput.textContent = `已新增餐點：${name}，價格：${price}`;
   itemNameInput.value = "";
   itemPriceInput.value = "";
 });
 
-//-----------------------------
-// 4. 點餐：多筆匹配 + 正確/錯誤 + 手動選擇 + 下次不再詢問
-//-----------------------------
-orderBtn.addEventListener("click", handleOrderInput);
+//-------------------------------
+// 4. 新增客製詞
+//-------------------------------
+addCustomWordBtn.addEventListener("click", () => {
+  const word = customWordInput.value.trim();
+  if (!word) {
+    customWordOutput.textContent = "請輸入客製詞 (例如：辣)";
+    customWordOutput.classList.add("error");
+    return;
+  }
+  customWordOutput.classList.remove("error");
 
-function handleOrderInput() {
+  if (!customWords.includes(word)) {
+    customWords.push(word);
+    saveCustomWords();
+    customWordOutput.textContent = `已新增客製詞：「${word}」`;
+  } else {
+    customWordOutput.textContent = `客製詞「${word}」已存在。`;
+  }
+  customWordInput.value = "";
+});
+
+//-------------------------------
+// 5. 簡易點餐 (測試區)
+//-------------------------------
+orderBtn.addEventListener("click", () => {
   const userInput = orderInput.value.trim();
   orderOutput.innerHTML = "";
   if (!userInput) {
-    orderOutput.textContent = "請輸入想點的餐點。";
+    orderOutput.textContent = "請輸入想點的餐點 (可含客製詞)";
     orderOutput.classList.add("error");
     return;
   }
   orderOutput.classList.remove("error");
 
-  const quantity = parseQuantity(userInput);
-
-  // 先找「完整字串」(exact) 的比對
-  const exactMatches = findExactMatches(userInput);
-  if (exactMatches.length === 1) {
-    // 單筆完整匹配 => 直接加入
-    const item = exactMatches[0];
-    const totalPrice = item.price * quantity;
-    orderOutput.innerHTML = `
-      已為您加入 <span class="highlight">${quantity}</span> 份
-      <span class="highlight">${item.name}</span>，
-      小計: NT$${totalPrice}
-    `;
-    orderInput.value = "";
-    return;
-  } else if (exactMatches.length > 1) {
-    // 多筆完整匹配 => 請使用者挑
-    showMultipleExactMatches(exactMatches, userInput, quantity);
-    orderInput.value = "";
-    return;
-  }
-
-  // 若沒找到或多筆衝突 => 進入 部分比對
-  handlePartialOrNoMatch(userInput, quantity);
-  orderInput.value = "";
-}
-
-/** 顯示多筆「完整字串」匹配時的處理 */
-function showMultipleExactMatches(items, userInput, quantity) {
-  orderOutput.innerHTML = "偵測到多筆完全匹配，請選擇正確的餐點：<br>";
-  items.forEach(item => {
-    const btn = document.createElement("button");
-    btn.textContent = item.name;
-    btn.onclick = () => {
-      const totalPrice = item.price * quantity;
-      orderOutput.innerHTML = `
-        已為您加入 <span class="highlight">${quantity}</span> 份
-        <span class="highlight">${item.name}</span>，
-        小計: NT$${totalPrice}
-      `;
-    };
-    orderOutput.appendChild(btn);
-  });
-  const noneBtn = document.createElement("button");
-  noneBtn.textContent = "都不對";
-  noneBtn.onclick = () => {
-    handlePartialOrNoMatch(userInput, quantity);
-  };
-  orderOutput.appendChild(noneBtn);
-}
-
-/** 部分比對 或 無匹配 => 1筆 -> [正確/錯誤], 多筆 -> 列出, 0筆 -> 手動選 */
-function handlePartialOrNoMatch(userInput, quantity) {
-  const matchedItems = findPartialMatches(userInput);
-  if (matchedItems.length === 0) {
-    // 0 筆 => 手動選擇
-    askUserToSelectItem(userInput, quantity);
-  } else if (matchedItems.length === 1) {
-    // 1 筆 => 詢問正確/錯誤
-    const item = matchedItems[0];
-    const totalPrice = item.price * quantity;
-
-    const div = document.createElement("div");
-    div.innerHTML = `您想點的是 <span class="highlight">${item.name}</span> 嗎？ (數量: ${quantity}, 小計: NT$${totalPrice})`;
-
-    const correctBtn = document.createElement("button");
-    correctBtn.textContent = "正確";
-    correctBtn.onclick = () => {
-      orderOutput.innerHTML = `
-        已為您加入 <span class="highlight">${quantity}</span> 份
-        <span class="highlight">${item.name}</span>，
-        小計: NT$${totalPrice}
-      `;
-      // 同時學習完整字串 => 下次不用再問
-      if (!item.synonyms.includes(userInput)) {
-        item.synonyms.push(userInput);
-        saveMenuItemsToLocalStorage();
-      }
-    };
-
-    const wrongBtn = document.createElement("button");
-    wrongBtn.textContent = "錯誤";
-    wrongBtn.onclick = () => {
-      askUserToSelectItem(userInput, quantity);
-    };
-
-    orderOutput.innerHTML = "";
-    orderOutput.appendChild(div);
-    orderOutput.appendChild(correctBtn);
-    orderOutput.appendChild(wrongBtn);
-
-  } else {
-    // 多筆 => 列出
-    orderOutput.innerHTML = "找到多個可能的餐點，請選擇：<br>";
-    matchedItems.forEach(item => {
-      const btn = document.createElement("button");
-      btn.textContent = item.name;
-      btn.onclick = () => {
-        const totalPrice = item.price * quantity;
-        orderOutput.innerHTML = `
-          已為您加入 <span class="highlight">${quantity}</span> 份
-          <span class="highlight">${item.name}</span>，
-          小計: NT$${totalPrice}
-        `;
-        // 同時學習完整字串
-        if (!item.synonyms.includes(userInput)) {
-          item.synonyms.push(userInput);
-          saveMenuItemsToLocalStorage();
-        }
-      };
-      orderOutput.appendChild(btn);
-    });
-    const noneBtn = document.createElement("button");
-    noneBtn.textContent = "都不對";
-    noneBtn.onclick = () => {
-      askUserToSelectItem(userInput, quantity);
-    };
-    orderOutput.appendChild(noneBtn);
-  }
-}
-
-//-----------------------------
-// 5. 查找「完整字串」(exact) / 「部分比對」(partial)
-//-----------------------------
-function findExactMatches(userInput) {
-  const results = [];
-  for (let item of menuItems) {
-    if (item.synonyms.includes(userInput)) {
-      results.push(item);
-    }
-  }
-  return results;
-}
-function findPartialMatches(userInput) {
-  const results = [];
+  // 偵測餐點 (部分比對)
+  let matchedItem = null;
   for (let item of menuItems) {
     for (let syn of item.synonyms) {
       if (userInput.includes(syn)) {
-        results.push(item);
+        matchedItem = item;
         break;
       }
     }
+    if (matchedItem) break;
   }
-  return results;
-}
 
-/** 0 筆 or 錯誤 => 手動選擇, 並學習整句 */
-function askUserToSelectItem(userInput, quantity) {
-  orderOutput.innerHTML = `
-    系統無法判定，請手動選取您想點的餐點：<br>
-  `;
-  const selectElem = document.createElement("select");
-  menuItems.forEach((item, index) => {
-    const option = document.createElement("option");
-    option.value = index;
-    option.textContent = `${item.name} (NT$${item.price})`;
-    selectElem.appendChild(option);
-  });
-  orderOutput.appendChild(selectElem);
-
-  const confirmBtn = document.createElement("button");
-  confirmBtn.textContent = "確認";
-  confirmBtn.onclick = () => {
-    const chosenIndex = parseInt(selectElem.value, 10);
-    const chosenItem = menuItems[chosenIndex];
-
-    const totalPrice = chosenItem.price * quantity;
-    if (!chosenItem.synonyms.includes(userInput)) {
-      chosenItem.synonyms.push(userInput);
-      saveMenuItemsToLocalStorage();
+  // 偵測客製詞
+  let foundCustomWords = [];
+  for (let w of customWords) {
+    if (userInput.includes(w)) {
+      foundCustomWords.push(w);
     }
-    orderOutput.innerHTML = `
-      已為您加入 <span class="highlight">${quantity}</span> 份
-      <span class="highlight">${chosenItem.name}</span> (NT$${totalPrice})！<br>
-      同時學習到「${userInput}」=「${chosenItem.name}」。
-    `;
-  };
-  orderOutput.appendChild(confirmBtn);
-}
+  }
 
-//-----------------------------
-// 6. 數量解析(含簡易中文 1~99)
-//-----------------------------
-function parseQuantity(input) {
-  // 阿拉伯數字
-  const arabicMatch = input.match(/(\d+)\s*(份|顆|個|碗|杯|串)?/);
-  if (arabicMatch) {
-    const q = parseInt(arabicMatch[1], 10);
-    if (!isNaN(q)) return q;
-  }
-  // 中文數字
-  let str = input.replace(/(份|顆|個|碗|杯|串)/g, '');
-  const cnMatch = str.match(/[零一二兩三四五六七八九十]+/);
-  if (cnMatch) {
-    const val = convertChineseNumberToInt(cnMatch[0]);
-    if (val > 0) return val;
-  }
-  // 預設1
-  return 1;
-}
-function convertChineseNumberToInt(cnStr) {
-  const cnMap = {
-    '零': 0, '一': 1, '二': 2, '兩': 2, '三': 3,
-    '四': 4, '五': 5, '六': 6, '七': 7,
-    '八': 8, '九': 9
-  };
-  if (cnStr === '十') return 10;
-  const parts = cnStr.split('十');
-  if (parts.length === 1) {
-    let sum = 0;
-    for (let c of cnStr) {
-      if (cnMap[c] != null) {
-        sum = sum * 10 + cnMap[c];
-      }
-    }
-    return sum;
-  } else {
-    let leftPart = parts[0];
-    let rightPart = parts[1] || "";
-    let leftVal = 0;
-    if (leftPart === '') {
-      leftVal = 1;
-    } else {
-      let sum = 0;
-      for (let c of leftPart) {
-        if (cnMap[c] != null) {
-          sum = sum * 10 + cnMap[c];
-        }
-      }
-      leftVal = sum === 0 ? 1 : sum;
-    }
-    let rightVal = 0;
-    if (rightPart !== '') {
-      let sum2 = 0;
-      for (let c of rightPart) {
-        if (cnMap[c] != null) {
-          sum2 = sum2 * 10 + cnMap[c];
-        }
-      }
-      rightVal = sum2;
-    }
-    return leftVal * 10 + rightVal;
-  }
-}
-
-//-----------------------------
-// 7. 語音輸入 (Web Speech API)
-//-----------------------------
-voiceInputBtn.addEventListener("click", () => {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert("您的瀏覽器不支援語音辨識。請使用 Chrome 或其他支援的瀏覽器。");
-    return;
-  }
-  const recognition = new SpeechRecognition();
-  recognition.lang = "zh-TW";
-  recognition.interimResults = false;
-
-  recognition.onstart = () => {
-    orderOutput.textContent = "語音辨識中，請開始說話...";
-  };
-  recognition.onerror = (e) => {
-    orderOutput.textContent = "語音辨識錯誤：" + e.error;
+  if (!matchedItem) {
+    // 沒找到任何餐點
+    orderOutput.textContent = `無法匹配任何餐點。偵測到客製詞：${foundCustomWords.join("、") || "無"}`;
     orderOutput.classList.add("error");
-  };
-  recognition.onresult = (e) => {
-    const transcript = e.results[0][0].transcript;
-    orderInput.value = transcript;
-    orderOutput.textContent = "語音輸入結果：" + transcript;
-    orderOutput.classList.remove("error");
-  };
-  recognition.start();
+  } else {
+    // 顯示匹配結果
+    orderOutput.innerHTML = `匹配到餐點：<span class="highlight">${matchedItem.name}</span><br>`;
+    if (foundCustomWords.length > 0) {
+      orderOutput.innerHTML += `偵測到客製詞：<span class="highlight">${foundCustomWords.join("、")}</span>`;
+    } else {
+      orderOutput.innerHTML += "未偵測到任何客製詞。";
+    }
+  }
+  orderInput.value = "";
 });
 
-//-----------------------------
-// 8. 查看 / 編輯資料庫 (Modal)
-//-----------------------------
+//-------------------------------
+// 6. 查看資料庫 (Modal)
+//-------------------------------
 viewDatabaseBtn.addEventListener("click", () => {
-  updateModalContent();
+  updateDatabaseModalContent();
   modalOverlay.style.display = "flex";
 });
 
+// 關閉
 closeModalBtn.addEventListener("click", () => {
   modalOverlay.style.display = "none";
 });
 
-clearDatabaseBtn.addEventListener("click", () => {
-  const sure = confirm("確定要清空所有餐點資料嗎？此操作無法復原！");
+//-------------------------------
+// 7. 在 Modal 裏同時顯示「餐點」與「客製詞」的清單
+//-------------------------------
+function updateDatabaseModalContent() {
+  // (a) 顯示餐點
+  menuItemsContent.innerHTML = "";
+  if (menuItems.length === 0) {
+    menuItemsContent.textContent = "目前沒有任何餐點。";
+  } else {
+    menuItems.forEach((item, idx) => {
+      const box = document.createElement("div");
+      box.className = "item-box";
+      box.innerHTML = `
+        <strong>餐點${idx+1}：</strong> ${item.name} (NT$${item.price})<br>
+        <em>相似詞：</em> ${item.synonyms.join(", ")}
+      `;
+      menuItemsContent.appendChild(box);
+    });
+  }
+
+  // (b) 顯示客製詞
+  customWordsContent.innerHTML = "";
+  if (customWords.length === 0) {
+    customWordsContent.textContent = "目前沒有任何客製詞。";
+  } else {
+    customWords.forEach((word, i) => {
+      const div = document.createElement("div");
+      div.className = "item-box";
+      div.textContent = `客製詞${i+1}：${word}`;
+      customWordsContent.appendChild(div);
+    });
+  }
+}
+
+//-------------------------------
+// 8. 清空「餐點」 & 「客製詞」按鈕
+//-------------------------------
+clearMenuItemsBtn.addEventListener("click", () => {
+  const sure = confirm("確定要清空所有餐點嗎？此操作無法復原！");
   if (sure) {
     localStorage.removeItem("menuItems");
     menuItems = [];
-    updateModalContent();
-    alert("資料庫已清空。");
+    updateDatabaseModalContent();
+    alert("餐點已清空。");
   }
 });
 
-/** 將資料庫內容顯示在 Modal 裡，每個餐點可「編輯/儲存」 */
-function updateModalContent() {
-  modalContent.innerHTML = "";
-  if (menuItems.length === 0) {
-    modalContent.textContent = "目前尚無任何餐點資料。";
-    return;
+clearCustomWordsBtn.addEventListener("click", () => {
+  const sure = confirm("確定要清空所有客製詞嗎？此操作無法復原！");
+  if (sure) {
+    localStorage.removeItem("customWords");
+    customWords = [];
+    updateDatabaseModalContent();
+    alert("客製詞已清空。");
   }
-
-  menuItems.forEach((item, idx) => {
-    const box = document.createElement("div");
-    box.className = "item-box";
-
-    // 顯示區
-    const info = document.createElement("div");
-    info.innerHTML = `
-      <strong>餐點${idx+1}：</strong> ${item.name} (NT$${item.price})<br>
-      <em>相似詞：</em> ${item.synonyms.join(", ")}
-    `;
-    box.appendChild(info);
-
-    // 編輯模式 (預設隱藏)
-    const editArea = document.createElement("div");
-    editArea.className = "edit-area";
-    editArea.style.display = "none";
-
-    // 編輯用輸入框
-    const nameInput = document.createElement("input");
-    nameInput.type = "text";
-    nameInput.value = item.name;
-    nameInput.style.width = "100%";
-
-    const priceInput = document.createElement("input");
-    priceInput.type = "number";
-    priceInput.value = item.price;
-    priceInput.style.width = "100%";
-
-    const synInput = document.createElement("input");
-    synInput.type = "text";
-    synInput.value = item.synonyms.join(", ");
-    synInput.style.width = "100%";
-
-    editArea.appendChild(document.createTextNode("名稱:"));
-    editArea.appendChild(nameInput);
-    editArea.appendChild(document.createElement("br"));
-
-    editArea.appendChild(document.createTextNode("價格:"));
-    editArea.appendChild(priceInput);
-    editArea.appendChild(document.createElement("br"));
-
-    editArea.appendChild(document.createTextNode("相似詞(逗號分隔):"));
-    editArea.appendChild(synInput);
-    editArea.appendChild(document.createElement("br"));
-
-    // 儲存 & 取消 按鈕
-    const saveBtn = document.createElement("button");
-    saveBtn.textContent = "儲存";
-    saveBtn.onclick = () => {
-      const newName = nameInput.value.trim();
-      const newPrice = parseFloat(priceInput.value);
-      if (!newName || isNaN(newPrice)) {
-        alert("請輸入正確名稱/價格");
-        return;
-      }
-      item.name = newName;
-      item.price = newPrice;
-
-      // 解析逗號分隔的相似詞
-      const synArr = synInput.value.split(",").map(s => s.trim()).filter(x => x);
-      item.synonyms = [...new Set(synArr)]; // 去重
-
-      saveMenuItemsToLocalStorage();
-      updateModalContent(); // 重新渲染
-    };
-
-    const cancelBtn = document.createElement("button");
-    cancelBtn.textContent = "取消";
-    cancelBtn.onclick = () => {
-      editArea.style.display = "none";
-    };
-
-    editArea.appendChild(saveBtn);
-    editArea.appendChild(cancelBtn);
-
-    box.appendChild(editArea);
-
-    // 「編輯」按鈕
-    const editBtn = document.createElement("button");
-    editBtn.textContent = "編輯";
-    editBtn.onclick = () => {
-      editArea.style.display = (editArea.style.display === "none") ? "block" : "none";
-    };
-    box.appendChild(editBtn);
-
-    modalContent.appendChild(box);
-  });
-}
+});
 </script>
 
 </body>
