@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>獨立點餐系統 - 多筆匹配時手動選擇 & 總金額</title>
+  <title>點餐系統 - 多筆匹配選定後自動 & 重複項目加數量</title>
   <style>
     body {
       font-family: sans-serif;
@@ -33,7 +33,8 @@
       color: green;
       font-weight: bold;
     }
-    /* 表格 */
+
+    /* 表格: RWD 支援 */
     .table-wrapper {
       width: 100%;
       overflow-x: auto; /* 小螢幕可左右捲動 */
@@ -65,14 +66,12 @@
 </head>
 <body>
 
-<h1>獨立點餐系統 - 多筆匹配學習 & 總金額</h1>
+<h1>點餐頁面 - 多筆匹配學習 & 重複品項合併</h1>
 
-<!-- 語音點餐區塊 -->
+<!-- 語音點餐 -->
 <div class="section">
   <h2>語音點餐</h2>
-  <div>
-    <button id="voice-input-btn">語音輸入</button>
-  </div>
+  <button id="voice-input-btn">語音輸入</button>
   <div class="output" id="voice-output"></div>
 </div>
 
@@ -90,30 +89,35 @@
         </tr>
       </thead>
       <tbody>
-        <!-- 動態新增 -->
+        <!-- 動態列 -->
       </tbody>
     </table>
   </div>
-  <!-- 顯示總金額 -->
   <h3>總金額：<span id="total-amount">0</span></h3>
 </div>
 
 <script>
 // --------------------------------------------------
-// 1. 從 localStorage 讀取 menuItems
+// 1. 從 localStorage 讀取已學習的餐點資料
 // --------------------------------------------------
 let menuItems = JSON.parse(localStorage.getItem("menuItems")) || [];
 
+// --------------------------------------------------
 // 2. DOM 取得
+// --------------------------------------------------
 const voiceInputBtn = document.getElementById("voice-input-btn");
 const voiceOutput = document.getElementById("voice-output");
 const orderTableBody = document.querySelector("#order-table tbody");
 const totalAmountSpan = document.getElementById("total-amount");
 
-// 3. 紀錄「總金額」 (每次加餐點都要重新計算或累加)
+// --------------------------------------------------
+// 3. 紀錄總金額
+// --------------------------------------------------
 let grandTotal = 0;
 
+// --------------------------------------------------
 // 4. 語音輸入
+// --------------------------------------------------
 voiceInputBtn.addEventListener("click", () => {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
@@ -137,13 +141,15 @@ voiceInputBtn.addEventListener("click", () => {
     voiceOutput.textContent = "語音輸入結果：" + transcript;
     voiceOutput.classList.remove("error");
 
-    // 解析並進行點餐
+    // 解析並點餐
     handleOrderByInput(transcript.trim());
   };
   recognition.start();
 });
 
-// 5. 根據語音輸入(userInput)進行「部分比對」，可能找到 0、多或1筆
+// --------------------------------------------------
+// 5. 根據使用者輸入去判定餐點
+// --------------------------------------------------
 function handleOrderByInput(userInput) {
   if (!userInput) {
     voiceOutput.textContent = "未偵測到任何語音輸入。";
@@ -151,102 +157,152 @@ function handleOrderByInput(userInput) {
     return;
   }
 
-  // 先解析份數
   const quantity = parseQuantity(userInput);
 
-  // 做「部分比對」(只要 userInput.includes(syn) => 視為符合)
-  const matched = findPartialMatches(userInput);
+  // 先檢查「完整字串」(exact match)
+  const exactMatches = findExactMatches(userInput);
+  if (exactMatches.length === 1) {
+    // 唯一完整字串匹配 -> 直接加
+    addOrderItem(exactMatches[0], userInput, quantity);
+    return;
+  } else if (exactMatches.length > 1) {
+    // 多筆完整 -> 暫時示範直接請使用者挑
+    // (理論上較少出現，但如同 partial multi scenario)
+    showMultipleMatches(exactMatches, userInput, quantity, true);
+    return;
+  }
 
-  if (matched.length === 1) {
-    // 唯一匹配 => 直接加入
-    const item = matched[0];
-    addOrderItem(item, userInput, quantity);
-  } else if (matched.length === 0) {
-    // 無匹配 => 顯示錯誤
+  // 沒有(或多筆)完整字串 -> 進入「部分比對」
+  const partialMatches = findPartialMatches(userInput);
+  if (partialMatches.length === 1) {
+    // 1 筆 partial -> 直接加 & 學習(將 userInput 放進 synonyms)
+    addOrderItem(partialMatches[0], userInput, quantity);
+  } else if (partialMatches.length === 0) {
     voiceOutput.textContent = "無法匹配任何餐點，請重新輸入。";
     voiceOutput.classList.add("error");
   } else {
-    // 多筆 => 讓使用者選擇正確餐點
-    showMultipleMatches(matched, userInput, quantity);
+    // 多筆 partial -> 顯示按鈕讓使用者選
+    showMultipleMatches(partialMatches, userInput, quantity, false);
   }
 }
 
-// 6. 顯示多筆匹配 => 按鈕讓使用者選擇正確的餐點
-function showMultipleMatches(items, userInput, quantity) {
-  voiceOutput.innerHTML = "找到多筆符合，下方按鈕請選正確餐點：<br>";
+// --------------------------------------------------
+// 6. 多筆匹配 -> 使用者選正確餐點 -> 下次就會是 "exact match"
+// --------------------------------------------------
+function showMultipleMatches(items, userInput, quantity, isExactMode) {
+  // isExactMode: 若在 "完整字串" 多筆匹配也可能發生
+  voiceOutput.innerHTML = isExactMode
+    ? "偵測到多筆『完整字串』相同，請選擇正確餐點：<br>"
+    : "找到多筆『部分比對』符合，請選擇正確餐點：<br>";
 
   items.forEach(item => {
     const btn = document.createElement("button");
     btn.textContent = item.name;
     btn.onclick = () => {
-      // 一旦選定 -> 將該輸入學習 -> 加入表格
       addOrderItem(item, userInput, quantity);
     };
     voiceOutput.appendChild(btn);
   });
-
-  // 若使用者暫時都不想選 => 可以自行加個 "取消" 按鈕
-  // (這裡示範就不加了)
 }
 
-/**
- * 7. 成功選到某餐點 => 
- *    - 將 userInput 整句學習 (push 到 item.synonyms) 並更新 localStorage
- *    - 新增表格列 + 更新總金額
- *    - 顯示提示文字
- */
+// --------------------------------------------------
+// 7. 加入餐點到訂單 (含學習 & 同品項合併數量)
+// --------------------------------------------------
 function addOrderItem(item, userInput, quantity) {
-  // (a) 若還沒記錄過這個輸入 -> 將其加入該餐點的 synonyms
+  // (a) 若 userInput 尚未在 item.synonyms 裡，將其加入 => 下次成 exact match
   if (!item.synonyms.includes(userInput)) {
     item.synonyms.push(userInput);
     saveMenuItemsToLocalStorage();
   }
 
-  // (b) 計算小計 & 更新表格
+  // (b) 檢查表格中是否已存在該餐點 (依 name 判斷)
+  const existingRow = findRowByName(item.name);
   const subtotal = item.price * quantity;
-  addTableRow(item.name, quantity, item.price, subtotal);
 
-  // (c) 更新總金額
-  grandTotal += subtotal;
+  if (existingRow) {
+    // 如果已存在 -> 更新數量 & 小計
+    const qtyCell = existingRow.querySelector(".cell-qty");
+    const subCell = existingRow.querySelector(".cell-subtotal");
+
+    const oldQty = parseInt(qtyCell.textContent, 10) || 0;
+    const newQty = oldQty + quantity;
+    qtyCell.textContent = newQty;
+
+    const oldSub = parseInt(subCell.textContent, 10) || 0;
+    const newSub = item.price * newQty;
+    subCell.textContent = newSub;
+
+    // 同時更新總金額 (先減去舊的小計，換算新的)
+    grandTotal = grandTotal - oldSub + newSub;
+  } else {
+    // 不存在 -> 新增一筆
+    const tr = document.createElement("tr");
+
+    const tdName = document.createElement("td");
+    tdName.textContent = item.name;
+    tr.appendChild(tdName);
+
+    const tdQty = document.createElement("td");
+    tdQty.classList.add("cell-qty");
+    tdQty.textContent = quantity;
+    tr.appendChild(tdQty);
+
+    const tdPrice = document.createElement("td");
+    tdPrice.textContent = item.price;
+    tr.appendChild(tdPrice);
+
+    const tdSubtotal = document.createElement("td");
+    tdSubtotal.classList.add("cell-subtotal");
+    tdSubtotal.textContent = subtotal;
+    tr.appendChild(tdSubtotal);
+
+    orderTableBody.appendChild(tr);
+
+    // 更新 grandTotal
+    grandTotal += subtotal;
+  }
+
+  // (c) 更新總金額 UI
   totalAmountSpan.textContent = grandTotal;
 
-  // (d) 更新提示
+  // (d) 提示
   voiceOutput.innerHTML = `
     已加入 <span class="highlight">${quantity}</span> 份
-    <span class="highlight">${item.name}</span>，小計 NT$${subtotal}。
+    <span class="highlight">${item.name}</span> (單價: ${item.price})，
+    小計: NT$${subtotal}
   `;
 }
 
-// 8. 新增表格列
-function addTableRow(name, qty, price, subtotal) {
-  const tr = document.createElement("tr");
-
-  const tdName = document.createElement("td");
-  tdName.textContent = name;
-  tr.appendChild(tdName);
-
-  const tdQty = document.createElement("td");
-  tdQty.textContent = qty;
-  tr.appendChild(tdQty);
-
-  const tdPrice = document.createElement("td");
-  tdPrice.textContent = price;
-  tr.appendChild(tdPrice);
-
-  const tdSubtotal = document.createElement("td");
-  tdSubtotal.textContent = subtotal;
-  tr.appendChild(tdSubtotal);
-
-  orderTableBody.appendChild(tr);
+// --------------------------------------------------
+// 8. 幫助函式: 找表格某 row(看 itemName) 有無出現
+// --------------------------------------------------
+function findRowByName(itemName) {
+  const rows = orderTableBody.querySelectorAll("tr");
+  for (let row of rows) {
+    const nameCell = row.querySelector("td:first-child");
+    if (nameCell && nameCell.textContent === itemName) {
+      return row;
+    }
+  }
+  return null;
 }
 
-// 9. 同步更新 localStorage
+// --------------------------------------------------
+// 9. 儲存回 localStorage
+// --------------------------------------------------
 function saveMenuItemsToLocalStorage() {
   localStorage.setItem("menuItems", JSON.stringify(menuItems));
 }
 
-// 10. 找到所有「部分比對」的餐點
+// --------------------------------------------------
+// 10. 查找「完整字串」(exact) / 「部分比對」(partial)
+// --------------------------------------------------
+function findExactMatches(userInput) {
+  // synonyms.includes(userInput)
+  return menuItems.filter(item => item.synonyms.includes(userInput));
+}
 function findPartialMatches(userInput) {
+  // userInput.includes(syn)
   const results = [];
   for (let item of menuItems) {
     for (let syn of item.synonyms) {
@@ -259,24 +315,24 @@ function findPartialMatches(userInput) {
   return results;
 }
 
-// 11. 份數解析：先試阿拉伯數字，再試簡易中文數字(1~99)
+// --------------------------------------------------
+// 11. 解析份數 (阿拉伯 + 簡易中文 1~99)
+// --------------------------------------------------
 function parseQuantity(input) {
-  // 先試阿拉伯數字
+  // (a) 先試阿拉伯數字
   const arabicMatch = input.match(/(\d+)\s*(份|顆|個|碗|杯|串)?/);
   if (arabicMatch) {
     const q = parseInt(arabicMatch[1], 10);
     if (!isNaN(q)) return q;
   }
-
-  // 再試中文數字
+  // (b) 再試中文數字
   let str = input.replace(/(份|顆|個|碗|杯|串)/g, '');
   const cnMatch = str.match(/[零一二兩三四五六七八九十]+/);
   if (cnMatch) {
     const val = convertChineseNumberToInt(cnMatch[0]);
     if (val > 0) return val;
   }
-
-  // 預設1
+  // (c) 預設1
   return 1;
 }
 function convertChineseNumberToInt(cnStr) {
