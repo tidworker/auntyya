@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>同音字管理頁面</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { 
+      font-family: sans-serif; 
+      margin: 20px; 
+    }
+    h1 { 
+      margin-bottom: 12px; 
+    }
+    .section { 
+      border: 1px solid #ccc; 
+      padding: 16px; 
+      margin-bottom:20px; 
+      border-radius:8px; 
+    }
+    label { 
+      display: block; 
+      margin:6px 0 2px; 
+      font-weight: bold; 
+    }
+    input[type="text"] { 
+      width: 100%; 
+      max-width:300px; 
+      margin-bottom:8px; 
+      box-sizing: border-box; 
+      padding:6px; 
+    }
+    button { 
+      margin: 5px; 
+      cursor: pointer; 
+    }
+    .output { 
+      margin-top:10px; 
+      color:#333; 
+    }
+    .item-box { 
+      border: 1px solid #ddd; 
+      padding: 8px; 
+      margin-bottom:8px; 
+      border-radius:4px; 
+    }
+    .edit-area { 
+      background-color: #f8f8f8; 
+      padding:8px; 
+      margin-top:5px; 
+      border-radius:4px; 
+      display: none; 
+    }
+    .error { 
+      color: red; 
+    }
+    @media (max-width:600px) {
+      body { margin: 10px; }
+      .section { padding:10px; }
+      input[type="text"] { max-width:100%; }
+    }
+  </style>
+</head>
+<body>
+
+<h1>同音字管理頁面</h1>
+
+<!-- 新增同音字設定 -->
+<div class="section">
+  <h2>新增同音字設定</h2>
+  <label for="base-word">主字 (Base):</label>
+  <input type="text" id="base-word" placeholder="例如：辣">
+
+  <label for="synonyms-input">同音字 (逗號分隔):</label>
+  <input type="text" id="synonyms-input" placeholder="例如：啦, 拉">
+
+  <button id="add-homophone-btn">新增設定</button>
+  <div class="output" id="add-output"></div>
+</div>
+
+<!-- 同音字列表 -->
+<div class="section">
+  <h2>同音字列表</h2>
+  <div id="homophone-list"></div>
+</div>
+
+<!-- 測試轉譯 -->
+<div class="section">
+  <h2>測試轉譯</h2>
+  <label for="test-input">輸入測試詞:</label>
+  <input type="text" id="test-input" placeholder="例如：拉">
+  <button id="test-btn">測試轉譯</button>
+  <div class="output" id="test-output"></div>
+</div>
+
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+  "use strict";
+
+  // 從 localStorage 讀取同音字設定，預設為空陣列
+  let homophones = JSON.parse(localStorage.getItem("homophones")) || [];
+
+  // 儲存同音字設定
+  function saveHomophones() {
+    localStorage.setItem("homophones", JSON.stringify(homophones));
+  }
+
+  // DOM 取得
+  const baseWordInput = document.getElementById("base-word");
+  const synonymsInput = document.getElementById("synonyms-input");
+  const addBtn = document.getElementById("add-homophone-btn");
+  const addOutput = document.getElementById("add-output");
+  const homophoneList = document.getElementById("homophone-list");
+  const testInput = document.getElementById("test-input");
+  const testBtn = document.getElementById("test-btn");
+  const testOutput = document.getElementById("test-output");
+
+  // 新增同音字設定
+  addBtn.addEventListener("click", () => {
+    const base = baseWordInput.value.trim();
+    const synStr = synonymsInput.value.trim();
+    if (!base) {
+      addOutput.textContent = "請輸入主字 (Base)";
+      addOutput.classList.add("error");
+      return;
+    }
+    addOutput.classList.remove("error");
+    let synonymsArr = [];
+    if (synStr) {
+      synonymsArr = synStr.split(",").map(s => s.trim()).filter(x => x);
+    }
+    const newSetting = { base, synonyms: synonymsArr };
+    homophones.push(newSetting);
+    saveHomophones();
+    addOutput.textContent = `已新增設定：輸入 [${synonymsArr.join(", ")}] 轉譯為 [${base}]`;
+    baseWordInput.value = "";
+    synonymsInput.value = "";
+    updateHomophoneList();
+  });
+
+  // 更新同音字列表
+  function updateHomophoneList() {
+    homophoneList.innerHTML = "";
+    if (homophones.length === 0) {
+      homophoneList.textContent = "目前沒有同音字設定。";
+      return;
+    }
+    homophones.forEach((item, index) => {
+      const box = document.createElement("div");
+      box.className = "item-box";
+
+      const info = document.createElement("div");
+      info.innerHTML = `<strong>主字:</strong> ${item.base}<br>
+                        <strong>同音字:</strong> ${item.synonyms.join(", ")}`;
+      box.appendChild(info);
+
+      // 編輯區
+      const editArea = document.createElement("div");
+      editArea.className = "edit-area";
+
+      const baseInput = document.createElement("input");
+      baseInput.type = "text";
+      baseInput.value = item.base;
+
+      const synInput = document.createElement("input");
+      synInput.type = "text";
+      synInput.value = item.synonyms.join(", ");
+
+      editArea.appendChild(document.createTextNode("主字:"));
+      editArea.appendChild(baseInput);
+      editArea.appendChild(document.createElement("br"));
+
+      editArea.appendChild(document.createTextNode("同音字 (逗號分隔):"));
+      editArea.appendChild(synInput);
+      editArea.appendChild(document.createElement("br"));
+
+      const saveBtn = document.createElement("button");
+      saveBtn.textContent = "儲存";
+      saveBtn.onclick = () => {
+        const newBase = baseInput.value.trim();
+        if (!newBase) {
+          alert("請輸入主字");
+          return;
+        }
+        let newSyns = synInput.value.split(",").map(s => s.trim()).filter(x => x);
+        homophones[index] = { base: newBase, synonyms: newSyns };
+        saveHomophones();
+        updateHomophoneList();
+      };
+
+      const cancelBtn = document.createElement("button");
+      cancelBtn.textContent = "取消";
+      cancelBtn.onclick = () => {
+        editArea.style.display = "none";
+      };
+
+      editArea.appendChild(saveBtn);
+      editArea.appendChild(cancelBtn);
+
+      box.appendChild(editArea);
+
+      const editBtn = document.createElement("button");
+      editBtn.textContent = "編輯";
+      editBtn.onclick = () => {
+        editArea.style.display = (editArea.style.display === "none" || editArea.style.display === "") ? "block" : "none";
+      };
+      box.appendChild(editBtn);
+
+      const deleteBtn = document.createElement("button");
+      deleteBtn.textContent = "刪除";
+      deleteBtn.style.backgroundColor = "#e74c3c";
+      deleteBtn.style.color = "#fff";
+      deleteBtn.onclick = () => {
+        if (confirm("確定要刪除這筆同音字設定嗎？此操作無法復原！")) {
+          homophones.splice(index, 1);
+          saveHomophones();
+          updateHomophoneList();
+        }
+      };
+      box.appendChild(deleteBtn);
+
+      homophoneList.appendChild(box);
+    });
+  }
+
+  // 測試轉譯功能：當輸入的文字在任一同音字設定中出現，則顯示對應的主字
+  testBtn.addEventListener("click", () => {
+    const inputText = testInput.value.trim();
+    if (!inputText) {
+      testOutput.textContent = "請輸入測試詞";
+      testOutput.classList.add("error");
+      return;
+    }
+    testOutput.classList.remove("error");
+    let translated = inputText; // 若找不到對應則保持原字
+    homophones.forEach(item => {
+      if (item.synonyms.includes(inputText)) {
+        translated = item.base;
+      }
+    });
+    testOutput.textContent = `轉譯結果：${translated}`;
+  });
+
+  // 初始更新列表
+  updateHomophoneList();
+});
+</script>
+
+</body>
+</html>
