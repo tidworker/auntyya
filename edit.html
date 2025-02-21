@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <title>編輯資料庫 (edit.html)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 20px;
+    }
+    h1 {
+      margin-bottom: 12px;
+    }
+    a {
+      text-decoration: none;
+      color: #fff;
+    }
+    .top-bar {
+      margin-bottom: 15px;
+    }
+    .back-btn {
+      background-color: #999;
+      color: #fff;
+      border: none;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+    .item-box {
+      border: 1px solid #ddd;
+      padding: 8px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+    }
+    .edit-area {
+      background-color: #f8f8f8;
+      padding: 8px;
+      margin-top: 5px;
+      border-radius: 4px;
+    }
+    .db-section-title {
+      margin: 14px 0 6px;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 4px;
+    }
+    button {
+      margin: 4px;
+      cursor: pointer;
+    }
+    label {
+      display: block;
+      margin: 6px 0 2px;
+      font-weight: bold;
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      max-width: 300px;
+      margin-bottom: 8px;
+      box-sizing: border-box;
+      padding: 6px;
+    }
+    .error {
+      color: red;
+    }
+    @media (max-width: 600px){
+      body {
+        margin: 10px;
+      }
+      .edit-area {
+        padding: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<h1>編輯資料庫 (edit.html)</h1>
+
+<!-- 返回主頁 (index.html) -->
+<div class="top-bar">
+  <button class="back-btn">
+    <a href="index.html">返回主頁</a>
+  </button>
+</div>
+
+<!-- 餐點清單 -->
+<h2 class="db-section-title">餐點清單</h2>
+<div id="menu-items-content"></div>
+<button id="clear-menuitems-btn" style="background-color:#e74c3c;color:#fff;border:none;padding:5px 10px;cursor:pointer;">
+  清空餐點
+</button>
+
+<!-- 客製詞清單 -->
+<h2 class="db-section-title">客製詞清單</h2>
+<div id="custom-words-content"></div>
+<button id="clear-customwords-btn" style="background-color:#e74c3c;color:#fff;border:none;padding:5px 10px;cursor:pointer;">
+  清空客製詞
+</button>
+
+<script>
+window.addEventListener("DOMContentLoaded", () => {
+  "use strict";
+
+  // 1. 從 localStorage 讀取
+  // (menuItems 結構: [ { name, price, synonyms:[] }, ... ])
+  let menuItems = JSON.parse(localStorage.getItem("menuItems")) || [];
+
+  // (customWords 結構: [ { base, synonyms:[] }, ... ])
+  let customWords = JSON.parse(localStorage.getItem("customWords")) || [];
+
+  // 2. 儲存函式
+  function saveMenuItems() {
+    localStorage.setItem("menuItems", JSON.stringify(menuItems));
+  }
+  function saveCustomWords() {
+    localStorage.setItem("customWords", JSON.stringify(customWords));
+  }
+
+  // 3. DOM 取得
+  const menuItemsContent= document.getElementById("menu-items-content");
+  const clearMenuItemsBtn= document.getElementById("clear-menuitems-btn");
+
+  const customWordsContent= document.getElementById("custom-words-content");
+  const clearCustomWordsBtn= document.getElementById("clear-customwords-btn");
+
+  // 4. 建立一個更新介面的函式
+  function updateView() {
+    // (a) 餐點
+    menuItemsContent.innerHTML = "";
+    if (menuItems.length === 0) {
+      menuItemsContent.textContent = "目前沒有任何餐點。";
+    } else {
+      menuItems.forEach((item, idx) => {
+        const box = document.createElement("div");
+        box.className = "item-box";
+
+        // 顯示
+        const info = document.createElement("div");
+        info.innerHTML = `
+          <strong>餐點${idx+1}：</strong> ${item.name} (NT$${item.price})<br>
+          <em>相似詞：</em> ${item.synonyms.join(", ")}
+        `;
+        box.appendChild(info);
+
+        // 編輯區(預設隱藏)
+        const editArea = document.createElement("div");
+        editArea.className = "edit-area";
+        editArea.style.display = "none";
+
+        // 編輯用輸入框
+        const nameInput = document.createElement("input");
+        nameInput.type = "text";
+        nameInput.value = item.name;
+
+        const priceInput = document.createElement("input");
+        priceInput.type = "number";
+        priceInput.value = item.price;
+
+        const synInput = document.createElement("input");
+        synInput.type = "text";
+        synInput.value = item.synonyms.join(", ");
+
+        editArea.appendChild(document.createTextNode("名稱:"));
+        editArea.appendChild(nameInput);
+        editArea.appendChild(document.createElement("br"));
+
+        editArea.appendChild(document.createTextNode("價格:"));
+        editArea.appendChild(priceInput);
+        editArea.appendChild(document.createElement("br"));
+
+        editArea.appendChild(document.createTextNode("相似詞(逗號分隔):"));
+        editArea.appendChild(synInput);
+        editArea.appendChild(document.createElement("br"));
+
+        // 儲存 & 取消
+        const saveBtn = document.createElement("button");
+        saveBtn.textContent = "儲存";
+        saveBtn.onclick = () => {
+          const newName = nameInput.value.trim();
+          const newPrice= parseFloat(priceInput.value);
+          if(!newName || isNaN(newPrice)){
+            alert("請輸入正確名稱 / 價格");
+            return;
+          }
+          item.name= newName;
+          item.price= newPrice;
+          // 同樣把逗號分隔的字串轉為陣列
+          let arr= synInput.value.split(",").map(s=> s.trim()).filter(x=> x);
+          item.synonyms= [...new Set(arr)]; // 去重
+          saveMenuItems();
+          updateView();
+        };
+
+        const cancelBtn= document.createElement("button");
+        cancelBtn.textContent= "取消";
+        cancelBtn.onclick=()=>{
+          editArea.style.display= "none";
+        };
+
+        editArea.appendChild(saveBtn);
+        editArea.appendChild(cancelBtn);
+
+        box.appendChild(editArea);
+
+        // 「編輯」按鈕
+        const editBtn = document.createElement("button");
+        editBtn.textContent="編輯";
+        editBtn.onclick=()=>{
+          editArea.style.display=(editArea.style.display==="none")?"block":"none";
+        };
+        box.appendChild(editBtn);
+
+        menuItemsContent.appendChild(box);
+      });
+    }
+
+    // (b) 客製詞
+    customWordsContent.innerHTML = "";
+    if (customWords.length === 0) {
+      customWordsContent.textContent = "目前沒有任何客製詞。";
+    } else {
+      customWords.forEach((cw, i) => {
+        const box = document.createElement("div");
+        box.className = "item-box";
+
+        const info= document.createElement("div");
+        info.innerHTML= `
+          <strong>客製詞${i+1}：</strong> ${cw.base}<br>
+          <em>同音字：</em> ${cw.synonyms.join(", ")}
+        `;
+        box.appendChild(info);
+
+        const editArea= document.createElement("div");
+        editArea.className="edit-area";
+        editArea.style.display="none";
+
+        const baseInput= document.createElement("input");
+        baseInput.type="text";
+        baseInput.value= cw.base;
+
+        const syn2Input= document.createElement("input");
+        syn2Input.type="text";
+        syn2Input.value= cw.synonyms.join(", ");
+
+        editArea.appendChild(document.createTextNode("Base:"));
+        editArea.appendChild(baseInput);
+        editArea.appendChild(document.createElement("br"));
+
+        editArea.appendChild(document.createTextNode("同音字(逗號分隔):"));
+        editArea.appendChild(syn2Input);
+        editArea.appendChild(document.createElement("br"));
+
+        const saveBtn= document.createElement("button");
+        saveBtn.textContent="儲存";
+        saveBtn.onclick=()=>{
+          const newBase= baseInput.value.trim();
+          if(!newBase){
+            alert("請輸入客製詞 base");
+            return;
+          }
+          cw.base= newBase;
+          let arr= syn2Input.value.split(",").map(s=> s.trim()).filter(x=> x);
+          cw.synonyms=[...new Set(arr)];
+          saveCustomWords();
+          updateView();
+        };
+        const cancelBtn= document.createElement("button");
+        cancelBtn.textContent="取消";
+        cancelBtn.onclick=()=>{
+          editArea.style.display="none";
+        };
+        editArea.appendChild(saveBtn);
+        editArea.appendChild(cancelBtn);
+
+        box.appendChild(editArea);
+
+        const editBtn= document.createElement("button");
+        editBtn.textContent="編輯";
+        editBtn.onclick=()=>{
+          editArea.style.display=(editArea.style.display==="none")?"block":"none";
+        };
+        box.appendChild(editBtn);
+
+        customWordsContent.appendChild(box);
+      });
+    }
+  }
+
+  // 5. 清空功能
+  clearMenuItemsBtn.addEventListener("click", () => {
+    const sure= confirm("確定要清空所有餐點嗎？此操作無法復原！");
+    if(sure){
+      localStorage.removeItem("menuItems");
+      menuItems=[];
+      updateView();
+      alert("餐點已清空。");
+    }
+  });
+  clearCustomWordsBtn.addEventListener("click", ()=>{
+    const sure= confirm("確定要清空所有客製詞嗎？此操作無法復原！");
+    if(sure){
+      localStorage.removeItem("customWords");
+      customWords=[];
+      updateView();
+      alert("客製詞已清空。");
+    }
+  });
+
+  // 6. 初始顯示
+  updateView();
+});
+</script>
+
+</body>
+</html>
