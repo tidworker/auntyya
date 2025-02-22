@@ -2,7 +2,6 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <!-- 行動裝置自適應 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>中文點餐系統</title>
   <style>
@@ -15,6 +14,18 @@
       margin: 5px;
       padding: 10px;
       font-size: 16px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      cursor: pointer;
+      padding: 5px;
+      border-bottom: 1px solid #ddd;
+    }
+    li:hover {
+      background-color: #f0f0f0;
     }
     @media (max-width: 600px) {
       input, button { font-size: 18px; }
@@ -55,22 +66,22 @@
 </head>
 <body>
   <h1>中文點餐系統</h1>
-  
-  <!-- 點餐區：輸入中文後自動轉換成英文點餐關鍵字 -->
+
+  <!-- 點餐區 -->
   <section>
     <h2>請輸入中文菜品名稱</h2>
     <input type="text" id="orderInput" placeholder="例如：蔥油餅">
     <button onclick="orderFromChinese()">送出訂單</button>
     <p>訂單結果：<span id="orderResult"></span></p>
   </section>
-  
+
   <!-- 自動讀取轉譯字庫 -->
   <section>
     <h2>轉譯字庫載入狀態</h2>
     <p id="dbStatus">尚未載入字庫資料...</p>
   </section>
-  
-  <!-- 菜單管理區：顯示目前菜單及編輯（新增、下載、上傳）功能 -->
+
+  <!-- 菜單管理區 -->
   <section>
     <h2>菜單管理</h2>
     <button onclick="openMenuModal()">新增菜單</button>
@@ -79,12 +90,12 @@
     <input type="file" id="uploadMenuFile" accept=".txt" style="display:none;" onchange="uploadMenuData()">
     <div id="menuList"></div>
   </section>
-  
-  <!-- 新增菜單彈出視窗 -->
+
+  <!-- 新增/編輯菜單彈出視窗 -->
   <div id="menuModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeMenuModal()">&times;</span>
-      <h3>新增菜單項目</h3>
+      <h3 id="modalTitle">新增菜單項目</h3>
       <div class="form-group">
         <label for="menuName">菜品名稱 (中文)：</label>
         <input type="text" id="menuName" placeholder="例如: 蔥油餅">
@@ -97,44 +108,26 @@
         <label for="menuPrice">價格：</label>
         <input type="number" id="menuPrice" placeholder="例如: 20">
       </div>
-      <button onclick="saveMenuItem()">儲存</button>
+      <button id="saveButton" onclick="saveMenuItem()">儲存</button>
+      <button id="deleteButton" onclick="deleteMenuItem()" style="display:none; background-color:red; color:white;">刪除</button>
       <button onclick="closeMenuModal()">取消</button>
     </div>
   </div>
-  
+
   <script>
-    // 全域字庫映射（由同一伺服器的 database.txt 載入）
+    // 全域資料
     let groupMapping = {};
     let charMapping = {};
-    
-    // 內建菜單，可透過菜單編輯系統動態新增項目
     let menu = {
       "chonyobin": { name: "蔥油餅", price: 20 }
     };
-    
-    // 更新並顯示目前菜單
-    function updateMenuDisplay() {
-      let menuListDiv = document.getElementById("menuList");
-      menuListDiv.innerHTML = "";
-      let ul = document.createElement("ul");
-      for (let key in menu) {
-        if (menu.hasOwnProperty(key)) {
-          let li = document.createElement("li");
-          li.textContent = key + " : " + menu[key].name + " - " + menu[key].price + "元";
-          ul.appendChild(li);
-        }
-      }
-      menuListDiv.appendChild(ul);
-    }
-    updateMenuDisplay();
-    
+    let currentEditingKey = null; // 用於記錄正在編輯的菜單項目
+
     // 自動從同一伺服器的 database.txt 讀取字庫資料
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
-          if (!response.ok) {
-            throw new Error("無法讀取 database.txt");
-          }
+          if (!response.ok) throw new Error("無法讀取 database.txt");
           return response.text();
         })
         .then(text => {
@@ -152,165 +145,80 @@
         });
     }
     loadTranslationDatabase();
-    
-    // 下載菜單資料，將 menu 物件以 JSON 格式下載成 txt 檔案
-    function downloadMenuData() {
-      const dataStr = JSON.stringify(menu, null, 2);
-      const blob = new Blob([dataStr], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "menu.txt";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-    
-    // 上傳菜單資料，讀取 txt 檔案後更新 menu 物件
-    function uploadMenuData() {
-      const fileInput = document.getElementById("uploadMenuFile");
-      if (fileInput.files.length === 0) return;
-      const file = fileInput.files[0];
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const data = JSON.parse(e.target.result);
-          // 檢查格式：預期為物件，且每個屬性皆含有 name 與 price
-          if (typeof data === 'object' && data !== null) {
-            let valid = true;
-            for (let key in data) {
-              if (data.hasOwnProperty(key)) {
-                if (typeof data[key].name !== 'string' || typeof data[key].price !== 'number') {
-                  valid = false;
-                  break;
-                }
-              }
-            }
-            if (valid) {
-              menu = data;
-              updateMenuDisplay();
-              alert("菜單資料已成功上傳！");
-            } else {
-              alert("上傳的菜單格式不正確！");
-            }
-          } else {
-            alert("上傳的菜單格式不正確！");
-          }
-        } catch (err) {
-          alert("上傳失敗，請確認檔案格式正確！");
-        }
-      };
-      reader.readAsText(file);
-    }
-    
-    // Levenshtein 距離函式
-    function levenshteinDistance(a, b) {
-      const m = a.length, n = b.length;
-      const dp = [];
-      for (let i = 0; i <= m; i++) {
-        dp[i] = [];
-        dp[i][0] = i;
-      }
-      for (let j = 0; j <= n; j++) {
-        dp[0][j] = j;
-      }
-      for (let i = 1; i <= m; i++) {
-        for (let j = 1; j <= n; j++) {
-          dp[i][j] = Math.min(
-            dp[i - 1][j] + 1,
-            dp[i][j - 1] + 1,
-            dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
-          );
-        }
-      }
-      return dp[m][n];
-    }
-    
-    // 計算相似度：1 - (Levenshtein 距離 / 最大長度)
-    function similarity(a, b) {
-      const maxLen = Math.max(a.length, b.length);
-      if (maxLen === 0) return 1;
-      const dist = levenshteinDistance(a, b);
-      return 1 - dist / maxLen;
-    }
-    
-    // 從中文輸入轉換成英文點餐關鍵字，並依模糊比對下訂單
-    function orderFromChinese() {
-      const input = document.getElementById("orderInput").value.trim();
-      if (!input) {
-        alert("請輸入中文菜品名稱！");
-        return;
-      }
-      let converted = "";
-      for (let i = 0; i < input.length; i++) {
-        const ch = input.charAt(i);
-        if (charMapping[ch] !== undefined) {
-          converted += charMapping[ch];
-        }
-      }
-      console.log("轉換結果：" + converted);
-      
-      // 若有精確匹配，直接下訂單
-      if (menu[converted]) {
-        const dish = menu[converted];
-        document.getElementById("orderResult").innerText =
-          "您點的是 " + dish.name + "，價格為 " + dish.price + "元";
-        return;
-      }
-      
-      // 否則執行模糊比對，選出相似度最高的關鍵字
-      let bestKey = "";
-      let bestSim = 0;
+
+    // 更新菜單顯示
+    function updateMenuDisplay() {
+      let menuListDiv = document.getElementById("menuList");
+      menuListDiv.innerHTML = "";
+      let ul = document.createElement("ul");
       for (let key in menu) {
         if (menu.hasOwnProperty(key)) {
-          const sim = similarity(converted, key);
-          if (sim > bestSim) {
-            bestSim = sim;
-            bestKey = key;
-          }
+          let li = document.createElement("li");
+          li.textContent = key + " : " + menu[key].name + " - " + menu[key].price + "元";
+          li.onclick = () => openMenuModal(key); // 點擊以編輯
+          ul.appendChild(li);
         }
       }
-      
-      if (bestKey) {
-        const dish = menu[bestKey];
-        document.getElementById("orderResult").innerText =
-          "依模糊比對，您點的是 " + dish.name + "（匹配關鍵字：" + bestKey +
-          "，相似度：" + (bestSim * 100).toFixed(1) + "%），價格為 " + dish.price + "元";
+      menuListDiv.appendChild(ul);
+    }
+    updateMenuDisplay();
+
+    // 開啟新增或編輯菜單彈出視窗
+    function openMenuModal(key = null) {
+      const modal = document.getElementById("menuModal");
+      modal.style.display = "block";
+      currentEditingKey = key;
+
+      if (key) {
+        // 編輯模式
+        document.getElementById("modalTitle").innerText = "編輯菜單項目";
+        document.getElementById("menuName").value = menu[key].name;
+        document.getElementById("menuKey").value = key;
+        document.getElementById("menuPrice").value = menu[key].price;
+        document.getElementById("deleteButton").style.display = "inline-block";
       } else {
-        document.getElementById("orderResult").innerText =
-          "無法依模糊比對出合適的點餐關鍵字 (" + converted + ")";
+        // 新增模式
+        document.getElementById("modalTitle").innerText = "新增菜單項目";
+        document.getElementById("menuName").value = "";
+        document.getElementById("menuKey").value = "";
+        document.getElementById("menuPrice").value = "";
+        document.getElementById("deleteButton").style.display = "none";
       }
     }
-    
-    // 開啟與關閉新增菜單的彈出視窗
-    function openMenuModal() {
-      document.getElementById("menuModal").style.display = "block";
-    }
+
+    // 關閉彈出視窗
     function closeMenuModal() {
       document.getElementById("menuModal").style.display = "none";
+      currentEditingKey = null;
     }
-    
-    // 儲存新增的菜單項目
+
+    // 儲存菜單項目（新增或編輯）
     function saveMenuItem() {
-      const key = document.getElementById("menuKey").value.trim().toLowerCase();
       const name = document.getElementById("menuName").value.trim();
+      const key = document.getElementById("menuKey").value.trim().toLowerCase();
       const price = parseFloat(document.getElementById("menuPrice").value.trim());
+
       if (!key || !name || isNaN(price)) {
         alert("請填寫完整且正確的菜單資料！");
         return;
       }
+
       menu[key] = { name: name, price: price };
       updateMenuDisplay();
       closeMenuModal();
-      // 清空輸入欄位
-      document.getElementById("menuName").value = "";
-      document.getElementById("menuKey").value = "";
-      document.getElementById("menuPrice").value = "";
     }
-    
-    // 當「菜品名稱 (中文)」欄位輸入變動時，自動轉譯生成英文點餐關鍵字
-    document.getElementById("menuName").addEventListener("input", function() {
+
+    // 刪除菜單項目
+    function deleteMenuItem() {
+      if (currentEditingKey && confirm("確定要刪除該項目嗎？")) {
+        delete menu[currentEditingKey];
+        updateMenuDisplay();
+        closeMenuModal();
+      }
+    }
+
+    // 自動生成英文關鍵字
+    document.getElementById("menuName").addEventListener("input", function () {
       let name = this.value.trim();
       let key = "";
       for (let i = 0; i < name.length; i++) {
@@ -321,14 +229,6 @@
       }
       document.getElementById("menuKey").value = key;
     });
-    
-    // 點擊視窗空白處關閉彈出視窗
-    window.onclick = function(event) {
-      const modal = document.getElementById("menuModal");
-      if (event.target == modal) {
-        closeMenuModal();
-      }
-    }
   </script>
 </body>
 </html>
