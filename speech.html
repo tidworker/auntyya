@@ -101,8 +101,8 @@
         <input type="text" id="menuName" placeholder="例如: 蔥油餅">
       </div>
       <div class="form-group">
-        <label for="menuKey">點餐關鍵字 (英文)：</label>
-        <input type="text" id="menuKey" placeholder="自動轉譯" readonly>
+        <label for="menuKey">點餐關鍵字 (英文，可手動編輯)：</label>
+        <input type="text" id="menuKey" placeholder="自動轉譯或手動輸入">
       </div>
       <div class="form-group">
         <label for="menuPrice">價格：</label>
@@ -121,7 +121,8 @@
     let menu = {
       "chonyobin": { name: "蔥油餅", price: 20 }
     };
-    let currentEditingKey = null; // 用於記錄正在編輯的菜單項目
+    let currentEditingKey = null;
+    let manualEditKey = false; // 判斷是否手動編輯關鍵字
 
     // 自動從同一伺服器的 database.txt 讀取字庫資料
     function loadTranslationDatabase() {
@@ -237,16 +238,15 @@
       const modal = document.getElementById("menuModal");
       modal.style.display = "block";
       currentEditingKey = key;
+      manualEditKey = false;
 
       if (key) {
-        // 編輯模式
         document.getElementById("modalTitle").innerText = "編輯菜單項目";
         document.getElementById("menuName").value = menu[key].name;
         document.getElementById("menuKey").value = key;
         document.getElementById("menuPrice").value = menu[key].price;
         document.getElementById("deleteButton").style.display = "inline-block";
       } else {
-        // 新增模式
         document.getElementById("modalTitle").innerText = "新增菜單項目";
         document.getElementById("menuName").value = "";
         document.getElementById("menuKey").value = "";
@@ -286,17 +286,24 @@
       }
     }
 
-    // 自動生成英文關鍵字
+    // 自動生成英文關鍵字（除非手動編輯）
     document.getElementById("menuName").addEventListener("input", function () {
-      let name = this.value.trim();
-      let key = "";
-      for (let i = 0; i < name.length; i++) {
-        let ch = name.charAt(i);
-        if (charMapping[ch] !== undefined) {
-          key += charMapping[ch];
+      if (!manualEditKey) {
+        let name = this.value.trim();
+        let key = "";
+        for (let i = 0; i < name.length; i++) {
+          let ch = name.charAt(i);
+          if (charMapping[ch] !== undefined) {
+            key += charMapping[ch];
+          }
         }
+        document.getElementById("menuKey").value = key;
       }
-      document.getElementById("menuKey").value = key;
+    });
+
+    // 監聽手動編輯英文關鍵字
+    document.getElementById("menuKey").addEventListener("input", function () {
+      manualEditKey = true;
     });
 
   </script>
