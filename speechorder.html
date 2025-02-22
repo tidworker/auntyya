@@ -15,6 +15,15 @@
       padding: 10px;
       font-size: 16px;
     }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      cursor: default;
+      padding: 5px;
+      border-bottom: 1px solid #ddd;
+    }
     table {
       border-collapse: collapse;
       width: 100%;
@@ -38,19 +47,13 @@
   <!-- 點餐區：包含語音輸入按鈕 -->
   <section>
     <h2>請輸入中文菜品名稱</h2>
-    <!-- 使用者可輸入類似："蔥油餅 2 #辣" -->
-    <input type="text" id="orderInput" placeholder="例如：蔥油餅 2 #辣">
+    <!-- 輸入範例："蔥油餅 2 #任何內容" 但備註固定為"辣" -->
+    <input type="text" id="orderInput" placeholder="例如：蔥油餅 2 #...">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
   </section>
 
-  <!-- 顯示轉譯字庫載入狀態 -->
-  <section>
-    <h2>轉譯字庫載入狀態</h2>
-    <p id="dbStatus">尚未載入字庫資料...</p>
-  </section>
-
-  <!-- 顯示訂單結果（以表格方式） -->
+  <!-- 顯示訂單結果以表格 -->
   <section>
     <h2>訂單明細</h2>
     <table id="orderTable">
@@ -64,9 +67,21 @@
         </tr>
       </thead>
       <tbody>
-        <!-- 訂單列會在此加入 -->
+        <!-- 訂單項目會動態加入 -->
       </tbody>
     </table>
+  </section>
+
+  <!-- 顯示轉譯字庫載入狀態 -->
+  <section>
+    <h2>轉譯字庫載入狀態</h2>
+    <p id="dbStatus">尚未載入字庫資料...</p>
+  </section>
+
+  <!-- 顯示菜單（由伺服器 menu.txt 載入） -->
+  <section>
+    <h2>菜單</h2>
+    <p id="menuStatus">尚未載入菜單資料...</p>
   </section>
 
   <script>
@@ -75,7 +90,7 @@
     let charMapping = {};
     let menu = {};
 
-    // 從同一伺服器讀取 database.txt（格式必須包含 groupMapping 與 charMapping）
+    // 從伺服器讀取 database.txt (必須包含 groupMapping 與 charMapping)
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -98,7 +113,7 @@
     }
     loadTranslationDatabase();
 
-    // 從同一伺服器讀取 menu.txt（JSON 格式）
+    // 從伺服器讀取菜單資料 (menu.txt，JSON 格式)
     function loadMenu() {
       fetch("menu.txt")
         .then(response => {
@@ -107,22 +122,22 @@
         })
         .then(text => {
           menu = JSON.parse(text);
+          document.getElementById("menuStatus").innerText = "菜單資料載入成功！";
         })
         .catch(err => {
-          console.error("載入菜單資料失敗：" + err.message);
+          document.getElementById("menuStatus").innerText = "載入菜單資料失敗：" + err.message;
         });
     }
     loadMenu();
 
-    // 訂單解析與下單
+    // 訂單解析與下單（顯示結果以表格）
     function orderFromChinese() {
       const orderStr = document.getElementById("orderInput").value.trim();
       if (!orderStr) {
         alert("請輸入訂單內容！");
         return;
       }
-      // 使用正則解析：第一部分為菜名（任意字元），後面可有數字代表份數，及以#開頭的備註
-      // 範例："蔥油餅 2 #辣" → group1: "蔥油餅", group2: "2", group3: "#辣"
+      // 使用正則解析：第一部分為菜名，接著可有數字代表份數，及以#開頭的備註（此處備註固定為"辣"）
       const match = orderStr.match(/^(.*?)\s*(\d+)?\s*(#\S+)?$/);
       if (!match) {
         alert("訂單格式不正確！");
@@ -130,9 +145,10 @@
       }
       const dishChinese = match[1].trim();
       const quantity = match[2] ? parseInt(match[2]) : 1;
-      const remark = match[3] ? match[3].substring(1) : "";
-      
-      // 將 dishChinese 透過轉譯字庫轉換成英文關鍵字
+      // 若出現備註符號"#"，則備註固定為"辣"
+      const remark = match[3] ? "辣" : "";
+
+      // 將 dishChinese 轉換為英文關鍵字
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
         const ch = dishChinese.charAt(i);
@@ -145,7 +161,7 @@
       if (menu[converted]) {
         dish = menu[converted];
       } else {
-        // 模糊比對：採用積分算法
+        // 模糊比對
         const bestMatch = findBestMatch(converted);
         if (bestMatch) {
           dish = menu[bestMatch.key];
@@ -156,11 +172,10 @@
         return;
       }
       addOrderRow(dish, quantity, remark);
-      // 清空訂單輸入
       document.getElementById("orderInput").value = "";
     }
 
-    // 積分算法：計算目標字串中每個字母在輸入字串中出現的次數累計得分
+    // 積分算法：計算目標字串中每個字母在輸入字串中出現次數累計得分
     function findBestMatch(input) {
       let bestKey = null;
       let bestScore = 0;
@@ -183,7 +198,7 @@
       return score;
     }
 
-    // 將訂單結果新增至訂單表格
+    // 新增訂單列到訂單表格中
     function addOrderRow(dish, quantity, remark) {
       const tableBody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tableBody.insertRow();
@@ -199,7 +214,7 @@
       cellTotal.innerText = dish.price * quantity;
     }
 
-    // 語音輸入功能（使用 Web Speech API）
+    // 語音輸入功能：使用 Web Speech API
     function startVoiceInput() {
       if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
         alert("您的瀏覽器不支援語音輸入功能。");
