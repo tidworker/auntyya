@@ -164,6 +164,46 @@
     }
     updateMenuDisplay();
 
+    // 新增或編輯菜單項目
+    function saveMenuItem() {
+      const name = document.getElementById("menuName").value.trim();
+      let key = document.getElementById("menuKey").value.trim().toLowerCase();
+      const price = parseFloat(document.getElementById("menuPrice").value.trim());
+
+      if (!key || !name || isNaN(price)) {
+        alert("請填寫完整且正確的菜單資料！");
+        return;
+      }
+
+      // 編輯模式：更新舊項目
+      if (currentEditingKey) {
+        if (key !== currentEditingKey) {
+          // 若修改了關鍵字，刪除舊資料
+          delete menu[currentEditingKey];
+        }
+        menu[key] = { name, price }; // 更新資料
+      } else {
+        // 新增模式：新增新項目
+        if (menu[key]) {
+          alert("已有相同關鍵字的菜單項目！");
+          return;
+        }
+        menu[key] = { name, price };
+      }
+
+      updateMenuDisplay(); // 更新菜單列表
+      closeMenuModal(); // 關閉編輯視窗
+    }
+
+    // 刪除菜單項目
+    function deleteMenuItem() {
+      if (currentEditingKey && confirm("確定要刪除該項目嗎？")) {
+        delete menu[currentEditingKey];
+        updateMenuDisplay();
+        closeMenuModal();
+      }
+    }
+
     // 點餐功能
     function orderFromChinese() {
       const input = document.getElementById("orderInput").value.trim();
