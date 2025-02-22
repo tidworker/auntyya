@@ -1,31 +1,344 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh">
 <head>
   <meta charset="UTF-8">
-  <title>中文轉拼音系統</title>
-  <!-- 引入 pinyin.js 庫 (需確認庫的 CDN 連結是否有效) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pinyin/2.8.0/pinyin.min.js"></script>
+  <!-- 加入 viewport 設定，使頁面在行動裝置上自適應 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中文轉碼系統 - 可刪改字庫（手持裝置版）</title>
+  <style>
+    /* 全域樣式 */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 10px;
+      padding: 0;
+    }
+    input, button {
+      margin: 5px;
+      padding: 10px;
+      font-size: 16px;
+    }
+    label {
+      margin-right: 5px;
+      font-size: 16px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    button {
+      cursor: pointer;
+    }
+
+    /* Modal 樣式 */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0; top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 90%;
+      max-width: 500px;
+    }
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .close:hover,
+    .close:focus {
+      color: black;
+      text-decoration: none;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      padding: 5px;
+      cursor: pointer;
+      border-bottom: 1px solid #ddd;
+    }
+    li:hover {
+      background-color: #f0f0f0;
+    }
+
+    /* 資料庫管理區塊 */
+    .db-management {
+      margin-top: 30px;
+      border-top: 1px solid #ccc;
+      padding-top: 20px;
+    }
+
+    /* 小尺寸裝置額外調整 */
+    @media (max-width: 600px) {
+      input, button {
+        font-size: 18px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <h1>中文轉拼音系統</h1>
-  <textarea id="inputText" rows="5" cols="30" placeholder="請輸入中文..."></textarea>
-  <br>
+  <h1>中文轉碼系統 - 可刪改字庫</h1>
+  
+  <!-- 新增字庫資料 -->
+  <h2>新增字庫資料</h2>
+  <div class="form-group">
+    <label for="chineseChar">中文字符（可多個）：</label>
+    <input type="text" id="chineseChar" placeholder="請輸入一或多個漢字">
+  </div>
+  <div class="form-group">
+    <label for="pinyin">拼音：</label>
+    <input type="text" id="pinyin" placeholder="請輸入對應拼音">
+  </div>
+  <button onclick="addMapping()">新增</button>
+  
+  <!-- 顯示字庫資料的按鈕 -->
+  <button onclick="openDictionaryModal()">顯示字庫資料</button>
+  
+  <!-- 字庫資料彈出視窗 -->
+  <div id="dictionaryModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeDictionaryModal()">&times;</span>
+      <h3>現有字庫資料（點選項目可編輯）</h3>
+      <ul id="dictionaryList"></ul>
+    </div>
+  </div>
+  
+  <!-- 編輯字庫資料彈出視窗 -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeEditModal()">&times;</span>
+      <h3>編輯字庫資料</h3>
+      <div class="form-group">
+        <label for="editPinyin">拼音：</label>
+        <input type="text" id="editPinyin" readonly>
+      </div>
+      <div class="form-group">
+        <label for="editCharacters">漢字（可用逗號分隔）：</label>
+        <input type="text" id="editCharacters" placeholder="例如：你,妳">
+      </div>
+      <button onclick="saveMapping()">儲存</button>
+      <button onclick="deleteMapping()">刪除</button>
+      <button onclick="closeEditModal()">取消</button>
+    </div>
+  </div>
+  
+  <!-- 轉換輸入文字 -->
+  <h2>轉換輸入文字</h2>
+  <input type="text" id="inputText" placeholder="輸入中文">
   <button onclick="convert()">轉換</button>
-  <p id="result"></p>
+  <p>結果：<span id="result"></span></p>
+  
+  <!-- 資料庫管理區塊：下載、上傳、清除 -->
+  <div class="db-management">
+    <h2>資料庫管理</h2>
+    <button onclick="downloadDatabase()">下載資料庫</button>
+    <button onclick="document.getElementById('uploadFile').click()">上傳資料庫</button>
+    <!-- 清除資料庫按鈕使用紅色背景與白色文字 -->
+    <button onclick="clearDatabase()" style="background-color: red; color: white;">清除資料庫</button>
+    <input type="file" id="uploadFile" accept=".txt" style="display:none;" onchange="uploadDatabase()">
+  </div>
   
   <script>
-    function convert() {
-      var text = document.getElementById("inputText").value;
-      // 使用 pinyin 庫進行轉換，這裡使用 STYLE_NORMAL 參數轉換成不帶聲調的拼音
-      var pinyinArr = pinyin(text, {
-          style: pinyin.STYLE_NORMAL, // 不帶聲調
-          heteronym: false            // 是否啟用多音字模式，這裡關閉
+    // 使用兩個資料結構：
+    // groupMapping：拼音 → 陣列，儲存該拼音對應的所有漢字
+    // charMapping：漢字 → 拼音，方便轉換時查詢
+    let groupMapping = {};
+    let charMapping = {};
+
+    // 若 localStorage 有資料則讀取
+    if (localStorage.getItem("groupMapping")) {
+      groupMapping = JSON.parse(localStorage.getItem("groupMapping"));
+    }
+    if (localStorage.getItem("charMapping")) {
+      charMapping = JSON.parse(localStorage.getItem("charMapping"));
+    }
+
+    // 更新字庫列表（依拼音首字母排序）
+    function updateDictionaryList() {
+      const list = document.getElementById("dictionaryList");
+      list.innerHTML = "";
+      const sortedKeys = Object.keys(groupMapping).sort();
+      sortedKeys.forEach(pinyin => {
+        const li = document.createElement("li");
+        li.textContent = pinyin + " : " + groupMapping[pinyin].join(", ");
+        li.onclick = function() { editMapping(pinyin); };
+        list.appendChild(li);
       });
-      // 將結果整理成一個拼音字串
-      var result = pinyinArr.map(function(item) { 
-          return item[0]; 
-      }).join(' ');
-      document.getElementById("result").innerText = result;
+    }
+
+    // 新增字庫資料，支援一次輸入多個漢字
+    function addMapping() {
+      const charInput = document.getElementById("chineseChar").value.trim();
+      const pinyinInput = document.getElementById("pinyin").value.trim().toLowerCase();
+      if (charInput && pinyinInput) {
+        let chars = charInput.indexOf(",") !== -1 ? 
+                    charInput.split(",").map(s => s.trim()).filter(s => s) : 
+                    charInput.split("");
+        chars.forEach(ch => {
+          if (groupMapping[pinyinInput]) {
+            if (!groupMapping[pinyinInput].includes(ch)) {
+              groupMapping[pinyinInput].push(ch);
+            }
+          } else {
+            groupMapping[pinyinInput] = [ch];
+          }
+          charMapping[ch] = pinyinInput;
+        });
+        localStorage.setItem("groupMapping", JSON.stringify(groupMapping));
+        localStorage.setItem("charMapping", JSON.stringify(charMapping));
+        updateDictionaryList();
+        document.getElementById("chineseChar").value = "";
+        document.getElementById("pinyin").value = "";
+      } else {
+        alert("請填寫完整資料！");
+      }
+    }
+
+    // 轉換輸入的中文字串，僅顯示字庫中存在的文字對應
+    function convert() {
+      const input = document.getElementById("inputText").value;
+      let output = "";
+      for (let i = 0; i < input.length; i++) {
+        const ch = input.charAt(i);
+        if (charMapping[ch] !== undefined) {
+          output += charMapping[ch];
+        }
+      }
+      document.getElementById("result").innerText = output;
+    }
+
+    // 開啟、關閉字庫列表 Modal
+    function openDictionaryModal() {
+      updateDictionaryList();
+      document.getElementById("dictionaryModal").style.display = "block";
+    }
+    function closeDictionaryModal() {
+      document.getElementById("dictionaryModal").style.display = "none";
+    }
+
+    // 編輯指定拼音的字庫資料
+    function editMapping(pinyin) {
+      closeDictionaryModal();
+      document.getElementById("editPinyin").value = pinyin;
+      document.getElementById("editCharacters").value = groupMapping[pinyin].join(",");
+      document.getElementById("editModal").style.display = "block";
+    }
+    function closeEditModal() {
+      document.getElementById("editModal").style.display = "none";
+    }
+
+    // 儲存編輯後的資料
+    function saveMapping() {
+      const pinyin = document.getElementById("editPinyin").value;
+      let newCharsStr = document.getElementById("editCharacters").value.trim();
+      if (!newCharsStr) {
+        alert("漢字欄位不能為空！");
+        return;
+      }
+      let newChars = newCharsStr.indexOf(",") !== -1 ?
+                     newCharsStr.split(",").map(s => s.trim()).filter(s => s) :
+                     newCharsStr.split("");
+      groupMapping[pinyin].forEach(ch => { delete charMapping[ch]; });
+      groupMapping[pinyin] = newChars;
+      newChars.forEach(ch => { charMapping[ch] = pinyin; });
+      localStorage.setItem("groupMapping", JSON.stringify(groupMapping));
+      localStorage.setItem("charMapping", JSON.stringify(charMapping));
+      closeEditModal();
+      updateDictionaryList();
+    }
+
+    // 刪除該拼音對應的整筆資料
+    function deleteMapping() {
+      const pinyin = document.getElementById("editPinyin").value;
+      if (confirm("確定要刪除該筆資料嗎？")) {
+        groupMapping[pinyin].forEach(ch => { delete charMapping[ch]; });
+        delete groupMapping[pinyin];
+        localStorage.setItem("groupMapping", JSON.stringify(groupMapping));
+        localStorage.setItem("charMapping", JSON.stringify(charMapping));
+        closeEditModal();
+        updateDictionaryList();
+      }
+    }
+
+    // 下載資料庫功能
+    function downloadDatabase() {
+      const db = { groupMapping: groupMapping, charMapping: charMapping };
+      const dataStr = JSON.stringify(db, null, 2);
+      const blob = new Blob([dataStr], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "database.txt";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // 上傳資料庫功能
+    function uploadDatabase() {
+      const fileInput = document.getElementById("uploadFile");
+      if (fileInput.files.length === 0) return;
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const db = JSON.parse(e.target.result);
+          if (db.groupMapping && db.charMapping) {
+            groupMapping = db.groupMapping;
+            charMapping = db.charMapping;
+            localStorage.setItem("groupMapping", JSON.stringify(groupMapping));
+            localStorage.setItem("charMapping", JSON.stringify(charMapping));
+            updateDictionaryList();
+            alert("資料庫已成功上傳！");
+          } else {
+            alert("檔案格式不正確！");
+          }
+        } catch (err) {
+          alert("上傳失敗，請確認檔案格式正確！");
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // 清除資料庫功能（紅色按鈕）
+    function clearDatabase() {
+      if (confirm("確定要清除所有資料庫資料嗎？此動作不可回復！")) {
+        groupMapping = {};
+        charMapping = {};
+        localStorage.removeItem("groupMapping");
+        localStorage.removeItem("charMapping");
+        updateDictionaryList();
+        alert("資料庫已清除！");
+      }
+    }
+
+    // 點擊 Modal 外部關閉 Modal
+    window.onclick = function(event) {
+      const dictModal = document.getElementById("dictionaryModal");
+      const editModal = document.getElementById("editModal");
+      if (event.target === dictModal) {
+        dictModal.style.display = "none";
+      }
+      if (event.target === editModal) {
+        editModal.style.display = "none";
+      }
     }
   </script>
 </body>
