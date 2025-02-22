@@ -118,13 +118,14 @@
     // 全域資料
     let groupMapping = {};
     let charMapping = {};
+    // 初始菜單資料
     let menu = {
       "chonyobin": { name: "蔥油餅", price: 20 }
     };
     let currentEditingKey = null;
-    let manualEditKey = false; // 是否手動編輯英文關鍵字
+    let manualEditKey = false;
 
-    // 從同一伺服器讀取 database.txt 的轉譯資料
+    // 從同一伺服器讀取 database.txt 轉譯資料
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -164,21 +165,19 @@
     }
     updateMenuDisplay();
 
-    // 開啟新增或編輯菜單視窗
+    // 開啟新增/編輯菜單視窗
     function openMenuModal(key = null) {
-      currentEditingKey = key; // key 為 null 代表新增模式
+      currentEditingKey = key;
       const modal = document.getElementById("menuModal");
       modal.style.display = "block";
       manualEditKey = false;
       if (key) {
-        // 編輯模式：填入原有資料
         document.getElementById("modalTitle").innerText = "編輯菜單項目";
         document.getElementById("menuName").value = menu[key].name;
         document.getElementById("menuKey").value = key;
         document.getElementById("menuPrice").value = menu[key].price;
         document.getElementById("deleteButton").style.display = "inline-block";
       } else {
-        // 新增模式：清空所有欄位
         document.getElementById("modalTitle").innerText = "新增菜單項目";
         document.getElementById("menuName").value = "";
         document.getElementById("menuKey").value = "";
@@ -187,7 +186,7 @@
       }
     }
 
-    // 關閉菜單編輯視窗
+    // 關閉菜單視窗
     function closeMenuModal() {
       document.getElementById("menuModal").style.display = "none";
       currentEditingKey = null;
@@ -224,7 +223,7 @@
       }
     }
 
-    // 點餐功能：輸入中文後根據字庫轉譯英文，精確或模糊比對下單
+    // 點餐功能：根據轉譯結果進行精確或模糊比對下單
     function orderFromChinese() {
       const input = document.getElementById("orderInput").value.trim();
       if (!input) {
@@ -268,7 +267,7 @@
       return bestKey ? { key: bestKey, similarity: bestScore } : null;
     }
 
-    // 積分算法：計算兩個字串中相同字母的最小出現次數總和，並以較長字串長度正規化
+    // 積分算法：計算兩個字串中相同字母的最小出現次數總和，正規化至較長字串長度
     function letterFrequencySimilarity(a, b) {
       const freqA = getLetterFrequency(a);
       const freqB = getLetterFrequency(b);
@@ -290,7 +289,7 @@
       return freq;
     }
 
-    // 自動生成英文關鍵字，除非使用者手動修改
+    // 自動生成英文關鍵字（除非手動編輯）
     document.getElementById("menuName").addEventListener("input", function () {
       if (!manualEditKey) {
         const name = this.value.trim();
@@ -305,10 +304,48 @@
       }
     });
 
-    // 當使用者手動編輯英文關鍵字時，設定標記
+    // 當使用者手動編輯英文關鍵字時，設定手動編輯標記
     document.getElementById("menuKey").addEventListener("input", function () {
       manualEditKey = true;
     });
+
+    // 下載菜單資料（將 menu 物件以 JSON 格式儲存到 menu.txt）
+    function downloadMenuData() {
+      const dataStr = JSON.stringify(menu, null, 2);
+      const blob = new Blob([dataStr], { type: "text/plain" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "menu.txt";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // 上傳菜單資料（更新 menu 物件）
+    function uploadMenuData() {
+      const fileInput = document.getElementById("uploadMenuFile");
+      if (fileInput.files.length === 0) return;
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          // 簡單檢查格式
+          if (typeof data === "object" && data !== null) {
+            menu = data;
+            updateMenuDisplay();
+            alert("菜單資料上傳成功！");
+          } else {
+            alert("上傳的菜單資料格式不正確！");
+          }
+        } catch (err) {
+          alert("上傳失敗：" + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
   </script>
 </body>
 </html>
