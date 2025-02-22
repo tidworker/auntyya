@@ -19,7 +19,7 @@
     "name": "蔥油餅",
     "price": 20
   },
-  "rougengtong": {
+  "rougengtongtong": {
     "name": "肉羹湯",
     "price": 35
   },
@@ -27,7 +27,7 @@
     "name": "肉羹麵線",
     "price": 50
   },
-  "zonghetong": {
+  "zonghetongtong": {
     "name": "綜合湯",
     "price": 35
   },
@@ -35,7 +35,7 @@
     "name": "綜合麵線",
     "price": 50
   },
-  "gongwantong": {
+  "gongwantongtong": {
     "name": "貢丸湯",
     "price": 35
   }
