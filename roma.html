@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>中文轉拼音系統</title>
+  <!-- 引入 pinyin.js 庫 (需確認庫的 CDN 連結是否有效) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pinyin/2.8.0/pinyin.min.js"></script>
+</head>
+<body>
+  <h1>中文轉拼音系統</h1>
+  <textarea id="inputText" rows="5" cols="30" placeholder="請輸入中文..."></textarea>
+  <br>
+  <button onclick="convert()">轉換</button>
+  <p id="result"></p>
+  
+  <script>
+    function convert() {
+      var text = document.getElementById("inputText").value;
+      // 使用 pinyin 庫進行轉換，這裡使用 STYLE_NORMAL 參數轉換成不帶聲調的拼音
+      var pinyinArr = pinyin(text, {
+          style: pinyin.STYLE_NORMAL, // 不帶聲調
+          heteronym: false            // 是否啟用多音字模式，這裡關閉
+      });
+      // 將結果整理成一個拼音字串
+      var result = pinyinArr.map(function(item) { 
+          return item[0]; 
+      }).join(' ');
+      document.getElementById("result").innerText = result;
+    }
+  </script>
+</body>
+</html>
