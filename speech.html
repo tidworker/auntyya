@@ -163,6 +163,75 @@
     }
     updateMenuDisplay();
 
+    // 點餐功能：從中文輸入自動轉換並下訂單
+    function orderFromChinese() {
+      const input = document.getElementById("orderInput").value.trim();
+      if (!input) {
+        alert("請輸入中文菜品名稱！");
+        return;
+      }
+
+      let converted = "";
+      for (let i = 0; i < input.length; i++) {
+        const ch = input.charAt(i);
+        if (charMapping[ch] !== undefined) {
+          converted += charMapping[ch];
+        }
+      }
+
+      if (menu[converted]) {
+        const dish = menu[converted];
+        document.getElementById("orderResult").innerText =
+          `您點的是 ${dish.name}，價格為 ${dish.price} 元`;
+      } else {
+        let bestMatch = findBestMatch(converted);
+        if (bestMatch) {
+          const { key, similarity } = bestMatch;
+          document.getElementById("orderResult").innerText =
+            `找不到完全相符項目，推薦您點：${menu[key].name} （相似度：${(similarity * 100).toFixed(1)}%），價格為 ${menu[key].price} 元`;
+        } else {
+          document.getElementById("orderResult").innerText = "未找到相似菜品！";
+        }
+      }
+    }
+
+    // 找到最相似的菜品
+    function findBestMatch(input) {
+      let bestKey = null;
+      let bestSimilarity = 0;
+      for (let key in menu) {
+        const similarity = calculateSimilarity(input, key);
+        if (similarity > bestSimilarity) {
+          bestSimilarity = similarity;
+          bestKey = key;
+        }
+      }
+      return bestKey ? { key: bestKey, similarity: bestSimilarity } : null;
+    }
+
+    // 相似度計算 (Levenshtein 距離)
+    function calculateSimilarity(a, b) {
+      const m = a.length;
+      const n = b.length;
+      const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+      for (let i = 0; i <= m; i++) dp[i][0] = i;
+      for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+      for (let i = 1; i <= m; i++) {
+        for (let j = 1; j <= n; j++) {
+          dp[i][j] = Math.min(
+            dp[i - 1][j] + 1,
+            dp[i][j - 1] + 1,
+            dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+          );
+        }
+      }
+
+      const distance = dp[m][n];
+      return 1 - distance / Math.max(m, n);
+    }
+
     // 開啟新增或編輯菜單彈出視窗
     function openMenuModal(key = null) {
       const modal = document.getElementById("menuModal");
@@ -192,7 +261,7 @@
       currentEditingKey = null;
     }
 
-    // 儲存菜單項目（新增或編輯）
+    // 儲存菜單項目
     function saveMenuItem() {
       const name = document.getElementById("menuName").value.trim();
       const key = document.getElementById("menuKey").value.trim().toLowerCase();
@@ -203,7 +272,7 @@
         return;
       }
 
-      menu[key] = { name: name, price: price };
+      menu[key] = { name, price };
       updateMenuDisplay();
       closeMenuModal();
     }
@@ -229,6 +298,7 @@
       }
       document.getElementById("menuKey").value = key;
     });
+
   </script>
 </body>
 </html>
