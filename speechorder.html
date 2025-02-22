@@ -15,15 +15,6 @@
       padding: 10px;
       font-size: 16px;
     }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-    li {
-      cursor: default;
-      padding: 5px;
-      border-bottom: 1px solid #ddd;
-    }
     table {
       border-collapse: collapse;
       width: 100%;
@@ -47,10 +38,16 @@
   <!-- 點餐區：包含語音輸入按鈕 -->
   <section>
     <h2>請輸入中文菜品名稱</h2>
-    <!-- 輸入範例："蔥油餅 2 #任何內容" 但備註固定為"辣" -->
-    <input type="text" id="orderInput" placeholder="例如：蔥油餅 2 #...">
+    <!-- 輸入舉例： 蔥油餅兩份辣 -->
+    <input type="text" id="orderInput" placeholder="例如：蔥油餅兩份辣">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
+  </section>
+
+  <!-- 顯示轉譯後文字 -->
+  <section>
+    <h2>轉譯後文字</h2>
+    <p id="convertedText">尚未轉譯</p>
   </section>
 
   <!-- 顯示訂單結果以表格 -->
@@ -72,25 +69,19 @@
     </table>
   </section>
 
-  <!-- 顯示轉譯字庫載入狀態 -->
+  <!-- 顯示系統載入狀態 -->
   <section>
-    <h2>轉譯字庫載入狀態</h2>
+    <h2>系統狀態</h2>
     <p id="dbStatus">尚未載入字庫資料...</p>
-  </section>
-
-  <!-- 顯示菜單（由伺服器 menu.txt 載入） -->
-  <section>
-    <h2>菜單</h2>
     <p id="menuStatus">尚未載入菜單資料...</p>
   </section>
 
   <script>
     // 全域變數：轉譯字庫與菜單
-    let groupMapping = {};
     let charMapping = {};
     let menu = {};
 
-    // 從伺服器讀取 database.txt (必須包含 groupMapping 與 charMapping)
+    // 讀取 database.txt (必須包含 charMapping)
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -99,8 +90,7 @@
         })
         .then(text => {
           const db = JSON.parse(text);
-          if (db.groupMapping && db.charMapping) {
-            groupMapping = db.groupMapping;
+          if (db.charMapping) {
             charMapping = db.charMapping;
             document.getElementById("dbStatus").innerText = "字庫資料載入成功！";
           } else {
@@ -113,7 +103,7 @@
     }
     loadTranslationDatabase();
 
-    // 從伺服器讀取菜單資料 (menu.txt，JSON 格式)
+    // 讀取菜單資料 (menu.txt，JSON 格式)
     function loadMenu() {
       fetch("menu.txt")
         .then(response => {
@@ -130,39 +120,65 @@
     }
     loadMenu();
 
-    // 訂單解析與下單（顯示結果以表格）
-    function orderFromChinese() {
-      const orderStr = document.getElementById("orderInput").value.trim();
-      if (!orderStr) {
-        alert("請輸入訂單內容！");
-        return;
-      }
-      // 使用正則解析：第一部分為菜名，接著可有數字代表份數，及以#開頭的備註（此處備註固定為"辣"）
-      const match = orderStr.match(/^(.*?)\s*(\d+)?\s*(#\S+)?$/);
-      if (!match) {
-        alert("訂單格式不正確！");
-        return;
-      }
-      const dishChinese = match[1].trim();
-      const quantity = match[2] ? parseInt(match[2]) : 1;
-      // 若出現備註符號"#"，則備註固定為"辣"
-      const remark = match[3] ? "辣" : "";
-
-      // 將 dishChinese 轉換為英文關鍵字
+    // 將中文菜品名稱轉譯成英文關鍵字
+    // 若對應映射存在則輸出映射值，否則保留原中文字
+    function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
         const ch = dishChinese.charAt(i);
         if (charMapping[ch] !== undefined) {
           converted += charMapping[ch];
+        } else {
+          converted += ch;
         }
       }
+      return converted;
+    }
+
+    // 輔助函式：僅保留中文字（Unicode 範圍）
+    function extractChinese(text) {
+      const matches = text.match(/[\u4e00-\u9fa5]+/g);
+      return matches ? matches.join('') : "";
+    }
+
+    // 從轉譯結果中解析訂單資訊，所有資訊均從轉譯結果取得
+    function orderFromChinese() {
+      const inputText = document.getElementById("orderInput").value.trim();
+      if (!inputText) {
+        alert("請輸入訂單內容！");
+        return;
+      }
       
+      // 取得完整轉譯結果（不刪除任何數字）
+      let translated = translateDishName(inputText);
+      
+      // 從轉譯結果中擷取括號內數字作為份數，支援半形與全形括號 (例如：(2) 或 （2）)
+      let quantity = 1;
+      const parenMatch = translated.match(/[（(](\d+)[）)]/);
+      if (parenMatch) {
+        quantity = parseInt(parenMatch[1]);
+        // ※ 此處不移除括號內數字，保持轉譯結果完整
+      }
+      
+      // 以整個轉譯結果作為訂單關鍵字
+      const dishKey = translated.trim();
+      if (!dishKey) {
+        alert("未能解析出菜品名稱！");
+        return;
+      }
+      
+      // 顯示完整轉譯結果（包含數字）
+      document.getElementById("convertedText").innerText = "轉譯結果：" + dishKey;
+      
+      // 從轉譯結果中僅擷取中文作為備註顯示
+      const chineseOnly = extractChinese(dishKey);
+      
+      // 根據轉譯結果匹配菜單：先檢查精確匹配，否則模糊比對
       let dish = null;
-      if (menu[converted]) {
-        dish = menu[converted];
+      if (menu[dishKey]) {
+        dish = menu[dishKey];
       } else {
-        // 模糊比對
-        const bestMatch = findBestMatch(converted);
+        const bestMatch = findBestMatch(dishKey);
         if (bestMatch) {
           dish = menu[bestMatch.key];
         }
@@ -171,11 +187,13 @@
         alert("未找到相似菜品！");
         return;
       }
-      addOrderRow(dish, quantity, remark);
+      
+      // 表格中資訊皆從轉譯結果取得，其中備註欄顯示僅包含中文字的內容
+      addOrderRow(dish, quantity, chineseOnly);
       document.getElementById("orderInput").value = "";
     }
 
-    // 積分算法：計算目標字串中每個字母在輸入字串中出現次數累計得分
+    // 模糊比對：計算轉譯結果與菜單中每個關鍵字的匹配分數
     function findBestMatch(input) {
       let bestKey = null;
       let bestScore = 0;
@@ -198,20 +216,15 @@
       return score;
     }
 
-    // 新增訂單列到訂單表格中
+    // 將訂單列加入訂單表格中
     function addOrderRow(dish, quantity, remark) {
       const tableBody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tableBody.insertRow();
-      const cellDish = row.insertCell();
-      const cellQuantity = row.insertCell();
-      const cellRemark = row.insertCell();
-      const cellUnit = row.insertCell();
-      const cellTotal = row.insertCell();
-      cellDish.innerText = dish.name;
-      cellQuantity.innerText = quantity;
-      cellRemark.innerText = remark;
-      cellUnit.innerText = dish.price;
-      cellTotal.innerText = dish.price * quantity;
+      row.insertCell().innerText = dish.name;
+      row.insertCell().innerText = quantity;
+      row.insertCell().innerText = remark;
+      row.insertCell().innerText = dish.price;
+      row.insertCell().innerText = dish.price * quantity;
     }
 
     // 語音輸入功能：使用 Web Speech API
