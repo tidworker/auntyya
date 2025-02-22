@@ -123,9 +123,9 @@
       "chonyobin": { name: "蔥油餅", price: 20 }
     };
     let currentEditingKey = null;
-    let manualEditKey = false;
+    let manualEditKey = false; // 是否手動編輯英文關鍵字
 
-    // 從同一伺服器讀取 database.txt 轉譯資料
+    // 讀取同一伺服器的 database.txt（必須包含 groupMapping 與 charMapping）
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -148,7 +148,7 @@
     }
     loadTranslationDatabase();
 
-    // 更新菜單列表顯示
+    // 更新菜單列表
     function updateMenuDisplay() {
       const menuListDiv = document.getElementById("menuList");
       menuListDiv.innerHTML = "";
@@ -165,19 +165,21 @@
     }
     updateMenuDisplay();
 
-    // 開啟新增/編輯菜單視窗
+    // 開啟新增或編輯菜單視窗（若未傳入 key，則表示新增模式）
     function openMenuModal(key = null) {
       currentEditingKey = key;
       const modal = document.getElementById("menuModal");
       modal.style.display = "block";
       manualEditKey = false;
       if (key) {
+        // 編輯模式：填入現有資料
         document.getElementById("modalTitle").innerText = "編輯菜單項目";
         document.getElementById("menuName").value = menu[key].name;
         document.getElementById("menuKey").value = key;
         document.getElementById("menuPrice").value = menu[key].price;
         document.getElementById("deleteButton").style.display = "inline-block";
       } else {
+        // 新增模式：清空所有欄位
         document.getElementById("modalTitle").innerText = "新增菜單項目";
         document.getElementById("menuName").value = "";
         document.getElementById("menuKey").value = "";
@@ -192,7 +194,7 @@
       currentEditingKey = null;
     }
 
-    // 新增或更新菜單項目（編輯模式直接更新原資料）
+    // 新增或更新菜單項目（編輯模式下直接更新原有項目）
     function saveMenuItem() {
       const name = document.getElementById("menuName").value.trim();
       let key = document.getElementById("menuKey").value.trim().toLowerCase();
@@ -223,7 +225,7 @@
       }
     }
 
-    // 點餐功能：根據轉譯結果進行精確或模糊比對下單
+    // 點餐功能：根據字庫轉譯後的輸入進行精確或模糊比對下單
     function orderFromChinese() {
       const input = document.getElementById("orderInput").value.trim();
       if (!input) {
@@ -253,12 +255,12 @@
       }
     }
 
-    // 找出最相似的菜單項目（採用積分算法：相同字母出現次數越多得分越高）
+    // 找出最相似的菜單項目（採用積分算法：計算目標字串中有多少字母出現在輸入字串中）
     function findBestMatch(input) {
       let bestKey = null;
       let bestScore = 0;
       for (let key in menu) {
-        const score = letterFrequencySimilarity(input, key);
+        const score = letterMatchScore(input, key);
         if (score > bestScore) {
           bestScore = score;
           bestKey = key;
@@ -267,29 +269,20 @@
       return bestKey ? { key: bestKey, similarity: bestScore } : null;
     }
 
-    // 積分算法：計算兩個字串中相同字母的最小出現次數總和，正規化至較長字串長度
-    function letterFrequencySimilarity(a, b) {
-      const freqA = getLetterFrequency(a);
-      const freqB = getLetterFrequency(b);
-      let commonCount = 0;
-      for (let letter in freqA) {
-        if (freqB[letter]) {
-          commonCount += Math.min(freqA[letter], freqB[letter]);
+    // 積分算法：計算目標字串中每個字母是否出現在輸入字中，累計得分
+    function letterMatchScore(input, target) {
+      let score = 0;
+      // 將輸入字轉換為集合以避免重複計算，但根據需求，每個出現都計分
+      // 因此直接檢查 target 每個字
+      for (let char of target) {
+        if (input.indexOf(char) >= 0) {
+          score++;
         }
       }
-      return commonCount / Math.max(a.length, b.length);
+      return score;
     }
 
-    // 計算字母出現頻率
-    function getLetterFrequency(str) {
-      const freq = {};
-      for (let char of str) {
-        freq[char] = (freq[char] || 0) + 1;
-      }
-      return freq;
-    }
-
-    // 自動生成英文關鍵字（除非手動編輯）
+    // 自動生成英文關鍵字，除非使用者手動編輯
     document.getElementById("menuName").addEventListener("input", function () {
       if (!manualEditKey) {
         const name = this.value.trim();
@@ -304,12 +297,12 @@
       }
     });
 
-    // 當使用者手動編輯英文關鍵字時，設定手動編輯標記
+    // 當使用者手動修改英文關鍵字時，設置手動編輯標記
     document.getElementById("menuKey").addEventListener("input", function () {
       manualEditKey = true;
     });
 
-    // 下載菜單資料（將 menu 物件以 JSON 格式儲存到 menu.txt）
+    // 下載菜單資料：將 menu 物件以 JSON 格式儲存到 menu.txt
     function downloadMenuData() {
       const dataStr = JSON.stringify(menu, null, 2);
       const blob = new Blob([dataStr], { type: "text/plain" });
@@ -323,7 +316,7 @@
       URL.revokeObjectURL(url);
     }
 
-    // 上傳菜單資料（更新 menu 物件）
+    // 上傳菜單資料：讀取 txt 檔案後更新 menu 物件
     function uploadMenuData() {
       const fileInput = document.getElementById("uploadMenuFile");
       if (fileInput.files.length === 0) return;
@@ -332,7 +325,6 @@
       reader.onload = function(e) {
         try {
           const data = JSON.parse(e.target.result);
-          // 簡單檢查格式
           if (typeof data === "object" && data !== null) {
             menu = data;
             updateMenuDisplay();
