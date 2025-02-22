@@ -38,8 +38,8 @@
   <!-- 點餐區：包含語音輸入按鈕 -->
   <section>
     <h2>請輸入中文菜品名稱</h2>
-    <!-- 輸入舉例： 蔥油餅兩份辣 -->
-    <input type="text" id="orderInput" placeholder="例如：蔥油餅兩份辣">
+    <!-- 輸入舉例： 蔥油餅(2)微辣 -->
+    <input type="text" id="orderInput" placeholder="例如：蔥油餅微辣">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
   </section>
@@ -121,15 +121,13 @@
     loadMenu();
 
     // 將中文菜品名稱轉譯成英文關鍵字
-    // 若對應映射存在則輸出映射值，否則保留原中文字
+    // 僅對資料庫中有映射的中文字進行轉譯，未在資料庫中的字不顯示
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
         const ch = dishChinese.charAt(i);
         if (charMapping[ch] !== undefined) {
           converted += charMapping[ch];
-        } else {
-          converted += ch;
         }
       }
       return converted;
@@ -149,15 +147,14 @@
         return;
       }
       
-      // 取得完整轉譯結果（不刪除任何數字）
+      // 取得完整轉譯結果（僅顯示有映射的部分）
       let translated = translateDishName(inputText);
       
-      // 從轉譯結果中擷取括號內數字作為份數，支援半形與全形括號 (例如：(2) 或 （2）)
+      // 從轉譯結果中擷取「)」前的數字作為份數，支援半形與全形右括號
       let quantity = 1;
-      const parenMatch = translated.match(/[（(](\d+)[）)]/);
+      const parenMatch = translated.match(/(\d+)(?=[）\)])/);
       if (parenMatch) {
         quantity = parseInt(parenMatch[1]);
-        // ※ 此處不移除括號內數字，保持轉譯結果完整
       }
       
       // 以整個轉譯結果作為訂單關鍵字
@@ -167,7 +164,7 @@
         return;
       }
       
-      // 顯示完整轉譯結果（包含數字）
+      // 顯示完整轉譯結果（僅有映射的內容，不包含未在資料庫中的文字）
       document.getElementById("convertedText").innerText = "轉譯結果：" + dishKey;
       
       // 從轉譯結果中僅擷取中文作為備註顯示
