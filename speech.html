@@ -84,6 +84,7 @@
   <!-- 菜單管理區 -->
   <section>
     <h2>菜單管理</h2>
+    <!-- 點擊此按鈕會呼叫 openMenuModal()，用於新增菜單項目 -->
     <button onclick="openMenuModal()">新增菜單</button>
     <button onclick="downloadMenuData()">下載菜單資料</button>
     <button onclick="document.getElementById('uploadMenuFile').click()">上傳菜單資料</button>
@@ -122,9 +123,9 @@
       "chonyobin": { name: "蔥油餅", price: 20 }
     };
     let currentEditingKey = null;
-    let manualEditKey = false; // 判斷是否手動編輯關鍵字
+    let manualEditKey = false;
 
-    // 自動從同一伺服器的 database.txt 讀取字庫資料
+    // 自動讀取轉譯字庫
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -147,16 +148,16 @@
     }
     loadTranslationDatabase();
 
-    // 更新菜單顯示
+    // 更新菜單清單
     function updateMenuDisplay() {
-      let menuListDiv = document.getElementById("menuList");
+      const menuListDiv = document.getElementById("menuList");
       menuListDiv.innerHTML = "";
-      let ul = document.createElement("ul");
+      const ul = document.createElement("ul");
       for (let key in menu) {
         if (menu.hasOwnProperty(key)) {
-          let li = document.createElement("li");
+          const li = document.createElement("li");
           li.textContent = key + " : " + menu[key].name + " - " + menu[key].price + "元";
-          li.onclick = () => openMenuModal(key); // 點擊以編輯
+          li.onclick = () => openMenuModal(key);
           ul.appendChild(li);
         }
       }
@@ -164,7 +165,37 @@
     }
     updateMenuDisplay();
 
-    // 新增或編輯菜單項目
+    // 開啟新增/編輯菜單視窗
+    function openMenuModal(key = null) {
+      currentEditingKey = key; // 如果 key 為 null 則表示新增模式
+      const modal = document.getElementById("menuModal");
+      modal.style.display = "block";
+      manualEditKey = false;
+
+      if (key) {
+        // 編輯模式：填入現有資料
+        document.getElementById("modalTitle").innerText = "編輯菜單項目";
+        document.getElementById("menuName").value = menu[key].name;
+        document.getElementById("menuKey").value = key;
+        document.getElementById("menuPrice").value = menu[key].price;
+        document.getElementById("deleteButton").style.display = "inline-block";
+      } else {
+        // 新增模式：清空欄位
+        document.getElementById("modalTitle").innerText = "新增菜單項目";
+        document.getElementById("menuName").value = "";
+        document.getElementById("menuKey").value = "";
+        document.getElementById("menuPrice").value = "";
+        document.getElementById("deleteButton").style.display = "none";
+      }
+    }
+
+    // 關閉菜單視窗
+    function closeMenuModal() {
+      document.getElementById("menuModal").style.display = "none";
+      currentEditingKey = null;
+    }
+
+    // 新增或編輯菜單項目（直接更新）
     function saveMenuItem() {
       const name = document.getElementById("menuName").value.trim();
       let key = document.getElementById("menuKey").value.trim().toLowerCase();
@@ -175,24 +206,21 @@
         return;
       }
 
-      // 編輯模式：更新舊項目
       if (currentEditingKey) {
+        // 編輯模式：若關鍵字有修改，先刪除舊的項目
         if (key !== currentEditingKey) {
-          // 若修改了關鍵字，刪除舊資料
           delete menu[currentEditingKey];
         }
-        menu[key] = { name, price }; // 更新資料
       } else {
-        // 新增模式：新增新項目
+        // 新增模式：如果已有相同關鍵字，提醒使用者
         if (menu[key]) {
           alert("已有相同關鍵字的菜單項目！");
           return;
         }
-        menu[key] = { name, price };
       }
-
-      updateMenuDisplay(); // 更新菜單列表
-      closeMenuModal(); // 關閉編輯視窗
+      menu[key] = { name, price };
+      updateMenuDisplay();
+      closeMenuModal();
     }
 
     // 刪除菜單項目
@@ -204,14 +232,13 @@
       }
     }
 
-    // 點餐功能
+    // 點餐功能：自動轉譯與比對
     function orderFromChinese() {
       const input = document.getElementById("orderInput").value.trim();
       if (!input) {
         alert("請輸入中文菜品名稱！");
         return;
       }
-
       let converted = "";
       for (let i = 0; i < input.length; i++) {
         const ch = input.charAt(i);
@@ -219,28 +246,26 @@
           converted += charMapping[ch];
         }
       }
-
       if (menu[converted]) {
         const dish = menu[converted];
         document.getElementById("orderResult").innerText =
           `您點的是 ${dish.name}，價格為 ${dish.price} 元`;
       } else {
-        let bestMatch = findBestMatch(converted);
+        const bestMatch = findBestMatch(converted);
         if (bestMatch) {
           const { key, similarity } = bestMatch;
           document.getElementById("orderResult").innerText =
-            `找不到完全相符項目，推薦您點：${menu[key].name} （相似度：${(similarity * 100).toFixed(1)}%），價格為 ${menu[key].price} 元`;
+            `推薦您點：${menu[key].name} （相似度：${(similarity * 100).toFixed(1)}%），價格為 ${menu[key].price} 元`;
         } else {
           document.getElementById("orderResult").innerText = "未找到相似菜品！";
         }
       }
     }
 
-    // 找到最相似的菜品（基於字母出現頻率比對）
+    // 找出最相似的菜單項目（採用全部字母頻率比對）
     function findBestMatch(input) {
       let bestKey = null;
       let bestSimilarity = 0;
-
       for (let key in menu) {
         const similarity = letterFrequencySimilarity(input, key);
         if (similarity > bestSimilarity) {
@@ -248,40 +273,55 @@
           bestKey = key;
         }
       }
-
       return bestKey ? { key: bestKey, similarity: bestSimilarity } : null;
     }
 
-    // 基於字母頻率的相似度比對
+    // 基於字母頻率比對相似度
     function letterFrequencySimilarity(a, b) {
       const freqA = getLetterFrequency(a);
       const freqB = getLetterFrequency(b);
-
       let intersection = 0;
       let total = 0;
-
       for (let letter in freqA) {
         if (freqB[letter]) {
           intersection += Math.min(freqA[letter], freqB[letter]);
         }
         total += freqA[letter];
       }
-
       for (let letter in freqB) {
         total += freqB[letter];
       }
-
-      return intersection / total;
+      return total ? intersection / total : 0;
     }
 
-    // 統計字母出現頻率
+    // 計算字母出現頻率
     function getLetterFrequency(str) {
-      let freq = {};
+      const freq = {};
       for (let char of str) {
         freq[char] = (freq[char] || 0) + 1;
       }
       return freq;
     }
+
+    // 自動生成英文關鍵字，除非使用者手動編輯
+    document.getElementById("menuName").addEventListener("input", function () {
+      if (!manualEditKey) {
+        const name = this.value.trim();
+        let key = "";
+        for (let i = 0; i < name.length; i++) {
+          const ch = name.charAt(i);
+          if (charMapping[ch] !== undefined) {
+            key += charMapping[ch];
+          }
+        }
+        document.getElementById("menuKey").value = key;
+      }
+    });
+
+    // 監聽手動編輯英文關鍵字
+    document.getElementById("menuKey").addEventListener("input", function () {
+      manualEditKey = true;
+    });
   </script>
 </body>
 </html>
