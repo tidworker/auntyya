@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中文點餐系統</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 10px;
+      padding: 0;
+    }
+    input, button {
+      margin: 5px;
+      padding: 10px;
+      font-size: 16px;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    li {
+      cursor: default;
+      padding: 5px;
+      border-bottom: 1px solid #ddd;
+    }
+    @media (max-width: 600px) {
+      input, button { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>中文點餐系統</h1>
+
+  <!-- 點餐區 -->
+  <section>
+    <h2>請輸入中文菜品名稱</h2>
+    <input type="text" id="orderInput" placeholder="例如：蔥油餅">
+    <button onclick="orderFromChinese()">送出訂單</button>
+    <button onclick="startVoiceInput()">語音輸入</button>
+    <p>訂單結果：<span id="orderResult"></span></p>
+  </section>
+
+  <!-- 轉譯字庫狀態 -->
+  <section>
+    <h2>轉譯字庫載入狀態</h2>
+    <p id="dbStatus">尚未載入字庫資料...</p>
+  </section>
+
+  <!-- 菜單顯示區（由伺服器上的 menu.txt 載入） -->
+  <section>
+    <h2>菜單</h2>
+    <p id="menuStatus">尚未載入菜單資料...</p>
+    <div id="menuList"></div>
+  </section>
+
+  <script>
+    // 全域變數：轉譯字庫與菜單
+    let groupMapping = {};
+    let charMapping = {};
+    let menu = {};
+
+    // 讀取轉譯字庫，檔案 database.txt 格式需包含 { "groupMapping":{...}, "charMapping":{...} }
+    function loadTranslationDatabase() {
+      fetch("database.txt")
+        .then(response => {
+          if (!response.ok) throw new Error("無法讀取 database.txt");
+          return response.text();
+        })
+        .then(text => {
+          const db = JSON.parse(text);
+          if (db.groupMapping && db.charMapping) {
+            groupMapping = db.groupMapping;
+            charMapping = db.charMapping;
+            document.getElementById("dbStatus").innerText = "字庫資料載入成功！";
+          } else {
+            document.getElementById("dbStatus").innerText = "database.txt 格式不正確！";
+          }
+        })
+        .catch(err => {
+          document.getElementById("dbStatus").innerText = "載入字庫資料失敗：" + err.message;
+        });
+    }
+    loadTranslationDatabase();
+
+    // 讀取菜單資料，檔案 menu.txt 格式需為 JSON 物件，例如：
+    // { "chonyobin": { "name": "蔥油餅", "price": 20 }, ... }
+    function loadMenu() {
+      fetch("menu.txt")
+        .then(response => {
+          if (!response.ok) throw new Error("無法讀取 menu.txt");
+          return response.text();
+        })
+        .then(text => {
+          const data = JSON.parse(text);
+          menu = data;
+          document.getElementById("menuStatus").innerText = "菜單資料載入成功！";
+          updateMenuDisplay();
+        })
+        .catch(err => {
+          document.getElementById("menuStatus").innerText = "載入菜單資料失敗：" + err.message;
+        });
+    }
+    loadMenu();
+
+    // 顯示菜單資料在畫面上
+    function updateMenuDisplay() {
+      const menuListDiv = document.getElementById("menuList");
+      menuListDiv.innerHTML = "";
+      const ul = document.createElement("ul");
+      for (let key in menu) {
+        if (menu.hasOwnProperty(key)) {
+          const li = document.createElement("li");
+          li.textContent = key + " : " + menu[key].name + " - " + menu[key].price + "元";
+          ul.appendChild(li);
+        }
+      }
+      menuListDiv.appendChild(ul);
+    }
+
+    // 點餐功能：將輸入的中文轉譯成英文點餐關鍵字，進行精確或模糊比對下單
+    function orderFromChinese() {
+      const input = document.getElementById("orderInput").value.trim();
+      if (!input) {
+        alert("請輸入中文菜品名稱！");
+        return;
+      }
+      let converted = "";
+      for (let i = 0; i < input.length; i++) {
+        const ch = input.charAt(i);
+        if (charMapping[ch] !== undefined) {
+          converted += charMapping[ch];
+        }
+      }
+      if (menu[converted]) {
+        const dish = menu[converted];
+        document.getElementById("orderResult").innerText =
+          `您點的是 ${dish.name}，價格為 ${dish.price} 元`;
+      } else {
+        const bestMatch = findBestMatch(converted);
+        if (bestMatch) {
+          const { key, similarity } = bestMatch;
+          document.getElementById("orderResult").innerText =
+            `推薦您點：${menu[key].name} （得分：${similarity}），價格為 ${menu[key].price} 元`;
+        } else {
+          document.getElementById("orderResult").innerText = "未找到相似菜品！";
+        }
+      }
+    }
+
+    // 積分算法：計算目標字串中每個字母在輸入字串中出現的次數累計得分
+    function findBestMatch(input) {
+      let bestKey = null;
+      let bestScore = 0;
+      for (let key in menu) {
+        const score = letterMatchScore(input, key);
+        if (score > bestScore) {
+          bestScore = score;
+          bestKey = key;
+        }
+      }
+      return bestKey ? { key: bestKey, similarity: bestScore } : null;
+    }
+    function letterMatchScore(input, target) {
+      let score = 0;
+      for (let char of target) {
+        if (input.indexOf(char) >= 0) {
+          score++;
+        }
+      }
+      return score;
+    }
+
+    // 語音輸入功能（使用 Web Speech API，瀏覽器支援時可用）
+    function startVoiceInput() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert("您的瀏覽器不支援語音輸入功能。");
+        return;
+      }
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'zh-TW';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.start();
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById("orderInput").value = transcript;
+        orderFromChinese();
+      };
+      recognition.onerror = function(event) {
+        alert("語音輸入發生錯誤：" + event.error);
+      };
+    }
+  </script>
+</body>
+</html>
