@@ -69,9 +69,11 @@
 
   <!-- 點餐區 -->
   <section>
-    <h2>請輸入中文菜品名稱1.1</h2>
+    <h2>請輸入中文菜品名稱1.3</h2>
     <input type="text" id="orderInput" placeholder="例如：蔥油餅">
     <button onclick="orderFromChinese()">送出訂單</button>
+    <!-- 新增語音輸入按鈕 -->
+    <button onclick="startVoiceInput()">語音輸入</button>
     <p>訂單結果：<span id="orderResult"></span></p>
   </section>
 
@@ -124,7 +126,7 @@
     let currentEditingKey = null;
     let manualEditKey = false;
 
-    // 讀取同一伺服器的 database.txt（需包含 groupMapping 與 charMapping）
+    // 讀取轉譯字庫
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -164,7 +166,7 @@
     }
     updateMenuDisplay();
 
-    // 開啟新增或編輯菜單視窗
+    // 開啟新增/編輯菜單視窗
     function openMenuModal(key = null) {
       currentEditingKey = key;
       const modal = document.getElementById("menuModal");
@@ -222,7 +224,7 @@
       }
     }
 
-    // 點餐功能：根據字庫轉譯後進行精確或模糊比對下單
+    // 點餐功能：根據轉譯後輸入進行比對下單
     function orderFromChinese() {
       const input = document.getElementById("orderInput").value.trim();
       if (!input) {
@@ -244,7 +246,6 @@
         const bestMatch = findBestMatch(converted);
         if (bestMatch) {
           const { key, similarity } = bestMatch;
-          // 顯示得分（相同字母出現次數）
           document.getElementById("orderResult").innerText =
             `推薦您點：${menu[key].name} （得分：${similarity}），價格為 ${menu[key].price} 元`;
         } else {
@@ -253,7 +254,7 @@
       }
     }
 
-    // 找出最相似的菜單項目（積分算法：計算相同字母出現次數）
+    // 積分算法：計算目標字串中每個字母在輸入字串中出現次數累計得分
     function findBestMatch(input) {
       let bestKey = null;
       let bestScore = 0;
@@ -266,8 +267,6 @@
       }
       return bestKey ? { key: bestKey, similarity: bestScore } : null;
     }
-
-    // 積分算法：計算目標字串中每個字母是否出現在輸入字串中，累計得分
     function letterMatchScore(input, target) {
       let score = 0;
       for (let char of target) {
@@ -278,7 +277,7 @@
       return score;
     }
 
-    // 自動生成英文關鍵字（除非使用者手動修改）
+    // 自動生成英文關鍵字（除非使用者手動編輯）
     document.getElementById("menuName").addEventListener("input", function () {
       if (!manualEditKey) {
         const name = this.value.trim();
@@ -292,13 +291,11 @@
         document.getElementById("menuKey").value = key;
       }
     });
-
-    // 當使用者手動編輯英文關鍵字時，設置手動編輯標記
     document.getElementById("menuKey").addEventListener("input", function () {
       manualEditKey = true;
     });
 
-    // 下載菜單資料（以 JSON 格式儲存到 menu.txt）
+    // 下載菜單資料（以 JSON 格式存成 menu.txt）
     function downloadMenuData() {
       const dataStr = JSON.stringify(menu, null, 2);
       const blob = new Blob([dataStr], { type: "text/plain" });
@@ -333,6 +330,28 @@
         }
       };
       reader.readAsText(file);
+    }
+
+    // 語音輸入功能（使用 Web Speech API）
+    function startVoiceInput() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert("您的瀏覽器不支援語音輸入功能。");
+        return;
+      }
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'zh-TW';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.start();
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById("orderInput").value = transcript;
+        orderFromChinese();
+      };
+      recognition.onerror = function(event) {
+        alert("語音輸入發生錯誤：" + event.error);
+      };
     }
   </script>
 </body>
