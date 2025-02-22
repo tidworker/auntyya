@@ -84,7 +84,6 @@
   <!-- 菜單管理區 -->
   <section>
     <h2>菜單管理</h2>
-    <!-- 點擊此按鈕會呼叫 openMenuModal()，用於新增菜單項目 -->
     <button onclick="openMenuModal()">新增菜單</button>
     <button onclick="downloadMenuData()">下載菜單資料</button>
     <button onclick="document.getElementById('uploadMenuFile').click()">上傳菜單資料</button>
@@ -123,9 +122,9 @@
       "chonyobin": { name: "蔥油餅", price: 20 }
     };
     let currentEditingKey = null;
-    let manualEditKey = false;
+    let manualEditKey = false; // 是否手動編輯英文關鍵字
 
-    // 自動讀取轉譯字庫
+    // 從同一伺服器讀取 database.txt 的轉譯資料
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -148,7 +147,7 @@
     }
     loadTranslationDatabase();
 
-    // 更新菜單清單
+    // 更新菜單列表顯示
     function updateMenuDisplay() {
       const menuListDiv = document.getElementById("menuList");
       menuListDiv.innerHTML = "";
@@ -165,22 +164,21 @@
     }
     updateMenuDisplay();
 
-    // 開啟新增/編輯菜單視窗
+    // 開啟新增或編輯菜單視窗
     function openMenuModal(key = null) {
-      currentEditingKey = key; // 如果 key 為 null 則表示新增模式
+      currentEditingKey = key; // key 為 null 代表新增模式
       const modal = document.getElementById("menuModal");
       modal.style.display = "block";
       manualEditKey = false;
-
       if (key) {
-        // 編輯模式：填入現有資料
+        // 編輯模式：填入原有資料
         document.getElementById("modalTitle").innerText = "編輯菜單項目";
         document.getElementById("menuName").value = menu[key].name;
         document.getElementById("menuKey").value = key;
         document.getElementById("menuPrice").value = menu[key].price;
         document.getElementById("deleteButton").style.display = "inline-block";
       } else {
-        // 新增模式：清空欄位
+        // 新增模式：清空所有欄位
         document.getElementById("modalTitle").innerText = "新增菜單項目";
         document.getElementById("menuName").value = "";
         document.getElementById("menuKey").value = "";
@@ -189,34 +187,28 @@
       }
     }
 
-    // 關閉菜單視窗
+    // 關閉菜單編輯視窗
     function closeMenuModal() {
       document.getElementById("menuModal").style.display = "none";
       currentEditingKey = null;
     }
 
-    // 新增或編輯菜單項目（直接更新）
+    // 新增或更新菜單項目（編輯模式直接更新原資料）
     function saveMenuItem() {
       const name = document.getElementById("menuName").value.trim();
       let key = document.getElementById("menuKey").value.trim().toLowerCase();
       const price = parseFloat(document.getElementById("menuPrice").value.trim());
-
       if (!key || !name || isNaN(price)) {
         alert("請填寫完整且正確的菜單資料！");
         return;
       }
-
       if (currentEditingKey) {
-        // 編輯模式：若關鍵字有修改，先刪除舊的項目
         if (key !== currentEditingKey) {
           delete menu[currentEditingKey];
         }
-      } else {
-        // 新增模式：如果已有相同關鍵字，提醒使用者
-        if (menu[key]) {
-          alert("已有相同關鍵字的菜單項目！");
-          return;
-        }
+      } else if (menu[key]) {
+        alert("已有相同關鍵字的菜單項目！");
+        return;
       }
       menu[key] = { name, price };
       updateMenuDisplay();
@@ -232,7 +224,7 @@
       }
     }
 
-    // 點餐功能：自動轉譯與比對
+    // 點餐功能：輸入中文後根據字庫轉譯英文，精確或模糊比對下單
     function orderFromChinese() {
       const input = document.getElementById("orderInput").value.trim();
       if (!input) {
@@ -262,36 +254,31 @@
       }
     }
 
-    // 找出最相似的菜單項目（採用全部字母頻率比對）
+    // 找出最相似的菜單項目（採用積分算法：相同字母出現次數越多得分越高）
     function findBestMatch(input) {
       let bestKey = null;
-      let bestSimilarity = 0;
+      let bestScore = 0;
       for (let key in menu) {
-        const similarity = letterFrequencySimilarity(input, key);
-        if (similarity > bestSimilarity) {
-          bestSimilarity = similarity;
+        const score = letterFrequencySimilarity(input, key);
+        if (score > bestScore) {
+          bestScore = score;
           bestKey = key;
         }
       }
-      return bestKey ? { key: bestKey, similarity: bestSimilarity } : null;
+      return bestKey ? { key: bestKey, similarity: bestScore } : null;
     }
 
-    // 基於字母頻率比對相似度
+    // 積分算法：計算兩個字串中相同字母的最小出現次數總和，並以較長字串長度正規化
     function letterFrequencySimilarity(a, b) {
       const freqA = getLetterFrequency(a);
       const freqB = getLetterFrequency(b);
-      let intersection = 0;
-      let total = 0;
+      let commonCount = 0;
       for (let letter in freqA) {
         if (freqB[letter]) {
-          intersection += Math.min(freqA[letter], freqB[letter]);
+          commonCount += Math.min(freqA[letter], freqB[letter]);
         }
-        total += freqA[letter];
       }
-      for (let letter in freqB) {
-        total += freqB[letter];
-      }
-      return total ? intersection / total : 0;
+      return commonCount / Math.max(a.length, b.length);
     }
 
     // 計算字母出現頻率
@@ -303,7 +290,7 @@
       return freq;
     }
 
-    // 自動生成英文關鍵字，除非使用者手動編輯
+    // 自動生成英文關鍵字，除非使用者手動修改
     document.getElementById("menuName").addEventListener("input", function () {
       if (!manualEditKey) {
         const name = this.value.trim();
@@ -318,7 +305,7 @@
       }
     });
 
-    // 監聽手動編輯英文關鍵字
+    // 當使用者手動編輯英文關鍵字時，設定標記
     document.getElementById("menuKey").addEventListener("input", function () {
       manualEditKey = true;
     });
