@@ -34,5 +34,9 @@
   "zonghemiansianzonghe": {
     "name": "綜合麵線",
     "price": 50
+  },
+  "gongwantong": {
+    "name": "貢丸湯",
+    "price": 35
   }
 }
