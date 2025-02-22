@@ -164,7 +164,7 @@
     }
     updateMenuDisplay();
 
-    // 點餐功能：從中文輸入自動轉換並下訂單
+    // 點餐功能
     function orderFromChinese() {
       const input = document.getElementById("orderInput").value.trim();
       if (!input) {
@@ -261,7 +261,7 @@
       currentEditingKey = null;
     }
 
-    // 儲存菜單項目
+    // 儲存菜單項目（編輯會更新原有資料）
     function saveMenuItem() {
       const name = document.getElementById("menuName").value.trim();
       const key = document.getElementById("menuKey").value.trim().toLowerCase();
@@ -270,6 +270,11 @@
       if (!key || !name || isNaN(price)) {
         alert("請填寫完整且正確的菜單資料！");
         return;
+      }
+
+      // 編輯模式更新原資料
+      if (currentEditingKey) {
+        delete menu[currentEditingKey]; // 刪除舊的 key
       }
 
       menu[key] = { name, price };
