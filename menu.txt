@@ -1,0 +1,38 @@
+{
+  "dacharngmiansian": {
+    "name": "大腸麵線",
+    "price": 50
+  },
+  "chingmiansian": {
+    "name": "清麵線",
+    "price": 40
+  },
+  "chunmiansian": {
+    "name": "純麵線",
+    "price": 40
+  },
+  "chonyobinjiadandan": {
+    "name": "蔥油餅加蛋",
+    "price": 30
+  },
+  "chonyobinbujiabujia": {
+    "name": "蔥油餅",
+    "price": 20
+  },
+  "rougengtong": {
+    "name": "肉羹湯",
+    "price": 35
+  },
+  "rougengmiansianrougen": {
+    "name": "肉羹麵線",
+    "price": 50
+  },
+  "zonghetong": {
+    "name": "綜合湯",
+    "price": 35
+  },
+  "zonghemiansianzonghe": {
+    "name": "綜合麵線",
+    "price": 50
+  }
+}
