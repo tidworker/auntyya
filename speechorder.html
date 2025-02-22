@@ -15,14 +15,17 @@
       padding: 10px;
       font-size: 16px;
     }
-    ul {
-      list-style: none;
-      padding: 0;
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 10px;
     }
-    li {
-      cursor: default;
-      padding: 5px;
-      border-bottom: 1px solid #ddd;
+    table, th, td {
+      border: 1px solid #aaa;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
     }
     @media (max-width: 600px) {
       input, button { font-size: 18px; }
@@ -32,26 +35,38 @@
 <body>
   <h1>中文點餐系統</h1>
 
-  <!-- 點餐區 -->
+  <!-- 點餐區：包含語音輸入按鈕 -->
   <section>
     <h2>請輸入中文菜品名稱</h2>
-    <input type="text" id="orderInput" placeholder="例如：蔥油餅">
+    <!-- 使用者可輸入類似："蔥油餅 2 #辣" -->
+    <input type="text" id="orderInput" placeholder="例如：蔥油餅 2 #辣">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
-    <p>訂單結果：<span id="orderResult"></span></p>
   </section>
 
-  <!-- 轉譯字庫狀態 -->
+  <!-- 顯示轉譯字庫載入狀態 -->
   <section>
     <h2>轉譯字庫載入狀態</h2>
     <p id="dbStatus">尚未載入字庫資料...</p>
   </section>
 
-  <!-- 菜單顯示區（由伺服器上的 menu.txt 載入） -->
+  <!-- 顯示訂單結果（以表格方式） -->
   <section>
-    <h2>菜單</h2>
-    <p id="menuStatus">尚未載入菜單資料...</p>
-    <div id="menuList"></div>
+    <h2>訂單明細</h2>
+    <table id="orderTable">
+      <thead>
+        <tr>
+          <th>菜品</th>
+          <th>份數</th>
+          <th>備註</th>
+          <th>單價</th>
+          <th>總價</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 訂單列會在此加入 -->
+      </tbody>
+    </table>
   </section>
 
   <script>
@@ -60,7 +75,7 @@
     let charMapping = {};
     let menu = {};
 
-    // 讀取轉譯字庫，檔案 database.txt 格式需包含 { "groupMapping":{...}, "charMapping":{...} }
+    // 從同一伺服器讀取 database.txt（格式必須包含 groupMapping 與 charMapping）
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -83,8 +98,7 @@
     }
     loadTranslationDatabase();
 
-    // 讀取菜單資料，檔案 menu.txt 格式需為 JSON 物件，例如：
-    // { "chonyobin": { "name": "蔥油餅", "price": 20 }, ... }
+    // 從同一伺服器讀取 menu.txt（JSON 格式）
     function loadMenu() {
       fetch("menu.txt")
         .then(response => {
@@ -92,60 +106,58 @@
           return response.text();
         })
         .then(text => {
-          const data = JSON.parse(text);
-          menu = data;
-          document.getElementById("menuStatus").innerText = "菜單資料載入成功！";
-          updateMenuDisplay();
+          menu = JSON.parse(text);
         })
         .catch(err => {
-          document.getElementById("menuStatus").innerText = "載入菜單資料失敗：" + err.message;
+          console.error("載入菜單資料失敗：" + err.message);
         });
     }
     loadMenu();
 
-    // 顯示菜單資料在畫面上
-    function updateMenuDisplay() {
-      const menuListDiv = document.getElementById("menuList");
-      menuListDiv.innerHTML = "";
-      const ul = document.createElement("ul");
-      for (let key in menu) {
-        if (menu.hasOwnProperty(key)) {
-          const li = document.createElement("li");
-          li.textContent = key + " : " + menu[key].name + " - " + menu[key].price + "元";
-          ul.appendChild(li);
-        }
-      }
-      menuListDiv.appendChild(ul);
-    }
-
-    // 點餐功能：將輸入的中文轉譯成英文點餐關鍵字，進行精確或模糊比對下單
+    // 訂單解析與下單
     function orderFromChinese() {
-      const input = document.getElementById("orderInput").value.trim();
-      if (!input) {
-        alert("請輸入中文菜品名稱！");
+      const orderStr = document.getElementById("orderInput").value.trim();
+      if (!orderStr) {
+        alert("請輸入訂單內容！");
         return;
       }
+      // 使用正則解析：第一部分為菜名（任意字元），後面可有數字代表份數，及以#開頭的備註
+      // 範例："蔥油餅 2 #辣" → group1: "蔥油餅", group2: "2", group3: "#辣"
+      const match = orderStr.match(/^(.*?)\s*(\d+)?\s*(#\S+)?$/);
+      if (!match) {
+        alert("訂單格式不正確！");
+        return;
+      }
+      const dishChinese = match[1].trim();
+      const quantity = match[2] ? parseInt(match[2]) : 1;
+      const remark = match[3] ? match[3].substring(1) : "";
+      
+      // 將 dishChinese 透過轉譯字庫轉換成英文關鍵字
       let converted = "";
-      for (let i = 0; i < input.length; i++) {
-        const ch = input.charAt(i);
+      for (let i = 0; i < dishChinese.length; i++) {
+        const ch = dishChinese.charAt(i);
         if (charMapping[ch] !== undefined) {
           converted += charMapping[ch];
         }
       }
+      
+      let dish = null;
       if (menu[converted]) {
-        const dish = menu[converted];
-        document.getElementById("orderResult").innerText =
-          `您點的是 ${dish.name}，價格為 ${dish.price} 元`;
+        dish = menu[converted];
       } else {
+        // 模糊比對：採用積分算法
         const bestMatch = findBestMatch(converted);
         if (bestMatch) {
-          const { key, similarity } = bestMatch;
-          document.getElementById("orderResult").innerText =
-            `推薦您點：${menu[key].name} （得分：${similarity}），價格為 ${menu[key].price} 元`;
-        } else {
-          document.getElementById("orderResult").innerText = "未找到相似菜品！";
+          dish = menu[bestMatch.key];
         }
       }
+      if (!dish) {
+        alert("未找到相似菜品！");
+        return;
+      }
+      addOrderRow(dish, quantity, remark);
+      // 清空訂單輸入
+      document.getElementById("orderInput").value = "";
     }
 
     // 積分算法：計算目標字串中每個字母在輸入字串中出現的次數累計得分
@@ -171,7 +183,23 @@
       return score;
     }
 
-    // 語音輸入功能（使用 Web Speech API，瀏覽器支援時可用）
+    // 將訂單結果新增至訂單表格
+    function addOrderRow(dish, quantity, remark) {
+      const tableBody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      const row = tableBody.insertRow();
+      const cellDish = row.insertCell();
+      const cellQuantity = row.insertCell();
+      const cellRemark = row.insertCell();
+      const cellUnit = row.insertCell();
+      const cellTotal = row.insertCell();
+      cellDish.innerText = dish.name;
+      cellQuantity.innerText = quantity;
+      cellRemark.innerText = remark;
+      cellUnit.innerText = dish.price;
+      cellTotal.innerText = dish.price * quantity;
+    }
+
+    // 語音輸入功能（使用 Web Speech API）
     function startVoiceInput() {
       if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
         alert("您的瀏覽器不支援語音輸入功能。");
