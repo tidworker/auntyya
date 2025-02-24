@@ -372,10 +372,12 @@
     }
     
     function deleteOrder(index){
-      let allOrders = JSON.parse(localStorage.getItem("allOrders"));
-      allOrders.splice(index, 1);
-      localStorage.setItem("allOrders", JSON.stringify(allOrders));
-      loadOrders();
+      if(confirm("是否確定刪除訂單？")){
+        let allOrders = JSON.parse(localStorage.getItem("allOrders"));
+        allOrders.splice(index, 1);
+        localStorage.setItem("allOrders", JSON.stringify(allOrders));
+        loadOrders();
+      }
     }
     
     window.onload = loadOrders;
