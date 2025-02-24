@@ -209,6 +209,27 @@
 
   <script>
     let currentOrderIndex = null;
+    
+    // 定義自訂排序陣列
+    const orderPriority = [
+      "蔥油餅",
+      "蔥油餅加蛋",
+      "大腸麵線",
+      "肉羹麵線",
+      "綜合麵線",
+      "清麵線",
+      "純麵線",
+      "大炒麵",
+      "小炒麵",
+      "荷包蛋",
+      "貢丸湯",
+      "肉羹湯",
+      "綜合湯",
+      "紅茶",
+      "奶茶",
+      "豆漿",
+      "米漿"
+    ];
 
     function goBackMenu(){
       window.location.href = "index.html";
@@ -306,7 +327,17 @@
         </thead><tbody></tbody>`;
         let tbody = table.querySelector("tbody");
         let orderTotal = 0;
-        for(let itemName in order.items){
+        
+        // 將 order.items 的品項名稱依照 orderPriority 排序
+        let sortedItemNames = Object.keys(order.items).sort((a, b) => {
+          let indexA = orderPriority.indexOf(a);
+          let indexB = orderPriority.indexOf(b);
+          if(indexA === -1) indexA = orderPriority.length;
+          if(indexB === -1) indexB = orderPriority.length;
+          return indexA - indexB;
+        });
+        
+        sortedItemNames.forEach(itemName => {
           let item = order.items[itemName];
           let subTotal = item.price * item.quantity;
           orderTotal += subTotal;
@@ -316,7 +347,8 @@
                            <td>${item.remark || "-"}</td>
                            <td>$${subTotal}</td>`;
           tbody.appendChild(row);
-        }
+        });
+        
         orderBlock.appendChild(table);
         
         let totalDiv = document.createElement("div");
@@ -328,7 +360,6 @@
           let noteDiv = document.createElement("div");
           noteDiv.className = "order-type " + (order.orderType === "外帶" ? "takeout" : "dinein");
           if(order.orderType === "外帶"){
-            // 外帶僅顯示取餐時間（不再顯示鬧鈴時間）
             noteDiv.innerText = `外帶，取餐時間：${order.pickupTime || "未設定"}`;
           } else {
             noteDiv.innerText = `內用，桌號：${order.tableNumber || "未設定"}`;
