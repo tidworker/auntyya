@@ -328,7 +328,7 @@
         let tbody = table.querySelector("tbody");
         let orderTotal = 0;
         
-        // 將 order.items 的品項名稱依照 orderPriority 排序
+        // 依照 orderPriority 排序 order.items 內的品項名稱
         let sortedItemNames = Object.keys(order.items).sort((a, b) => {
           let indexA = orderPriority.indexOf(a);
           let indexB = orderPriority.indexOf(b);
@@ -341,8 +341,10 @@
           let item = order.items[itemName];
           let subTotal = item.price * item.quantity;
           orderTotal += subTotal;
+          // 建立品項列，依據儲存的 faded 狀態決定 class
+          let fadedClass = item.faded ? "faded" : "";
           let row = document.createElement("tr");
-          row.innerHTML = `<td onclick="this.classList.toggle('faded')">${itemName}</td>
+          row.innerHTML = `<td onclick="toggleFaded(${index}, '${itemName}', this)" class="${fadedClass}">${itemName}</td>
                            <td>${item.quantity}</td>
                            <td>${item.remark || "-"}</td>
                            <td>$${subTotal}</td>`;
@@ -377,6 +379,24 @@
         allOrders.splice(index, 1);
         localStorage.setItem("allOrders", JSON.stringify(allOrders));
         loadOrders();
+      }
+    }
+    
+    // 點選品項時切換 faded 狀態，並更新 localStorage
+    function toggleFaded(orderIndex, itemName, element){
+      let orders = JSON.parse(localStorage.getItem("allOrders"));
+      let order = orders[orderIndex];
+      // 若尚未設定 faded 屬性，則預設為 true；否則反轉其值
+      if(order.items[itemName].faded === undefined){
+        order.items[itemName].faded = true;
+      } else {
+        order.items[itemName].faded = !order.items[itemName].faded;
+      }
+      localStorage.setItem("allOrders", JSON.stringify(orders));
+      if(order.items[itemName].faded){
+        element.classList.add('faded');
+      } else {
+        element.classList.remove('faded');
       }
     }
     
