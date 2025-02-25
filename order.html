@@ -57,6 +57,19 @@
       margin-top: 5px;
       font-weight: bold;
     }
+    /* 顯示外帶／內用資訊區 */
+    .order-type {
+      margin-top: 10px;
+      font-size: 16px;
+      padding: 8px;
+      text-align: center;
+    }
+    .takeout {
+      background-color: #ffcccc;
+    }
+    .dinein {
+      background-color: #cce5ff;
+    }
     .actions {
       display: flex;
       justify-content: space-between;
@@ -82,16 +95,18 @@
   <header>
     <h2>訂單管理</h2>
   </header>
+  
   <div class="order-container" id="orderContainer">
-    <!-- 訂單內容將在此產生 -->
+    <!-- 訂單內容會在此產生 -->
   </div>
+  
   <div class="actions">
     <button class="menu-button" onclick="goBackMenu()">返回 Menu</button>
     <button class="menu-button" onclick="resetOrderNumber()">重置編號</button>
   </div>
   
   <script>
-    // 返回主選單（假設 index.html 為主選單頁面）
+    // 返回主選單（例如 index.html 為主選單/點餐頁面）
     function goBackMenu(){
       window.location.href = "index.html";
     }
@@ -103,7 +118,7 @@
       }
     }
     
-    // 讀取 localStorage 中所有訂單，並依據下訂單頁面儲存的 subTotal 資料直接顯示小計
+    // 載入訂單資料並顯示
     function loadOrders(){
       let ordersStr = localStorage.getItem("allOrders");
       let orderContainer = document.getElementById("orderContainer");
@@ -116,16 +131,20 @@
       allOrders.forEach((order, orderIndex) => {
         let orderBlock = document.createElement("div");
         orderBlock.className = "order-block";
-        // 訂單編號與操作按鈕
+        
+        // 訂單標題區：訂單編號及操作按鈕
         let headerDiv = document.createElement("div");
         headerDiv.style.display = "flex";
         headerDiv.style.justifyContent = "space-between";
         headerDiv.style.alignItems = "center";
         headerDiv.innerHTML = `<h3>訂單編號：${order.orderId}</h3>
-          <button onclick="deleteOrder(${orderIndex})">刪除訂單</button>`;
+          <div>
+            <button onclick="editOrder(${orderIndex})">編輯訂單</button>
+            <button onclick="deleteOrder(${orderIndex})">刪除訂單</button>
+          </div>`;
         orderBlock.appendChild(headerDiv);
         
-        // 建立訂單內容表格
+        // 訂單內容表格
         let table = document.createElement("table");
         table.className = "order-list";
         table.innerHTML = `<thead>
@@ -138,10 +157,8 @@
         </thead><tbody></tbody>`;
         let tbody = table.querySelector("tbody");
         let orderTotal = 0;
-        // 遍歷該訂單內的各個品項
         for(let itemName in order.items){
           let item = order.items[itemName];
-          // 直接取得訂單資料中儲存的 subTotal（若不存在則備用計算）
           let subTotal = (item.subTotal !== undefined)
                           ? item.subTotal
                           : item.price * item.quantity + (item.eggCost || 0);
@@ -154,15 +171,32 @@
           tbody.appendChild(row);
         }
         orderBlock.appendChild(table);
+        
+        // 顯示外帶／內用資訊，並依據類型加上對應背景色
+        if(order.orderType) {
+          let infoDiv = document.createElement("div");
+          // 根據訂單類型增加對應的 class
+          if(order.orderType === "外帶") {
+            infoDiv.className = "order-type takeout";
+            infoDiv.innerText = `外帶，取餐時間：${order.pickupTime || "未設定"}`;
+          } else {
+            infoDiv.className = "order-type dinein";
+            infoDiv.innerText = `內用，座位：${order.tableNumber || "未設定"}`;
+          }
+          orderBlock.appendChild(infoDiv);
+        }
+        
+        // 顯示總金額
         let totalDiv = document.createElement("div");
         totalDiv.className = "total-price";
         totalDiv.innerText = "總金額：$" + orderTotal;
         orderBlock.appendChild(totalDiv);
+        
         orderContainer.appendChild(orderBlock);
       });
     }
     
-    // 刪除單筆訂單
+    // 刪除訂單功能
     function deleteOrder(index){
       if(confirm("是否確定刪除訂單？")){
         let allOrders = JSON.parse(localStorage.getItem("allOrders"));
@@ -172,7 +206,6 @@
       }
     }
     
-    // 載入訂單資料後立即顯示
     window.onload = loadOrders;
   </script>
 </body>
