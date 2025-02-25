@@ -20,7 +20,7 @@
   <section>
     <h2>請輸入中文菜品名稱</h2>
     <!-- 輸入範例： 蔥油餅2) 辣味3)# -->
-    <input type="text" id="orderInput" placeholder="例如：蔥油餅2) 辣味3)#">
+    <input type="text" id="orderInput" placeholder="例如：蔥油餅三份兩份辣">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
@@ -163,7 +163,7 @@
       // 備註：預設僅擷取中文，若有客製數量則顯示在後方
       let remark = extractChinese(dishKey);
       if (customRemark) {
-        remark += " 客製數量:" + customRemark;
+        remark += "×" + customRemark;
       }
       
       // 根據轉譯結果匹配菜單：先精確比對，若找不到則用模糊比對
