@@ -33,7 +33,7 @@
   </style>
 </head>
 <body>
-  <h1>中文點餐系統</h1>
+  <h1>中文點餐系統1.0</h1>
 
   <!-- 點餐區：包含語音輸入、送出及重置按鈕 -->
   <section>
@@ -139,7 +139,7 @@
       return matches ? matches.join('') : "";
     }
 
-    // 從轉譯結果中解析訂單資訊，所有資訊均從轉譯結果取得
+    // 從轉譯結果中解析訂單資訊，當遇到數字後跟 )# 組合時，將數字加入備註
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -150,37 +150,36 @@
       // 取得完整轉譯結果（僅顯示有映射的部分）
       let translated = translateDishName(inputText);
       
-      // 檢查轉譯結果中是否有數字緊跟右括號（支援半形與全形）
-      // 如果有，將數字視為備註數量，同時將該部分從轉譯結果移除
+      // 檢查轉譯結果中是否有數字跟著 ")#" 的組合
       let remarkQuantity = "";
-      const parenMatch = translated.match(/(\d+)(?=[）\)])/);
-      if (parenMatch) {
-        remarkQuantity = parenMatch[1];
-        // 移除數字及右括號部分，避免影響菜品關鍵字比對
-        translated = translated.replace(/(\d+)(?=[）\)])/g, "");
+      const pattern = /(\d+)\)\#/;
+      const match = translated.match(pattern);
+      if (match) {
+        remarkQuantity = match[1];
+        // 將數字與 ")#" 移除，避免影響菜品關鍵字比對
+        translated = translated.replace(pattern, "");
       }
       
-      // 訂單份數預設為 1（不再以轉譯中的數字作份數）
+      // 訂單份數預設為 1
       let quantity = 1;
       
-      // 以移除數字後的轉譯結果作為訂單關鍵字
+      // 以移除指定數字後的轉譯結果作為訂單關鍵字
       const dishKey = translated.trim();
       if (!dishKey) {
         alert("未能解析出菜品名稱！");
         return;
       }
       
-      // 顯示完整轉譯結果（僅顯示映射後的內容）
+      // 顯示轉譯結果（僅顯示映射後的內容）
       document.getElementById("convertedText").innerText = "轉譯結果：" + dishKey;
       
       // 從轉譯結果中僅擷取中文作為備註顯示
       let remark = extractChinese(dishKey);
-      // 如果有備註數量，加入到備註中
       if (remarkQuantity) {
         remark += " " + remarkQuantity;
       }
       
-      // 根據轉譯結果匹配菜單：先檢查精確匹配，否則使用模糊比對
+      // 根據轉譯結果匹配菜單：先精確匹配，否則使用模糊比對
       let dish = null;
       if (menu[dishKey]) {
         dish = menu[dishKey];
