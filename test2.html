@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>中文點餐系統</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 10px;
+      padding: 0;
+    }
+    input, button {
+      margin: 5px;
+      padding: 10px;
+      font-size: 16px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 10px;
+    }
+    table, th, td {
+      border: 1px solid #aaa;
+    }
+    th, td {
+      padding: 8px;
+      text-align: center;
+    }
+    @media (max-width: 600px) {
+      input, button { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <h1>中文點餐系統</h1>
+
+  <!-- 點餐區：包含語音輸入、送出及重置按鈕 -->
+  <section>
+    <h2>請輸入中文菜品名稱</h2>
+    <!-- 輸入舉例： 蔥油餅兩份辣 -->
+    <input type="text" id="orderInput" placeholder="例如：蔥油餅兩份辣">
+    <button onclick="orderFromChinese()">送出訂單</button>
+    <button onclick="startVoiceInput()">語音輸入</button>
+    <button onclick="resetOrder()">重置點餐</button>
+  </section>
+
+  <!-- 顯示轉譯後文字 -->
+  <section>
+    <h2>轉譯後文字</h2>
+    <p id="convertedText">尚未轉譯</p>
+  </section>
+
+  <!-- 顯示訂單結果以表格 -->
+  <section>
+    <h2>訂單明細</h2>
+    <table id="orderTable">
+      <thead>
+        <tr>
+          <th>菜品</th>
+          <th>份數</th>
+          <th>備註</th>
+          <th>單價</th>
+          <th>總價</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 訂單項目會動態加入 -->
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 顯示系統載入狀態 -->
+  <section>
+    <h2>系統狀態</h2>
+    <p id="dbStatus">尚未載入字庫資料...</p>
+    <p id="menuStatus">尚未載入菜單資料...</p>
+  </section>
+
+  <script>
+    // 全域變數：轉譯字庫與菜單
+    let charMapping = {};
+    let menu = {};
+
+    // 讀取 database.txt (必須包含 charMapping)
+    function loadTranslationDatabase() {
+      fetch("database.txt")
+        .then(response => {
+          if (!response.ok) throw new Error("無法讀取 database.txt");
+          return response.text();
+        })
+        .then(text => {
+          const db = JSON.parse(text);
+          if (db.charMapping) {
+            charMapping = db.charMapping;
+            document.getElementById("dbStatus").innerText = "字庫資料載入成功！";
+          } else {
+            document.getElementById("dbStatus").innerText = "database.txt 格式不正確！";
+          }
+        })
+        .catch(err => {
+          document.getElementById("dbStatus").innerText = "載入字庫資料失敗：" + err.message;
+        });
+    }
+    loadTranslationDatabase();
+
+    // 讀取菜單資料 (menu.txt，JSON 格式)
+    function loadMenu() {
+      fetch("menu.txt")
+        .then(response => {
+          if (!response.ok) throw new Error("無法讀取 menu.txt");
+          return response.text();
+        })
+        .then(text => {
+          menu = JSON.parse(text);
+          document.getElementById("menuStatus").innerText = "菜單資料載入成功！";
+        })
+        .catch(err => {
+          document.getElementById("menuStatus").innerText = "載入菜單資料失敗：" + err.message;
+        });
+    }
+    loadMenu();
+
+    // 僅轉譯資料庫中有映射的中文字，未映射的字不顯示
+    function translateDishName(dishChinese) {
+      let converted = "";
+      for (let i = 0; i < dishChinese.length; i++) {
+        const ch = dishChinese.charAt(i);
+        if (charMapping[ch] !== undefined) {
+          converted += charMapping[ch];
+        }
+      }
+      return converted;
+    }
+
+    // 輔助函式：僅保留中文字（Unicode 範圍）
+    function extractChinese(text) {
+      const matches = text.match(/[\u4e00-\u9fa5]+/g);
+      return matches ? matches.join('') : "";
+    }
+
+    // 從轉譯結果中解析訂單資訊，所有資訊均從轉譯結果取得
+    function orderFromChinese() {
+      const inputText = document.getElementById("orderInput").value.trim();
+      if (!inputText) {
+        alert("請輸入訂單內容！");
+        return;
+      }
+      
+      // 取得完整轉譯結果（僅顯示有映射的部分）
+      let translated = translateDishName(inputText);
+      
+      // 檢查轉譯結果中是否有數字緊跟右括號（支援半形與全形）
+      // 如果有，將數字視為備註數量，同時將該部分從轉譯結果移除
+      let remarkQuantity = "";
+      const parenMatch = translated.match(/(\d+)(?=[）\)])/);
+      if (parenMatch) {
+        remarkQuantity = parenMatch[1];
+        // 移除數字及右括號部分，避免影響菜品關鍵字比對
+        translated = translated.replace(/(\d+)(?=[）\)])/g, "");
+      }
+      
+      // 訂單份數預設為 1（不再以轉譯中的數字作份數）
+      let quantity = 1;
+      
+      // 以移除數字後的轉譯結果作為訂單關鍵字
+      const dishKey = translated.trim();
+      if (!dishKey) {
+        alert("未能解析出菜品名稱！");
+        return;
+      }
+      
+      // 顯示完整轉譯結果（僅顯示映射後的內容）
+      document.getElementById("convertedText").innerText = "轉譯結果：" + dishKey;
+      
+      // 從轉譯結果中僅擷取中文作為備註顯示
+      let remark = extractChinese(dishKey);
+      // 如果有備註數量，加入到備註中
+      if (remarkQuantity) {
+        remark += " " + remarkQuantity;
+      }
+      
+      // 根據轉譯結果匹配菜單：先檢查精確匹配，否則使用模糊比對
+      let dish = null;
+      if (menu[dishKey]) {
+        dish = menu[dishKey];
+      } else {
+        const bestMatch = findBestMatch(dishKey);
+        if (bestMatch) {
+          dish = menu[bestMatch.key];
+        }
+      }
+      if (!dish) {
+        alert("未找到相似菜品！");
+        return;
+      }
+      
+      // 將訂單列加入訂單表格中
+      addOrderRow(dish, quantity, remark);
+      document.getElementById("orderInput").value = "";
+    }
+
+    // 模糊比對：計算轉譯結果與菜單中每個關鍵字的匹配分數
+    function findBestMatch(input) {
+      let bestKey = null;
+      let bestScore = 0;
+      for (let key in menu) {
+        const score = letterMatchScore(input, key);
+        if (score > bestScore) {
+          bestScore = score;
+          bestKey = key;
+        }
+      }
+      return bestKey ? { key: bestKey, similarity: bestScore } : null;
+    }
+    function letterMatchScore(input, target) {
+      let score = 0;
+      for (let char of target) {
+        if (input.indexOf(char) >= 0) {
+          score++;
+        }
+      }
+      return score;
+    }
+
+    // 將訂單列加入訂單表格中
+    function addOrderRow(dish, quantity, remark) {
+      const tableBody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      const row = tableBody.insertRow();
+      row.insertCell().innerText = dish.name;
+      row.insertCell().innerText = quantity;
+      row.insertCell().innerText = remark;
+      row.insertCell().innerText = dish.price;
+      row.insertCell().innerText = dish.price * quantity;
+    }
+
+    // 重置點餐：清空訂單表格與轉譯結果顯示
+    function resetOrder() {
+      document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
+      document.getElementById("convertedText").innerText = "尚未轉譯";
+      document.getElementById("orderInput").value = "";
+    }
+
+    // 語音輸入功能：使用 Web Speech API
+    function startVoiceInput() {
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert("您的瀏覽器不支援語音輸入功能。");
+        return;
+      }
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'zh-TW';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.start();
+      recognition.onresult = function(event) {
+        const transcript = event.results[0][0].transcript;
+        document.getElementById("orderInput").value = transcript;
+        orderFromChinese();
+      };
+      recognition.onerror = function(event) {
+        alert("語音輸入發生錯誤：" + event.error);
+      };
+    }
+  </script>
+</body>
+</html>
