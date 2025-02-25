@@ -19,8 +19,9 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入中文菜品名稱</h2>
-    <!-- 範例輸入： danbin3)dacharng3) -->
-    <input type="text" id="orderInput" placeholder="例如：danbin3)dacharng3)">
+    <!-- 使用 "/" 來分隔多筆品項，例如：
+         danbin3)dacharng3)/xxxx4)yyyy5)# -->
+    <input type="text" id="orderInput" placeholder="例如：danbin3)dacharng3)/xxxx4)yyyy5)#">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
@@ -122,7 +123,8 @@
       return matches ? matches.join('') : "";
     }
 
-    // 處理單一品項解析（不刪除轉譯內容），根據內部正則擷取訂單份數與客製備註：
+    // 處理單一品項解析（不刪除轉譯內容）
+    // 依據內部正則擷取訂單份數與客製備註：
     // - 訂單份數：符合「數字)」但不屬於客製情形  
     // - 客製備註：符合「數字)#」，備註以「×數字」呈現
     function processSingleItem(itemStr) {
@@ -143,7 +145,6 @@
         quantity = parseInt(quantityMatch[1]);
       }
       
-      // 完整轉譯結果作為品項關鍵字（不做刪除）
       const dishKey = translated.trim();
       if (!dishKey) {
         alert("未能解析出品項：" + itemStr);
@@ -178,9 +179,7 @@
       addOrderRow(dish, quantity, remark);
     }
 
-    // 多品項點餐處理：
-    // 利用正則式拆分，條件為：當前一個字元為數字或右括號，而下一個字元（不含空白）存在，
-    // 則視為新的餐點開始。滿足「數字的前面」、「)的後面」或「)和數字之間」其中一個條件即為一筆餐點。
+    // 多品項點餐處理：僅以 "/" 作為分隔符，不會因 ")" 而換行
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -188,16 +187,16 @@
         return;
       }
       
-      // 取得完整轉譯結果（保留所有字元）
+      // 取得完整轉譯結果（保留所有內容）
       let translated = translateDishName(inputText);
       
-      // 使用正則拆分：前一個字元為數字或右括號，且下一個字元非空白，則拆分為新餐點
-      const items = translated.split(/(?<=[\d\)])(?=\S)/);
+      // 使用 "/" 分割成多筆品項（若無 "/" 則僅一筆）
+      const items = translated.split("/");
       
       // 清空轉譯結果顯示區
       document.getElementById("convertedText").innerText = "";
       
-      // 逐筆處理每個餐點
+      // 逐筆處理每筆餐點
       items.forEach(item => {
         if (item) {
           processSingleItem(item);
