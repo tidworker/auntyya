@@ -15,24 +15,24 @@
 </head>
 <body>
   <h1>中文點餐系統</h1>
-  
+
   <!-- 點餐區 -->
   <section>
     <h2>請輸入中文菜品名稱</h2>
-    <!-- 使用 "/" 分隔多筆品項，例如：
-         3)danbin3)dacharng3)/xxxx4)yyyy5)# -->
-    <input type="text" id="orderInput" placeholder="例如：3)danbin3)dacharng3)/xxxx4)yyyy5)#">
+    <!-- 例如：第一行為「3）」表示預設份數，後面各品項以 "/" 分隔
+         如： 3）/danbin3)dacharng3)/xxxx4)yyyy5)# -->
+    <input type="text" id="orderInput" placeholder="例如：3）/danbin3)dacharng3)/xxxx4)yyyy5)#">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
   </section>
-  
+
   <!-- 轉譯後文字 (完整顯示，不刪除任何內容) -->
   <section>
     <h2>轉譯後文字</h2>
     <pre id="convertedText">尚未轉譯</pre>
   </section>
-  
+
   <!-- 訂單明細 -->
   <section>
     <h2>訂單明細</h2>
@@ -51,19 +51,19 @@
       </tbody>
     </table>
   </section>
-  
+
   <!-- 系統狀態 -->
   <section>
     <h2>系統狀態</h2>
     <p id="dbStatus">尚未載入字庫資料...</p>
     <p id="menuStatus">尚未載入菜單資料...</p>
   </section>
-  
+
   <script>
     // 全域變數：轉譯字庫與菜單
     let charMapping = {};
     let menu = {};
-  
+
     // 讀取 database.txt (必須包含 charMapping)
     function loadTranslationDatabase() {
       fetch("database.txt")
@@ -85,7 +85,7 @@
         });
     }
     loadTranslationDatabase();
-  
+
     // 讀取菜單資料 (menu.txt，JSON 格式)
     function loadMenu() {
       fetch("menu.txt")
@@ -102,7 +102,7 @@
         });
     }
     loadMenu();
-  
+
     // 轉譯函式：若字庫中有映射則取映射值，否則原樣保留（完整內容）
     function translateDishName(dishChinese) {
       let converted = "";
@@ -116,33 +116,36 @@
       }
       return converted;
     }
-  
+
     // 輔助函式：擷取所有中文字（僅用於備註初步取值）
     function extractChinese(text) {
       const matches = text.match(/[\u4e00-\u9fa5]+/g);
       return matches ? matches.join('') : "";
     }
-  
+
     // 處理單一品項解析（不刪除轉譯內容）
-    // 1. 若原始輸入以數字加右括號（例如 3) 或 3））開頭，則直接使用此數字作為訂單份數
-    // 2. 否則，依原邏輯先嘗試匹配「數字)」；若匹配不到，再使用「數字)#」前的數字
-    // 客製備註部分則以「×數字」呈現
-    function processSingleItem(itemStr) {
+    // 1. 如果原始輸入以數字加右括號開頭，則直接使用該數字作為該品項的份數。
+    // 2. 否則依原邏輯先嘗試匹配「數字)」；若匹配不到，再使用「數字)#」前的數字。
+    // 客製備註部分則以「×數字」呈現。
+    // 如果前面有預設份數（由獨立行提供），則當本品項未自行指定時套用預設。
+    function processSingleItem(itemStr, defaultQuantity) {
       let quantity = 1;
       let customRemark = "";
-  
-      // 若原始輸入以數字加右括號開頭，優先使用該數字
+      
+      // 檢查原始輸入是否以數字加右括號開頭
       let prefixMatch = itemStr.match(/^(\d+)[）\)]/);
       if (prefixMatch) {
         quantity = parseInt(prefixMatch[1]);
+      } else if (defaultQuantity !== null) {
+        // 若未自行指定，且有預設份數，則使用預設份數
+        quantity = defaultQuantity;
       } else {
-        // 若未以數字開頭，則以轉譯後內容來匹配
+        // 否則，以轉譯後內容來匹配
         let translatedForQty = translateDishName(itemStr);
         let quantityMatch = translatedForQty.match(/(\d+)(?=[）\)](?!#))/);
         if (quantityMatch) {
           quantity = parseInt(quantityMatch[1]);
         } else {
-          // 若沒有匹配到正常的份數，則嘗試使用 ")#" 前的數字
           let customMatch = translatedForQty.match(/(\d+)(?=[）\)]#)/);
           if (customMatch) {
             customRemark = customMatch[1];
@@ -150,31 +153,31 @@
           }
         }
       }
-  
-      // 同時取出客製備註部分（若轉譯內有符合格式，也會附加）
+      
+      // 同時取出客製備註部分（如果有符合格式）
       let translated = translateDishName(itemStr);
       let customMatchInside = translated.match(/(\d+)(?=[）\)]#)/);
       if (customMatchInside) {
         customRemark = customMatchInside[1];
       }
-  
+      
       const dishKey = translated.trim();
       if (!dishKey) {
         alert("未能解析出品項：" + itemStr);
         return;
       }
-  
+      
       // 更新轉譯結果顯示（完整內容，每筆品項換行）
       let convElem = document.getElementById("convertedText");
       convElem.innerText += dishKey + "\n";
-  
+      
       // 備註取自轉譯內容中的所有中文字，如有客製數量則附加「×數字」
       let remark = extractChinese(dishKey);
       if (customRemark) {
         remark += "×" + customRemark;
       }
-  
-      // 根據完整轉譯結果匹配菜單：先精確比對，若找不到則使用模糊比對
+      
+      // 根據完整轉譯結果匹配菜單：先精確比對，找不到則使用模糊比對
       let dish = null;
       if (menu[dishKey]) {
         dish = menu[dishKey];
@@ -188,37 +191,50 @@
         alert("未找到相似菜品：" + dishKey);
         return;
       }
-  
+      
       addOrderRow(dish, quantity, remark);
     }
-  
-    // 多品項點餐處理：僅以 "/" 作為分隔符，不會因為 ")" 換行
+
+    // 多品項點餐處理：以 "/" 分隔各筆品項
+    // 若第一筆品項僅為數字加右括號（例如 "3）"），則視為預設份數，
+    // 並將其從品項列表中移除，讓後續第一筆品項自動套用該預設份數。
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
         alert("請輸入訂單內容！");
         return;
       }
-  
+      
       // 取得完整轉譯結果（保留所有字元）
       let translated = translateDishName(inputText);
-  
+      
       // 使用 "/" 分割成多筆品項（若無 "/" 則僅一筆）
-      const items = translated.split("/");
-  
+      let items = translated.split("/");
+      let defaultQuantity = null;
+      
+      // 檢查第一筆是否僅為數字加右括號（例如 "3）"）
+      if (items.length > 1 && items[0].trim().match(/^(\d+)[）\)]\s*$/)) {
+        let m = items[0].trim().match(/^(\d+)[）\)]\s*$/);
+        defaultQuantity = parseInt(m[1]);
+        // 將第一筆移除
+        items.shift();
+      }
+      
       // 清空轉譯結果顯示區
       document.getElementById("convertedText").innerText = "";
-  
+      
       // 逐筆處理每筆餐點
       items.forEach(item => {
         if (item) {
-          processSingleItem(item);
+          processSingleItem(item, defaultQuantity);
+          // 預設份數僅套用一次（僅匹配到第二行）
+          defaultQuantity = null;
         }
       });
-  
+      
       document.getElementById("orderInput").value = "";
     }
-  
+
     // 模糊比對：計算轉譯結果與菜單中每個關鍵字的匹配分數
     function findBestMatch(input) {
       let bestKey = null;
@@ -241,7 +257,7 @@
       }
       return score;
     }
-  
+
     // 將訂單列加入訂單表格中
     function addOrderRow(dish, quantity, remark) {
       const tableBody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
@@ -252,14 +268,14 @@
       row.insertCell().innerText = dish.price;
       row.insertCell().innerText = dish.price * quantity;
     }
-  
+
     // 重置點餐：清空訂單表格、轉譯結果與輸入欄
     function resetOrder() {
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("convertedText").innerText = "尚未轉譯";
       document.getElementById("orderInput").value = "";
     }
-  
+
     // 語音輸入功能：使用 Web Speech API
     function startVoiceInput() {
       if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
