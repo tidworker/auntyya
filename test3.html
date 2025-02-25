@@ -19,7 +19,7 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入中文菜品名稱</h2>
-    <!-- 使用 "/" 來分隔多筆品項，例如：
+    <!-- 使用 "/" 分隔多筆品項，例如：
          danbin3)dacharng3)/xxxx4)yyyy5)# -->
     <input type="text" id="orderInput" placeholder="例如：danbin3)dacharng3)/xxxx4)yyyy5)#">
     <button onclick="orderFromChinese()">送出訂單</button>
@@ -124,9 +124,8 @@
     }
 
     // 處理單一品項解析（不刪除轉譯內容）
-    // 依據內部正則擷取訂單份數與客製備註：
-    // - 訂單份數：符合「數字)」但不屬於客製情形  
-    // - 客製備註：符合「數字)#」，備註以「×數字」呈現
+    // 先嘗試用正則 /(\d+)(?=[）\)](?!#))/ 取得「數字)」作為份數；
+    // 若未匹配到，則優先嘗試匹配 /(\d+)(?=[）\)]#)/ 前的數字作為份數（同時也作為客製備註）。
     function processSingleItem(itemStr) {
       let translated = translateDishName(itemStr);
       
@@ -139,10 +138,13 @@
         customRemark = customMatch[1];
       }
       
-      // 取得「數字)」的訂單份數，但不匹配客製情形
-      const quantityMatch = translated.match(/(\d+)(?=[）\)](?!#))/);
+      // 嘗試取得「數字)」的訂單份數（不匹配客製情形）
+      let quantityMatch = translated.match(/(\d+)(?=[）\)](?!#))/);
       if (quantityMatch) {
         quantity = parseInt(quantityMatch[1]);
+      } else if (customRemark) {
+        // 若未匹配到正常的份數，則優先使用 ")#" 前的數字
+        quantity = parseInt(customRemark);
       }
       
       const dishKey = translated.trim();
@@ -179,7 +181,7 @@
       addOrderRow(dish, quantity, remark);
     }
 
-    // 多品項點餐處理：僅以 "/" 作為分隔符，不會因 ")" 而換行
+    // 多品項點餐處理：僅以 "/" 作為分隔符，不會因為 ")" 換行
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -187,7 +189,7 @@
         return;
       }
       
-      // 取得完整轉譯結果（保留所有內容）
+      // 取得完整轉譯結果（保留所有字元）
       let translated = translateDishName(inputText);
       
       // 使用 "/" 分割成多筆品項（若無 "/" 則僅一筆）
