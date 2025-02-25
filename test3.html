@@ -19,14 +19,14 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入中文菜品名稱</h2>
-    <!-- 範例輸入： 蔥油餅三份 兩份辣 或 蔥油餅2)辣味3)# -->
-    <input type="text" id="orderInput" placeholder="例如：蔥油餅三份 兩份辣">
+    <!-- 範例輸入： danbin3)dacharng3) -->
+    <input type="text" id="orderInput" placeholder="例如：danbin3)dacharng3)">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
   </section>
 
-  <!-- 轉譯後文字（完整顯示，不刪除任何內容） -->
+  <!-- 轉譯後文字 (完整顯示，不刪除任何內容) -->
   <section>
     <h2>轉譯後文字</h2>
     <pre id="convertedText">尚未轉譯</pre>
@@ -102,7 +102,7 @@
     }
     loadMenu();
 
-    // 僅轉譯資料庫中有映射的中文字，未映射的字原樣保留
+    // 轉譯函式：若字庫中有映射則取映射值，否則原樣保留（完整內容）
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -110,7 +110,6 @@
         if (charMapping[ch] !== undefined) {
           converted += charMapping[ch];
         } else {
-          // 未映射的字也保留
           converted += ch;
         }
       }
@@ -123,41 +122,39 @@
       return matches ? matches.join('') : "";
     }
 
-    // 處理單一品項的解析，僅做比對不做刪除
+    // 處理單一品項解析（不刪除轉譯內容），根據內部正則擷取訂單份數與客製備註：
+    // - 訂單份數：符合「數字)」但不屬於客製情形  
+    // - 客製備註：符合「數字)#」，備註以「×數字」呈現
     function processSingleItem(itemStr) {
-      // 取得完整轉譯結果（不做任何刪除）
       let translated = translateDishName(itemStr);
       
-      // 預設訂單份數為 1
       let quantity = 1;
-      // 預設客製備註為空
       let customRemark = "";
       
-      // 比對「數字)#」的客製數量（支援半形與全形右括號）
+      // 取得「數字)#」的客製數量（支援半形與全形右括號）
       const customMatch = translated.match(/(\d+)(?=[）\)]#)/);
       if (customMatch) {
         customRemark = customMatch[1];
       }
       
-      // 比對「數字)」的訂單份數，但排除已屬於客製情形
+      // 取得「數字)」的訂單份數，但不匹配客製情形
       const quantityMatch = translated.match(/(\d+)(?=[）\)](?!#))/);
       if (quantityMatch) {
         quantity = parseInt(quantityMatch[1]);
       }
       
-      // 此處完整轉譯結果不作任何刪除
+      // 完整轉譯結果作為品項關鍵字（不做刪除）
       const dishKey = translated.trim();
       if (!dishKey) {
         alert("未能解析出品項：" + itemStr);
         return;
       }
       
-      // 更新轉譯結果顯示（完整內容，每筆品項換行）
+      // 累計更新轉譯結果顯示（完整內容，每筆品項換行）
       let convElem = document.getElementById("convertedText");
       convElem.innerText += dishKey + "\n";
       
-      // 備註初步取自完整轉譯結果中的中文字，
-      // 如有客製數量則附加格式「×數字」
+      // 備註取自轉譯內容中的所有中文字，如有客製數量則附加「×數字」
       let remark = extractChinese(dishKey);
       if (customRemark) {
         remark += "×" + customRemark;
@@ -178,13 +175,12 @@
         return;
       }
       
-      // 將該品項加入訂單表格
       addOrderRow(dish, quantity, remark);
     }
 
     // 多品項點餐處理：
-    // 利用正則拆分轉譯結果，當「）」後面連續有中文（代表下一品項）時拆分成多筆訂單，
-    // 拆分不移除任何原始轉譯內容。
+    // 利用正則式拆分，條件為：當前一個字元為數字或右括號，而下一個字元（不含空白）存在，
+    // 則視為新的餐點開始。滿足「數字的前面」、「)的後面」或「)和數字之間」其中一個條件即為一筆餐點。
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -192,24 +188,22 @@
         return;
       }
       
-      // 先取得完整轉譯結果（保留所有字元）
+      // 取得完整轉譯結果（保留所有字元）
       let translated = translateDishName(inputText);
       
-      // 使用正則拆分：利用「）」作為分界，當其後緊接中文時表示新品項開始，
-      // 此處不移除分隔符號
-      const items = translated.split(/(?<=[）\)])\s*(?=[\u4e00-\u9fa5])/);
+      // 使用正則拆分：前一個字元為數字或右括號，且下一個字元非空白，則拆分為新餐點
+      const items = translated.split(/(?<=[\d\)])(?=\S)/);
       
       // 清空轉譯結果顯示區
       document.getElementById("convertedText").innerText = "";
       
-      // 對每一筆品項逐筆處理
+      // 逐筆處理每個餐點
       items.forEach(item => {
         if (item) {
           processSingleItem(item);
         }
       });
       
-      // 清空輸入欄
       document.getElementById("orderInput").value = "";
     }
 
