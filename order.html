@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <title>訂單管理 - 葉阿姨點餐系統</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- 引入 html2canvas CDN，用於下載訂單圖片 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     /* 基本樣式 */
     body {
@@ -57,7 +59,7 @@
       margin-top: 5px;
       font-weight: bold;
     }
-    /* 顯示外帶／內用資訊區 */
+    /* 顯示外帶／內用資訊 */
     .order-type {
       margin-top: 10px;
       font-size: 16px;
@@ -89,7 +91,7 @@
     .menu-button:hover {
       background-color: #333;
     }
-    /* 編輯訂單 Modal */
+    /* 這裡不再定義編輯、刪除、下載按鈕的特殊顏色，恢復預設 */
     .modal {
       display: none;
       position: fixed;
@@ -149,7 +151,7 @@
   </header>
   
   <div class="order-container" id="orderContainer">
-    <!-- 訂單內容將在此產生 -->
+    <!-- 訂單內容會在此產生 -->
   </div>
   
   <div class="actions">
@@ -188,7 +190,7 @@
   </div>
   
   <script>
-    // 返回主選單（假設 index.html 為主選單/點餐頁面）
+    // 返回主選單
     function goBackMenu(){
       window.location.href = "index.html";
     }
@@ -200,7 +202,7 @@
       }
     }
     
-    // 載入訂單資料並顯示（新增單價欄位）
+    // 載入訂單資料並顯示
     function loadOrders(){
       let ordersStr = localStorage.getItem("allOrders");
       let orderContainer = document.getElementById("orderContainer");
@@ -211,22 +213,25 @@
       }
       let allOrders = JSON.parse(ordersStr);
       allOrders.forEach((order, orderIndex) => {
+        // 為每筆訂單設定 id 方便下載
         let orderBlock = document.createElement("div");
         orderBlock.className = "order-block";
+        orderBlock.id = "orderBlock-" + orderIndex;
         
-        // 訂單標題區：訂單編號與操作按鈕
+        // 訂單標題區：訂單編號及操作按鈕（編輯、刪除、下載）
         let headerDiv = document.createElement("div");
         headerDiv.style.display = "flex";
         headerDiv.style.justifyContent = "space-between";
         headerDiv.style.alignItems = "center";
         headerDiv.innerHTML = `<h3>訂單編號：${order.orderId}</h3>
-          <div>
+          <div style="display: flex; gap: 5px; white-space: nowrap;">
             <button onclick="editOrder(${orderIndex})">編輯訂單</button>
             <button onclick="deleteOrder(${orderIndex})">刪除訂單</button>
+            <button onclick="downloadOrder(${orderIndex})">下載訂單</button>
           </div>`;
         orderBlock.appendChild(headerDiv);
         
-        // 建立訂單內容表格，顯示品項、單價、數量、備註及小計
+        // 訂單內容表格，顯示品項、單價、數量、備註及小計
         let table = document.createElement("table");
         table.className = "order-list";
         table.innerHTML = `<thead>
@@ -289,7 +294,7 @@
       }
     }
     
-    // 編輯訂單功能：記錄當前編輯訂單索引，並載入該筆訂單的外帶／內用資訊到編輯 Modal
+    // 編輯訂單功能：記錄當前編輯訂單索引，並載入該筆訂單外帶／內用資訊到編輯 Modal
     let currentEditOrderIndex = null;
     function editOrder(index){
       currentEditOrderIndex = index;
@@ -301,7 +306,7 @@
         document.getElementById("editDineinOption").style.display = "block";
         document.getElementById("editTakeoutOption").style.display = "none";
         document.getElementById("editTableNumber").value = order.tableNumber || "R1";
-      } else {  // 預設外帶
+      } else {
         document.getElementById("editTakeout").checked = true;
         document.getElementById("editDinein").checked = false;
         document.getElementById("editTakeoutOption").style.display = "block";
@@ -343,6 +348,19 @@
       localStorage.setItem("allOrders", JSON.stringify(allOrders));
       closeEditNoteModal();
       loadOrders();
+    }
+    
+    // 下載訂單功能：使用 html2canvas 將指定訂單區塊轉成 JPG 圖片下載
+    function downloadOrder(index) {
+      let orderBlock = document.getElementById("orderBlock-" + index);
+      if (!orderBlock) return;
+      html2canvas(orderBlock).then(canvas => {
+        let dataURL = canvas.toDataURL("image/jpeg");
+        let a = document.createElement("a");
+        a.href = dataURL;
+        a.download = "order_" + index + ".jpg";
+        a.click();
+      });
     }
     
     window.onload = loadOrders;
