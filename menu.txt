@@ -19,7 +19,7 @@
     "name": "蔥油餅",
     "price": 20
   },
-  "rougengtongtong": {
+  "rougengtong": {
     "name": "肉羹湯",
     "price": 35
   },
@@ -27,7 +27,7 @@
     "name": "肉羹麵線",
     "price": 50
   },
-  "zonghetongtong": {
+  "zonghetong": {
     "name": "綜合湯",
     "price": 35
   },
@@ -35,8 +35,32 @@
     "name": "綜合麵線",
     "price": 50
   },
-  "gongwantongtong": {
-    "name": "貢丸湯",
-    "price": 35
+  "dachaomian": {
+    "name": "大炒麵",
+    "price": 40
+  },
+  "siaochaomian": {
+    "name": "小炒麵",
+    "price": 30
+  },
+  "hebaodan": {
+    "name": "荷包蛋",
+    "price": 15
+  },
+  "hongcha": {
+    "name": "紅茶",
+    "price": 10
+  },
+  "naicha": {
+    "name": "奶茶",
+    "price": 15
+  },
+  "doujiang": {
+    "name": "豆漿",
+    "price": 15
+  },
+  "mijiang": {
+    "name": "米漿",
+    "price": 15
   }
 }
