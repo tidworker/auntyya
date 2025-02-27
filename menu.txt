@@ -1,66 +1,30 @@
-{
-  "dacharngmiansian": {
-    "name": "大腸麵線",
-    "price": 50
-  },
-  "chingmiansian": {
-    "name": "清麵線",
-    "price": 40
-  },
-  "chunmiansian": {
-    "name": "純麵線",
-    "price": 40
-  },
-  "chonyobinjiadandan": {
-    "name": "蔥油餅加蛋",
-    "price": 30
-  },
-  "chonyobinbujiabujia": {
+[
+  {
+    "keywords": [
+      "chonyobin"
+    ],
     "name": "蔥油餅",
     "price": 20
   },
-  "rougengtong": {
-    "name": "肉羹湯",
-    "price": 35
+  {
+    "keywords": [
+      "bujiadan"
+    ],
+    "name": "蔥油餅",
+    "price": 20
   },
-  "rougengmiansianrougen": {
-    "name": "肉羹麵線",
-    "price": 50
-  },
-  "zonghetong": {
-    "name": "綜合湯",
-    "price": 35
-  },
-  "zonghemiansianzonghe": {
-    "name": "綜合麵線",
-    "price": 50
-  },
-  "dachaomian": {
-    "name": "大炒麵",
-    "price": 40
-  },
-  "siaochaomian": {
-    "name": "小炒麵",
+  {
+    "keywords": [
+      "danbin"
+    ],
+    "name": "蔥油餅加蛋",
     "price": 30
   },
-  "hebaodan": {
-    "name": "荷包蛋",
-    "price": 15
-  },
-  "hongcha": {
-    "name": "紅茶",
-    "price": 10
-  },
-  "naicha": {
-    "name": "奶茶",
-    "price": 15
-  },
-  "doujiang": {
-    "name": "豆漿",
-    "price": 15
-  },
-  "mijiang": {
-    "name": "米漿",
-    "price": 15
+  {
+    "keywords": [
+      "chonyobinjiadan"
+    ],
+    "name": "蔥油餅加蛋",
+    "price": 30
   }
-}
+]
