@@ -88,7 +88,7 @@
     <p>訂單結果：<span id="orderResult"></span></p>
   </section>
 
-  <!-- 自動讀取轉譯字庫 -->
+  <!-- 轉譯字庫載入狀態 -->
   <section>
     <h2>轉譯字庫載入狀態</h2>
     <p id="dbStatus">尚未載入字庫資料...</p>
@@ -104,7 +104,7 @@
     <div id="menuList"></div>
   </section>
 
-  <!-- 新增/編輯菜單彈出視窗：僅包含【餐點名稱】與【中文輸入】 -->
+  <!-- 新增/編輯菜單彈出視窗：包含【餐點名稱】、【中文輸入】與【金額】 -->
   <div id="menuModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeMenuModal()">&times;</span>
@@ -117,6 +117,10 @@
         <label for="menuChinese">中文輸入：</label>
         <input type="text" id="menuChinese" placeholder="輸入中文進行轉碼">
       </div>
+      <div class="form-group">
+        <label for="menuPrice">金額：</label>
+        <input type="number" id="menuPrice" placeholder="例如：20">
+      </div>
       <button id="saveButton" onclick="saveMenuItem()">確定</button>
       <button onclick="closeMenuModal()">取消</button>
     </div>
@@ -126,9 +130,9 @@
     // 全域資料：字庫與菜單
     let groupMapping = {};
     let charMapping = {};
-    // 菜單項目資料結構：每個項目含有 keywords 陣列、name、（價格預設為 0）
+    // 菜單資料結構：每個項目含有 keywords 陣列、name 與 price
     let menu = [
-      { keywords: ["chonyobin"], name: "蔥油餅", price: 0 }
+      { keywords: ["chonyobin"], name: "蔥油餅", price: 20 }
     ];
     let currentEditingIndex = null;
 
@@ -155,14 +159,14 @@
     }
     loadTranslationDatabase();
 
-    // 更新菜單列表
+    // 更新菜單列表，顯示關鍵字、餐點名稱與金額
     function updateMenuDisplay() {
       const menuListDiv = document.getElementById("menuList");
       menuListDiv.innerHTML = "";
       const ul = document.createElement("ul");
       menu.forEach((item, index) => {
         const li = document.createElement("li");
-        li.textContent = `[${item.keywords.join(", ")}] : ${item.name}`;
+        li.textContent = `[${item.keywords.join(", ")}] : ${item.name} - ${item.price} 元`;
         li.onclick = () => openMenuModal(index);
         ul.appendChild(li);
       });
@@ -179,12 +183,14 @@
         document.getElementById("modalTitle").innerText = "編輯菜單項目";
         const item = menu[index];
         document.getElementById("menuName").value = item.name;
-        // 若已有轉碼結果，顯示第一組關鍵字
+        // 顯示轉碼後的關鍵字於中文輸入欄位中（可供修改）
         document.getElementById("menuChinese").value = item.keywords[0] || "";
+        document.getElementById("menuPrice").value = item.price;
       } else {
         document.getElementById("modalTitle").innerText = "新增菜單項目";
         document.getElementById("menuName").value = "";
         document.getElementById("menuChinese").value = "";
+        document.getElementById("menuPrice").value = "";
       }
     }
 
@@ -194,15 +200,16 @@
       currentEditingIndex = null;
     }
 
-    // 新增或更新菜單項目：利用「中文輸入」欄位經轉碼產生一組關鍵字
+    // 新增或更新菜單項目：中文輸入經轉碼產生關鍵字，再連同餐點名稱與金額存入菜單
     function saveMenuItem() {
       const name = document.getElementById("menuName").value.trim();
       const chineseInput = document.getElementById("menuChinese").value.trim();
-      if (!name || !chineseInput) {
-        alert("請填寫完整的資料！");
+      const price = parseFloat(document.getElementById("menuPrice").value.trim());
+      if (!name || !chineseInput || isNaN(price)) {
+        alert("請填寫完整且正確的資料！");
         return;
       }
-      // 利用字庫進行轉碼：對中文輸入每個字若在 charMapping 中有對應，則串接結果
+      // 利用字庫轉碼：對中文輸入中每個字，若在 charMapping 有對應則串接結果
       let converted = "";
       for (let i = 0; i < chineseInput.length; i++) {
         const ch = chineseInput.charAt(i);
@@ -215,7 +222,7 @@
         alert("轉碼結果為空，請確認字庫是否正確！");
         return;
       }
-      const newItem = { keywords: [converted], name: name, price: 0 };
+      const newItem = { keywords: [converted], name: name, price: price };
       if (currentEditingIndex !== null) {
         menu[currentEditingIndex] = newItem;
       } else {
@@ -232,7 +239,7 @@
       closeMenuModal();
     }
 
-    // 點餐功能：將使用者輸入透過字庫轉換後比對各菜單項目的關鍵字
+    // 點餐功能：使用者輸入中文後經字庫轉碼比對菜單中的關鍵字
     function orderFromChinese() {
       const input = document.getElementById("orderInput").value.trim();
       if (!input) {
@@ -247,17 +254,17 @@
         }
       }
       converted = converted.toLowerCase();
-      // 先嘗試精確比對各菜單項目中的關鍵字
+      // 精確比對各菜單項目中的關鍵字
       let foundDish = menu.find(item => item.keywords.includes(converted));
       if (foundDish) {
         document.getElementById("orderResult").innerText =
-          `您點的是 ${foundDish.name}`;
+          `您點的是 ${foundDish.name}，金額為 ${foundDish.price} 元`;
       } else {
-        // 如未精確命中則以匹配得分推薦
+        // 如未精確命中則採用得分推薦
         const bestMatch = findBestMatch(converted);
         if (bestMatch) {
           document.getElementById("orderResult").innerText =
-            `推薦您點：${bestMatch.item.name} （得分：${bestMatch.score}）`;
+            `推薦您點：${bestMatch.item.name} （得分：${bestMatch.score}），金額為 ${bestMatch.item.price} 元`;
         } else {
           document.getElementById("orderResult").innerText = "未找到相似菜品！";
         }
