@@ -1,28 +1,18 @@
 [
   {
     "keywords": [
-      "chonyobin"
+      "chonyobin",
+      "bujiadan",
+      "bujia"
     ],
     "name": "蔥油餅",
     "price": 20
   },
   {
     "keywords": [
-      "bujiadan"
-    ],
-    "name": "蔥油餅",
-    "price": 20
-  },
-  {
-    "keywords": [
-      "danbin"
-    ],
-    "name": "蔥油餅加蛋",
-    "price": 30
-  },
-  {
-    "keywords": [
-      "chonyobinjiadan"
+      "chonyobinjiadan",
+      "danbin",
+      "jiadan"
     ],
     "name": "蔥油餅加蛋",
     "price": 30
