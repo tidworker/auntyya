@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>中文點餐系統</title>
+  <title>中文點餐系統2.0</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 10px; padding: 0; }
     input, button { margin: 5px; padding: 10px; font-size: 16px; }
@@ -61,9 +61,10 @@
   <script>
     // 全域變數：轉譯字庫與菜單
     let charMapping = {};
+    let groupMapping = {}; // 若新資料庫包含群組對應資料，將一併載入
     let menu = {};
 
-    // 讀取 database.txt (必須包含 charMapping)
+    // 讀取 database.txt (必須包含 charMapping；若有 groupMapping 也一併載入)
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -74,7 +75,12 @@
           const db = JSON.parse(text);
           if (db.charMapping) {
             charMapping = db.charMapping;
-            document.getElementById("dbStatus").innerText = "字庫資料載入成功！";
+            if (db.groupMapping) {
+              groupMapping = db.groupMapping;
+              document.getElementById("dbStatus").innerText = "字庫資料及群組資料載入成功！";
+            } else {
+              document.getElementById("dbStatus").innerText = "字庫資料載入成功！（未包含群組資料）";
+            }
           } else {
             document.getElementById("dbStatus").innerText = "database.txt 格式不正確！";
           }
