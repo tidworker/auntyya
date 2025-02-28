@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>中文點餐系統</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 10px; padding: 0; }
@@ -24,7 +24,7 @@
          2/la                → 第一筆："2" 設定預設份數為2；第二筆："la" → 免費餐點「辣」，
                                 如果前面已有其他訂單則附加到前一筆備註，否則獨立顯示但份數欄留空。
     -->
-    <input type="text" id="orderInput" placeholder="例如：danbin3/chonyobin 或 2/la">
+    <input type="text" id="orderInput" placeholder="例如：danbin3/chonyobin 或 2/la" />
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
@@ -66,6 +66,7 @@
     // 全域變數：資料庫 (database.txt) 與菜單 (menu.txt)
     let charMapping = {};
     let groupMapping = {};
+
     // 內建測試用菜單資料（若能正確讀取 menu.txt 則會覆蓋此資料）
     let menu = [
       {
@@ -74,7 +75,7 @@
         "price": 20
       },
       {
-        "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"],
+        "keywords": ["chonyobinjiadan", "danbin", "jiadan"],
         "name": "蔥油餅加蛋",
         "price": 30
       },
@@ -143,23 +144,13 @@
       return converted;
     }
 
-    // 輔助函式：計算兩個字串的匹配得分（簡單匹配）
-    function letterMatchScore(input, target) {
-      let score = 0;
-      for (let char of input) {
-        if (target.indexOf(char) !== -1) {
-          score++;
-        }
-      }
-      return score;
-    }
-
     // 點餐解析函式：
-    // 以 "/" 替換成空白後分割 token，
-    // token 若為純數字，更新預設份數，
-    // token 為字母或字母＋數字（格式：^[a-zA-Z]+(\d+)?$）解析關鍵字與數量，
-    // 若匹配到的餐點金額為 0，則將該免費餐點的資訊附加到前一筆非免費訂單的備註欄（若存在），
-    // 如果免費餐點為第一筆，則獨立顯示，但份數欄留空。
+    // 1. 以 "/" 替換成空白後分割 token
+    // 2. 若 token 為純數字，更新預設份數 (defaultQuantity)
+    // 3. 若為字母或字母＋數字（格式：^[a-zA-Z]+(\d+)?$）：
+    //    - 若含附加數字 (例如 "danbin3")，僅適用該餐點，不回頭更新 defaultQuantity
+    //    - 若不含附加數字且有 defaultQuantity，就用 defaultQuantity；否則預設為 1
+    // 4. 若菜單 price=0，則判定為免費項目，附加到前一筆非免費品的備註，或獨立顯示
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -167,11 +158,11 @@
         return;
       }
       
-      // 將使用者輸入經轉譯（依據 charMapping），轉譯結果顯示
+      // 將使用者輸入先做中文字轉英文字 (charMapping)
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
       
-      // 將 "/" 替換成空白，再以空白分割成 token
+      // 將 "/" 替換成空白，再以空白分割 token
       let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
       if (tokens.length === 0) {
         alert("未能解析出任何訂單內容！");
@@ -179,35 +170,32 @@
       }
       
       let orderList = [];
-      let defaultQuantity = null;
-      
+      let defaultQuantity = null; // 儲存「預設份數」
+
       tokens.forEach(token => {
-        // 如果 token 為純數字，則更新預設份數
+        // 如果 token 是純數字，代表「設定預設份數」
         if (/^\d+$/.test(token)) {
           defaultQuantity = parseInt(token);
           return;
         }
-        
-        // token 應為字母或字母＋數字，例如 "danbin3"
+
+        // 解析 token：字母或字母＋數字 (例如 "danbin3")
         let m = token.match(/^([a-zA-Z]+)(\d+)?$/);
         if (!m) {
           alert("訂單格式錯誤：" + token);
           return;
         }
-        let dishKeyword = m[1];
-        let attachedQuantity = m[2] ? parseInt(m[2]) : null;
-
-        // === 這裡是修正的關鍵邏輯 ===
+        
+        let dishKeyword = m[1];            // 例如 "danbin"
+        let attachedQuantity = m[2] ? parseInt(m[2]) : null; // 例如 3
+        
+        // 數量判斷：若有附加數字，就只作用在當前餐點，不覆蓋預設數量
         let quantity;
         if (attachedQuantity !== null) {
-          // 如果本次 token 本身就含數字，直接用它並更新 defaultQuantity
           quantity = attachedQuantity;
-          defaultQuantity = attachedQuantity;
         } else if (defaultQuantity !== null) {
-          // 若沒有附加數字則看前面是否已設定 defaultQuantity
           quantity = defaultQuantity;
         } else {
-          // 如果都沒有，預設 1
           quantity = 1;
         }
 
@@ -217,38 +205,41 @@
           return;
         }
         
-        // 如果該餐點價格為 0（免費）
+        // 價格為 0 → 免費項目
         if (foundDish.price === 0) {
-          // 如果有前一筆非免費訂單，將免費餐點附加到前一筆的備註中
+          // 如有前一筆「非免費」，則將該免費品加到前一筆備註
           if (orderList.length > 0 && orderList[orderList.length - 1].dish.price !== 0) {
             let prevRemark = orderList[orderList.length - 1].remark;
+            let remarkStr = foundDish.name + "×" + quantity;
             if (prevRemark) {
-              orderList[orderList.length - 1].remark = prevRemark + ", " + foundDish.name + "×" + quantity;
+              orderList[orderList.length - 1].remark = prevRemark + ", " + remarkStr;
             } else {
-              orderList[orderList.length - 1].remark = foundDish.name + "×" + quantity;
+              orderList[orderList.length - 1].remark = remarkStr;
             }
           } else {
-            // 如果免費項目為第一筆，或前一筆也是免費，則獨立添加
-            // 份數欄留空，以 remark 顯示免費餐點
-            orderList.push({ dish: foundDish, quantity: "", remark: foundDish.name + "×" + quantity });
+            // 否則獨立顯示，份數欄留空
+            orderList.push({
+              dish: foundDish,
+              quantity: "",
+              remark: foundDish.name + "×" + quantity
+            });
           }
         } else {
-          // 一般餐點直接加入清單
+          // 一般餐點
           orderList.push({ dish: foundDish, quantity: quantity, remark: "" });
         }
       });
       
+      // 若沒有解析出任何訂單就結束
       if (orderList.length === 0) return;
       
-      // 組合訂單摘要供確認
+      // 顯示確認視窗
       let summary = "";
       orderList.forEach(order => {
         if (order.dish.price === 0) {
-          summary += "(" + order.remark + ") " 
-                   + (order.quantity !== "" ? order.quantity + " 份" : "") + "\n";
+          summary += "(" + order.remark + ")\n";
         } else {
-          summary += order.dish.name + " " + order.quantity + " 份, 單價：" 
-                   + order.dish.price + " 元\n";
+          summary += `${order.dish.name} ${order.quantity} 份, 單價：${order.dish.price} 元\n`;
         }
       });
       
@@ -262,11 +253,13 @@
 
     // 將訂單項目加入訂單明細表格
     function addOrderRow(dish, quantity, remark) {
-      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      const tbody = document.getElementById("orderTable").querySelector("tbody");
       const row = tbody.insertRow();
+      
       if (dish.price === 0) {
-        row.insertCell().innerText = "";  // 不顯示菜品名稱
-        row.insertCell().innerText = "";  // 份數欄留空
+        // 免費餐點：菜品＆份數欄都留空
+        row.insertCell().innerText = "";
+        row.insertCell().innerText = "";
         row.insertCell().innerText = remark;
         row.insertCell().innerText = "";
         row.insertCell().innerText = "";
@@ -281,7 +274,8 @@
 
     // 重置點餐畫面
     function resetOrder() {
-      document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
+      const tbody = document.getElementById("orderTable").querySelector("tbody");
+      tbody.innerHTML = "";
       document.getElementById("convertedText").innerText = "尚未轉譯";
       document.getElementById("orderInput").value = "";
     }
@@ -298,6 +292,7 @@
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
       recognition.start();
+      
       recognition.onresult = function(event) {
         const transcript = event.results[0][0].transcript;
         document.getElementById("orderInput").value = transcript;
