@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>中文點餐系統2.0</title>
+  <title>中文點餐系統</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 10px; padding: 0; }
     input, button { margin: 5px; padding: 10px; font-size: 16px; }
@@ -14,21 +14,14 @@
   </style>
 </head>
 <body>
-  <h1>中文點餐系統2.0</h1>
+  <h1>中文點餐系統</h1>
 
   <!-- 點餐區 -->
   <section>
-    <h2>請輸入中文菜品名稱</h2>
+    <h2>請輸入菜品名稱</h2>
     <input type="text" id="orderInput" placeholder="例如：danbin3/">
     <button onclick="orderFromChinese()">送出訂單</button>
-    <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
-  </section>
-
-  <!-- 轉譯後文字 -->
-  <section>
-    <h2>轉譯後文字</h2>
-    <p id="convertedText">尚未轉譯</p>
   </section>
 
   <!-- 訂單明細 -->
@@ -162,7 +155,6 @@
     // 重置點餐
     function resetOrder() {
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
-      document.getElementById("convertedText").innerText = "尚未轉譯";
       document.getElementById("orderInput").value = "";
     }
   </script>
