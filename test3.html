@@ -20,11 +20,11 @@
   <section>
     <h2>請輸入訂單內容</h2>
     <!-- 輸入範例：
-         danbin3/chonyobin    → 第一筆："danbin3" → 蔥油餅加蛋 3 份；第二筆："chonyobin" → 蔥油餅 3 份
-         2/la                → 第一筆："2" 設定預設份數為2；第二筆："la" → 免費餐點「辣」，
-                                如果前面已有其他訂單則附加到前一筆備註，否則獨立顯示但份數欄留空。
+         danbin2/bujiadan1
+         → 第一個 token "danbin2" 解析為關鍵字 "danbin"，份數 2；
+         → 第二個 token "bujiadan1" 解析為關鍵字 "bujiadan"，份數 1。
     -->
-    <input type="text" id="orderInput" placeholder="例如：danbin3/chonyobin 或 2/la">
+    <input type="text" id="orderInput" placeholder="例如：danbin2/bujiadan1">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
@@ -129,7 +129,7 @@
     }
     loadMenu();
 
-    // 轉譯函式：依據 charMapping 將中文字轉換為對應字母，若無對應則保留原字元
+    // 轉譯函式：依據 charMapping 將中文字轉換為對應字母；若無對應則保留原字元
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -143,23 +143,10 @@
       return converted;
     }
 
-    // 輔助函式：計算兩個字串的匹配得分（簡單匹配）
-    function letterMatchScore(input, target) {
-      let score = 0;
-      for (let char of input) {
-        if (target.indexOf(char) !== -1) {
-          score++;
-        }
-      }
-      return score;
-    }
-
     // 點餐解析函式：
-    // 以 "/" 替換成空白後分割 token，
-    // token 若為純數字，更新預設份數，
-    // token 為字母或字母＋數字（格式：^[a-zA-Z]+(\d+)?$）解析關鍵字與數量，
-    // 若匹配到的餐點金額為 0，則將該免費餐點的資訊附加到前一筆非免費訂單的備註欄（若存在），
-    // 如果免費餐點為第一筆，則獨立顯示，但份數欄留空。
+    // 將輸入經轉譯後，以 "/" 替換成空白並以空白分割成 token。
+    // 每個 token 若為純數字，則更新預設份數；
+    // 若 token 為字母或字母＋數字（格式：^[a-zA-Z]+(\d+)?$），如果 token 中有附帶數字，則直接使用該數字，否則使用預設份數（預設為 3）。
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -167,11 +154,11 @@
         return;
       }
       
-      // 將使用者輸入經轉譯（依據 charMapping），轉譯結果顯示
+      // 將使用者輸入經轉譯後，顯示在轉譯結果區
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
       
-      // 將 "/" 替換成空白，再以空白分割成 token
+      // 將 "/" 替換成空白，再以空白分割 token
       let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
       if (tokens.length === 0) {
         alert("未能解析出任何訂單內容！");
@@ -179,7 +166,7 @@
       }
       
       let orderList = [];
-      let defaultQuantity = null;
+      let defaultQuantity = 3; // 主餐預設份數為3
       
       tokens.forEach(token => {
         // 如果 token 為純數字，則更新預設份數
@@ -188,7 +175,7 @@
           return;
         }
         
-        // token 應為字母或字母＋數字，例如 "danbin3"
+        // token 格式：應為英文字母或英文字母＋數字，例如 "danbin2"
         let m = token.match(/^([a-zA-Z]+)(\d+)?$/);
         if (!m) {
           alert("訂單格式錯誤：" + token);
@@ -196,8 +183,13 @@
         }
         let dishKeyword = m[1];
         let attachedQuantity = m[2] ? parseInt(m[2]) : null;
-        let quantity = (defaultQuantity !== null) ? defaultQuantity : (attachedQuantity !== null ? attachedQuantity : 1);
-        defaultQuantity = attachedQuantity; // 更新預設份數
+        
+        // 如果 token 中有附帶數字，則直接使用該數字，否則使用 defaultQuantity
+        let quantity = attachedQuantity !== null ? attachedQuantity : defaultQuantity;
+        // 更新 defaultQuantity 為 token 附帶數字（如果有），否則維持原來的 defaultQuantity
+        if (attachedQuantity !== null) {
+          defaultQuantity = attachedQuantity;
+        }
         
         let foundDish = menu.find(item => item.keywords.includes(dishKeyword));
         if (!foundDish) {
@@ -205,29 +197,28 @@
           return;
         }
         
-        // 如果該餐點價格為 0（免費）
-        if (foundDish.price === 0) {
-          // 如果有前一筆非免費訂單，則將免費餐點資訊附加到前一筆的備註中
-          if (orderList.length > 0 && orderList[orderList.length - 1].dish.price !== 0) {
-            let prevRemark = orderList[orderList.length - 1].remark;
-            if (prevRemark) {
-              orderList[orderList.length - 1].remark = prevRemark + ", " + foundDish.name + "×" + quantity;
-            } else {
-              orderList[orderList.length - 1].remark = foundDish.name + "×" + quantity;
-            }
-          } else {
-            // 如果免費項目為第一筆或前一筆也是免費，則獨立添加，但在後續顯示時份數欄留空
-            orderList.push({ dish: foundDish, quantity: "", remark: foundDish.name + "×" + quantity });
-          }
-        } else {
-          orderList.push({ dish: foundDish, quantity: quantity, remark: "" });
-        }
+        orderList.push({ dish: foundDish, quantity: quantity, remark: "" });
       });
       
       if (orderList.length === 0) return;
       
       // 組合訂單摘要供確認
       let summary = "";
+      orderList.forEach(order => {
+        // 如果該餐點免費（price 0），則備註附加到前一筆訂單的備註欄（如果存在），否則獨立顯示但份數欄留空
+        if (order.dish.price === 0) {
+          if (orderList.length > 0 && orderList[orderList.length - 1].dish.price !== 0) {
+            let prev = orderList[orderList.length - 1];
+            prev.remark = prev.remark ? prev.remark + ", " + order.dish.name + "×" + order.quantity : order.dish.name + "×" + order.quantity;
+          } else {
+            orderList.push({ dish: order.dish, quantity: "", remark: order.dish.name + "×" + order.quantity });
+          }
+        }
+        // 對於正常餐點，顯示正常
+      });
+      
+      // 組合摘要文字
+      summary = "";
       orderList.forEach(order => {
         if (order.dish.price === 0) {
           summary += "(" + order.remark + ") " + (order.quantity !== "" ? order.quantity + " 份" : "") + "\n";
@@ -245,13 +236,13 @@
     }
 
     // 將訂單項目加入訂單明細表格
-    // 若餐點免費，則菜品欄留空、份數欄留空，備註欄顯示免費餐點資訊
+    // 若餐點免費，則菜品與份數欄留空，備註欄顯示免費餐點資訊（不顯示價格）
     function addOrderRow(dish, quantity, remark) {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
       if (dish.price === 0) {
-        row.insertCell().innerText = "";  // 不顯示菜品名稱
-        row.insertCell().innerText = "";  // 份數欄留空
+        row.insertCell().innerText = "";  // 菜品名稱留空
+        row.insertCell().innerText = "";  // 份數留空
         row.insertCell().innerText = remark;
         row.insertCell().innerText = "";
         row.insertCell().innerText = "";
