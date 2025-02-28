@@ -196,9 +196,21 @@
         }
         let dishKeyword = m[1];
         let attachedQuantity = m[2] ? parseInt(m[2]) : null;
-        let quantity = (defaultQuantity !== null) ? defaultQuantity : (attachedQuantity !== null ? attachedQuantity : 1);
-        defaultQuantity = attachedQuantity; // 更新預設份數
-        
+
+        // === 這裡是修正的關鍵邏輯 ===
+        let quantity;
+        if (attachedQuantity !== null) {
+          // 如果本次 token 本身就含數字，直接用它並更新 defaultQuantity
+          quantity = attachedQuantity;
+          defaultQuantity = attachedQuantity;
+        } else if (defaultQuantity !== null) {
+          // 若沒有附加數字則看前面是否已設定 defaultQuantity
+          quantity = defaultQuantity;
+        } else {
+          // 如果都沒有，預設 1
+          quantity = 1;
+        }
+
         let foundDish = menu.find(item => item.keywords.includes(dishKeyword));
         if (!foundDish) {
           alert("未找到與 " + dishKeyword + " 相符的餐點！");
@@ -207,7 +219,7 @@
         
         // 如果該餐點價格為 0（免費）
         if (foundDish.price === 0) {
-          // 如果有前一筆非免費訂單，則將免費餐點資訊附加到前一筆的備註中
+          // 如果有前一筆非免費訂單，將免費餐點附加到前一筆的備註中
           if (orderList.length > 0 && orderList[orderList.length - 1].dish.price !== 0) {
             let prevRemark = orderList[orderList.length - 1].remark;
             if (prevRemark) {
@@ -216,10 +228,12 @@
               orderList[orderList.length - 1].remark = foundDish.name + "×" + quantity;
             }
           } else {
-            // 如果免費項目為第一筆或前一筆也是免費，則獨立添加，但在後續顯示時份數欄留空
+            // 如果免費項目為第一筆，或前一筆也是免費，則獨立添加
+            // 份數欄留空，以 remark 顯示免費餐點
             orderList.push({ dish: foundDish, quantity: "", remark: foundDish.name + "×" + quantity });
           }
         } else {
+          // 一般餐點直接加入清單
           orderList.push({ dish: foundDish, quantity: quantity, remark: "" });
         }
       });
@@ -230,9 +244,11 @@
       let summary = "";
       orderList.forEach(order => {
         if (order.dish.price === 0) {
-          summary += "(" + order.remark + ") " + (order.quantity !== "" ? order.quantity + " 份" : "") + "\n";
+          summary += "(" + order.remark + ") " 
+                   + (order.quantity !== "" ? order.quantity + " 份" : "") + "\n";
         } else {
-          summary += order.dish.name + " " + order.quantity + " 份, 單價：" + order.dish.price + " 元\n";
+          summary += order.dish.name + " " + order.quantity + " 份, 單價：" 
+                   + order.dish.price + " 元\n";
         }
       });
       
@@ -245,7 +261,6 @@
     }
 
     // 將訂單項目加入訂單明細表格
-    // 若餐點免費，則菜品欄留空、份數欄留空，備註欄顯示免費餐點資訊
     function addOrderRow(dish, quantity, remark) {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
