@@ -141,7 +141,7 @@
   },
   {
     "keywords": [
-      "/la/danbin"
+      "ladanbin"
     ],
     "name": "蔥油餅加蛋+辣",
     "price": 30
