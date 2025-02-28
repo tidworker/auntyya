@@ -61,7 +61,7 @@
   <script>
     // 全域變數：轉譯字庫與菜單
     let charMapping = {};
-    let groupMapping = {}; // 若新資料庫包含群組對應資料，將一併載入
+    let groupMapping = {}; // 若新資料庫包含群組對應資料，也一併載入
     let menu = {};
 
     // 讀取 database.txt (必須包含 charMapping；若有 groupMapping 也一併載入)
@@ -126,7 +126,21 @@
       return matches ? matches.join('') : "";
     }
 
-    // 解析轉譯結果，僅接受**完全相同**的菜品鍵值
+    // 輔助函式：計算兩個字串的字母匹配得分
+    function letterMatchScore(input, target) {
+      let score = 0;
+      for (let char of input) {
+        if (target.indexOf(char) !== -1) {
+          score++;
+        }
+      }
+      return score;
+    }
+
+    // 修改後的點餐解析函式：
+    // 1. 先轉譯輸入（包含數字符號），再過濾掉不必要符號保留字母作查詢
+    // 2. 先嘗試精確匹配資料庫菜單；若無則進行模糊匹配
+    // 3. 使用 confirm() 提示使用者確認後下單
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -134,51 +148,65 @@
         return;
       }
       
-      // 取得完整轉譯結果（僅顯示有映射的部分）
+      // 取得轉譯後完整內容（包含數字、符號）
       let translated = translateDishName(inputText);
       
-      // 預設訂單份數與客製數量
-      let quantity = 1;
-      let customRemark = "";
-      
-      // 取得「數字)#」的客製數量（使用正則表達式，支援半形與全形右括號）
-      const customMatch = translated.match(/(\d+)(?=[）\)]#)/);
-      if (customMatch) {
-        customRemark = customMatch[1];
-      }
-      
-      // 取得「數字)」的訂單份數，但不匹配已符合客製數量的情形
-      const quantityMatch = translated.match(/(\d+)(?=[）\)](?!#))/);
-      if (quantityMatch) {
-        quantity = parseInt(quantityMatch[1]);
-      }
-      
-      // 以完整的轉譯結果作為菜品關鍵字（保留所有字元，包括數字）
-      const dishKey = translated.trim();
+      // 過濾掉數字、括號與 '#'，僅保留字母作為查詢依據
+      let dishKey = translated.replace(/[0-9（）()#]/g, '').trim();
       if (!dishKey) {
         alert("未能解析出菜品名稱！");
         return;
       }
       
-      // 顯示完整轉譯結果
-      document.getElementById("convertedText").innerText = "轉譯結果：" + dishKey;
+      // 顯示原始轉譯結果供參考
+      document.getElementById("convertedText").innerText = "轉譯結果：" + translated;
       
-      // 備註：預設僅擷取中文，若有客製數量則顯示在後方
-      let remark = extractChinese(dishKey);
+      // 嘗試精確匹配：直接查詢菜單資料
+      let foundDish = menu[dishKey];
+      
+      // 若精確匹配失敗，進行簡單的模糊匹配
+      if (!foundDish) {
+        let bestMatchKey = null;
+        let bestScore = 0;
+        for (let key in menu) {
+          let score = letterMatchScore(dishKey, key);
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatchKey = key;
+          }
+        }
+        // 當最佳匹配得分達到輸入字串長度一半以上時，認為匹配成立
+        if (bestScore >= dishKey.length / 2) {
+          foundDish = menu[bestMatchKey];
+        }
+      }
+      
+      if (!foundDish) {
+        alert("未找到相似菜品！");
+        return;
+      }
+      
+      // 解析訂單份數與客製數量（原邏輯維持）
+      let quantity = 1;
+      let customRemark = "";
+      const customMatch = translated.match(/(\d+)(?=[）\)]#)/);
+      if (customMatch) {
+        customRemark = customMatch[1];
+      }
+      const quantityMatch = translated.match(/(\d+)(?=[）\)](?!#))/);
+      if (quantityMatch) {
+        quantity = parseInt(quantityMatch[1]);
+      }
+      let remark = extractChinese(translated);
       if (customRemark) {
         remark += "×" + customRemark;
       }
       
-      // 僅使用精確比對
-      let dish = menu[dishKey];
-      if (!dish) {
-        alert("未找到相同菜品！");
-        return;
+      // 使用 confirm() 提示使用者確認點餐內容
+      if (confirm("您點的是 " + foundDish.name + "，金額為 " + foundDish.price + " 元。\n確定要下單嗎？")) {
+        addOrderRow(foundDish, quantity, remark);
+        document.getElementById("orderInput").value = "";
       }
-      
-      // 加入訂單列
-      addOrderRow(dish, quantity, remark);
-      document.getElementById("orderInput").value = "";
     }
 
     // 將訂單列加入訂單表格中
