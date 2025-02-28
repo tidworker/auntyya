@@ -138,7 +138,8 @@
     ],
     "name": "辣",
     "price": 0
-  }
+  },
+  {
     "keywords": [
       "/la/danbin"
     ],
