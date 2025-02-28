@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>中文點餐系統 (簡化數量解析)</title>
+  <title>中文點餐系統 (0 元商品寫入備註)</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 10px; padding: 0; }
     input, button { margin: 5px; padding: 10px; font-size: 16px; }
@@ -14,16 +14,18 @@
   </style>
 </head>
 <body>
-  <h1>中文點餐系統（簡化數量解析）</h1>
+  <h1>中文點餐系統（0 元商品寫入備註）</h1>
 
   <!-- 點餐區 -->
   <section>
     <h2>請輸入訂單內容</h2>
-    <p>單筆最多兩個品項，以「/」分隔；數字套用規則：<br>
-       - 沒有數字 → 預設每品項 1 份。<br>
-       - 只有一個數字 → 兩品項都用該數字（若品項自帶數字後綴則覆蓋自己）。<br>
-       - 兩個數字 → 依照先後順序分別套用給第一、第二個品項（若品項自帶數字後綴則覆蓋自己）。</p>
-    <input type="text" id="orderInput" placeholder="例如：bujiadan3/danbin 或 2/danbin/bujia (僅前兩項)" />
+    <p>單筆最多兩個品項，以「/」分隔；數字套用規則：<br/>
+       - 沒有數字 → 預設每品項 1 份。<br/>
+       - 只有一個數字 → 兩品項都用該數字（若品項自帶數字後綴則以後綴為主）。<br/>
+       - 兩個數字 → 依先後順序分配給第一、第二品項（若品項自帶數字後綴則以後綴為主）。<br/>
+       - 價格為 0 元的餐點，備註必帶「(0元商品)」。</p>
+    <input type="text" id="orderInput" 
+           placeholder="例如：2/danbin/bujia (只會解析前兩品)" />
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
@@ -143,7 +145,7 @@
       return converted;
     }
 
-    // === 點餐解析函式 (核心邏輯簡化＆最多兩個品項) ===
+    // === 點餐解析函式 (核心：最多兩個品項、簡化數量解析) ===
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -155,105 +157,86 @@
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
 
-      // 2) 擷取「純數字」token（不含在品項後綴的）: 例如使用空白或 "/" split
-      //   以判斷整體到底出現了幾個「獨立數字」(global numeric)
+      // 2) 擷取「獨立純數字」token (例如 "2", "5")，用來判斷是否有 0/1/2 個全域數字
       const splitAll = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
-      // 只挑「純數字」部分
       const globalNumberTokens = splitAll.filter(t => /^\d+$/.test(t));
-      
-      // 3) 取出最多兩個「品項」(以 "/" 為分隔)，若有多的略過
+
+      // 3) 取最多兩個「品項 token」(以 "/" 分隔)
       const itemTokens = translatedText.split("/").slice(0, 2);
 
-      // 4) 將每個品項 token 做進一步解析 (取得 dishKeyword + suffixQty)
+      // 4) 每個品項 token 再解析 (dishKeyword + suffixQty)
       let itemData = itemTokens.map(t => parseItemToken(t.trim()));
 
-      // 5) 根據「獨立數字總數」決定數量套用
-      //    - 0 個數字 → 每品項預設 1（除非該品項自帶後綴數字）
-      //    - 1 個數字 → 該數字套用到兩品項（除非該品項自帶後綴數字）
-      //    - 2 個數字 → 依先後順序分配給第一、第二品項（除非該品項自帶後綴數字）
+      // 5) 根據全域數字數量決定數量套用
       if (globalNumberTokens.length === 0) {
-        // 沒有任何獨立數字 → 每個品項都默認 1
+        // 沒任何純數字 → 皆預設1（除非自帶後綴數字）
         itemData.forEach(d => {
-          if (d.attachedQty === null) {
-            d.finalQty = 1;
-          } else {
-            d.finalQty = d.attachedQty;
-          }
+          if (!d.dishKeyword) return;
+          d.finalQty = (d.attachedQty !== null) ? d.attachedQty : 1;
         });
       } else if (globalNumberTokens.length === 1) {
-        // 只有 1 個獨立數字 → 若品項未自帶後綴數字，套用同一個
-        const n = parseInt(globalNumberTokens[0]);
+        // 只有1個 → 若品項沒後綴數字，就套用此全域數字
+        const n = parseInt(globalNumberTokens[0], 10);
         itemData.forEach(d => {
-          if (d.attachedQty !== null) {
-            d.finalQty = d.attachedQty;
-          } else if (d.dishKeyword) {
-            // 沒後綴就用這個全域數字
-            d.finalQty = n;
-          }
+          if (!d.dishKeyword) return;
+          d.finalQty = (d.attachedQty !== null) ? d.attachedQty : n;
         });
       } else {
-        // >= 2 個獨立數字 → 取前兩個，第一個給第一品項，第二個給第二品項 (除非自帶後綴)
-        const n1 = parseInt(globalNumberTokens[0]);
-        const n2 = parseInt(globalNumberTokens[1]);
-        // item1
-        if (itemData[0].attachedQty !== null) {
-          itemData[0].finalQty = itemData[0].attachedQty;
-        } else if (itemData[0].dishKeyword) {
-          itemData[0].finalQty = n1;
+        // 2 個以上 → 第一個給第一品項，第二個給第二品項 (若自帶後綴數字則優先)
+        const n1 = parseInt(globalNumberTokens[0], 10);
+        const n2 = parseInt(globalNumberTokens[1], 10);
+        // 第一品項
+        if (itemData[0].dishKeyword) {
+          itemData[0].finalQty = (itemData[0].attachedQty !== null)
+            ? itemData[0].attachedQty
+            : n1;
         }
-        // item2
-        if (itemData[1]) {
-          if (itemData[1].attachedQty !== null) {
-            itemData[1].finalQty = itemData[1].attachedQty;
-          } else if (itemData[1].dishKeyword) {
-            itemData[1].finalQty = n2;
-          }
+        // 第二品項
+        if (itemData[1] && itemData[1].dishKeyword) {
+          itemData[1].finalQty = (itemData[1].attachedQty !== null)
+            ? itemData[1].attachedQty
+            : n2;
         }
       }
 
-      // 若最終沒填 (空白 token之類)，就不處理；同時預設 1
-      itemData.forEach(d => {
-        if (!d.dishKeyword) return; // 空的 token
-        if (d.finalQty === null) {
-          d.finalQty = 1; 
-        }
-      });
-
-      // 6) 將最終 itemData 封裝成對應的餐點 (或免費品等)
+      // 6) 將最終結果封裝 orderList
       let orderList = [];
       itemData.forEach((d, idx) => {
-        // 若沒有有效關鍵字 (e.g. 空的 token)，跳過
-        if (!d.dishKeyword) return;
+        if (!d.dishKeyword) return; // 無效品項跳過
 
-        // 從菜單找符合 dishKeyword 的品項
+        // 從菜單找符合 dishKeyword
         let foundDish = menu.find(item => item.keywords.includes(d.dishKeyword));
         if (!foundDish) {
-          // 找不到就跳過或提示
           alert("未找到與「" + d.dishKeyword + "」相符的餐點！");
           return;
         }
 
-        // 若為免費品 (price=0)，沿用原本「附加到上一個非免費品項」的邏輯
+        // 若 finalQty 還是 null，預設為 1
+        if (d.finalQty === null) {
+          d.finalQty = 1;
+        }
+
+        // === 關鍵：price=0 → 寫入備註 "0元商品" ===
         if (foundDish.price === 0) {
-          // 先看 orderList 最後一筆是否為「非免費」品項
+          let remarkStr = `${foundDish.name} (0元商品) × ${d.finalQty}`;
+          // 試圖附加到「上一筆非免費品」
           if (orderList.length > 0 && orderList[orderList.length - 1].dish.price !== 0) {
             let prevRemark = orderList[orderList.length - 1].remark;
-            let remarkStr = foundDish.name + "×" + d.finalQty;
             if (prevRemark) {
               orderList[orderList.length - 1].remark = prevRemark + ", " + remarkStr;
             } else {
               orderList[orderList.length - 1].remark = remarkStr;
             }
           } else {
-            // 否則獨立加進清單（份數欄留空）
+            // 若沒有前一筆或前一筆也是免費 → 獨立顯示
             orderList.push({
               dish: foundDish,
               quantity: "",
-              remark: foundDish.name + "×" + d.finalQty
+              remark: remarkStr
             });
           }
         } else {
-          // 一般餐點
+          // 一般品項
           orderList.push({
             dish: foundDish,
             quantity: d.finalQty,
@@ -262,16 +245,15 @@
         }
       });
 
-      // 若結果空，就不處理
       if (orderList.length === 0) return;
 
-      // 7) 確認視窗顯示
+      // 7) 顯示確認視窗
       let summary = "";
       orderList.forEach(order => {
         if (order.dish.price === 0) {
           summary += "(" + order.remark + ")\n";
         } else {
-          summary += order.dish.name + " " + order.quantity + " 份, 單價：" + order.dish.price + " 元\n";
+          summary += `${order.dish.name} ${order.quantity} 份, 單價：${order.dish.price} 元\n`;
         }
       });
       
@@ -283,9 +265,7 @@
       }
     }
 
-    // === 解析「單個品項 token」：取 dishKeyword & 附帶數字 ===
-    // 例如 "danbin3" -> dishKeyword="danbin", attachedQty=3
-    // 若整個 token 不符合 ^([a-zA-Z]+)(\d+)?$，回傳 dishKeyword="" 代表無效
+    // === 解析單個品項 token，取 dishKeyword 與後綴數字 ===
     function parseItemToken(token) {
       let m = token.match(/^([a-zA-Z]+)(\d+)?$/);
       if (!m) {
