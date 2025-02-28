@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>中文點餐系統 (0 元商品寫入備註)</title>
+  <title>中文點餐系統 (0元商品備註)</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 10px; padding: 0; }
     input, button { margin: 5px; padding: 10px; font-size: 16px; }
@@ -14,18 +14,19 @@
   </style>
 </head>
 <body>
-  <h1>中文點餐系統（0 元商品寫入備註）</h1>
+  <h1>中文點餐系統（0元商品備註）</h1>
 
   <!-- 點餐區 -->
   <section>
     <h2>請輸入訂單內容</h2>
-    <p>單筆最多兩個品項，以「/」分隔；數字套用規則：<br/>
-       - 沒有數字 → 預設每品項 1 份。<br/>
-       - 只有一個數字 → 兩品項都用該數字（若品項自帶數字後綴則以後綴為主）。<br/>
-       - 兩個數字 → 依先後順序分配給第一、第二品項（若品項自帶數字後綴則以後綴為主）。<br/>
-       - 價格為 0 元的餐點，備註必帶「(0元商品)」。</p>
-    <input type="text" id="orderInput" 
-           placeholder="例如：2/danbin/bujia (只會解析前兩品)" />
+    <p>
+      單筆最多兩個品項，以「/」分隔；數字套用規則：<br>
+      - 沒有數字 → 預設每品項 1 份。<br>
+      - 只有一個數字 → 兩品項都用該數字（若品項自帶後綴數字則以後綴為主）。<br>
+      - 兩個數字 → 依先後順序分配給第一、第二品項（若品項自帶後綴數字則以後綴為主）。<br>
+      - 價格為 0 元的餐點，將獨立顯示且備註中標示「(0元商品)」。
+    </p>
+    <input type="text" id="orderInput" placeholder="例如：2/danbin/bujia" />
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
@@ -185,13 +186,11 @@
         // 2 個以上 → 第一個給第一品項，第二個給第二品項 (若自帶後綴數字則優先)
         const n1 = parseInt(globalNumberTokens[0], 10);
         const n2 = parseInt(globalNumberTokens[1], 10);
-        // 第一品項
         if (itemData[0].dishKeyword) {
           itemData[0].finalQty = (itemData[0].attachedQty !== null)
             ? itemData[0].attachedQty
             : n1;
         }
-        // 第二品項
         if (itemData[1] && itemData[1].dishKeyword) {
           itemData[1].finalQty = (itemData[1].attachedQty !== null)
             ? itemData[1].attachedQty
@@ -201,7 +200,7 @@
 
       // 6) 將最終結果封裝 orderList
       let orderList = [];
-      itemData.forEach((d, idx) => {
+      itemData.forEach(d => {
         if (!d.dishKeyword) return; // 無效品項跳過
 
         // 從菜單找符合 dishKeyword
@@ -216,27 +215,16 @@
           d.finalQty = 1;
         }
 
-        // === 關鍵：price=0 → 寫入備註 "0元商品" ===
+        // 若為 0 元商品，獨立加入一筆，且備註中標示「(0元商品)」
         if (foundDish.price === 0) {
           let remarkStr = `${foundDish.name} (0元商品) × ${d.finalQty}`;
-          // 試圖附加到「上一筆非免費品」
-          if (orderList.length > 0 && orderList[orderList.length - 1].dish.price !== 0) {
-            let prevRemark = orderList[orderList.length - 1].remark;
-            if (prevRemark) {
-              orderList[orderList.length - 1].remark = prevRemark + ", " + remarkStr;
-            } else {
-              orderList[orderList.length - 1].remark = remarkStr;
-            }
-          } else {
-            // 若沒有前一筆或前一筆也是免費 → 獨立顯示
-            orderList.push({
-              dish: foundDish,
-              quantity: "",
-              remark: remarkStr
-            });
-          }
+          orderList.push({
+            dish: foundDish,
+            quantity: "",
+            remark: remarkStr
+          });
         } else {
-          // 一般品項
+          // 一般餐點直接加入
           orderList.push({
             dish: foundDish,
             quantity: d.finalQty,
@@ -281,7 +269,7 @@
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
       if (dish.price === 0) {
-        // 免費品：菜品、份數欄留空
+        // 0元商品：菜品與份數欄留空，備註顯示 free 商品資訊
         row.insertCell().innerText = "";
         row.insertCell().innerText = "";
         row.insertCell().innerText = remark;
