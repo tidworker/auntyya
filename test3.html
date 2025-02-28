@@ -19,8 +19,8 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入訂單內容</h2>
-    <!-- 範例：danbin3(加蛋)/chonyobin 表示第一筆 token："danbin3(加蛋)" → 關鍵字 "danbin" 份數 3，備註 "加蛋"；第二筆 token："chonyobin" → 使用預設份數 -->
-    <input type="text" id="orderInput" placeholder="例如：danbin3(加蛋)/chonyobin">
+    <!-- 範例：2/(la) 表示第一個 token "2"（預設份數 2），第二個 token "(la)"取括號內內容作關鍵字 -->
+    <input type="text" id="orderInput" placeholder="例如：2/(la)">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
@@ -46,7 +46,7 @@
         </tr>
       </thead>
       <tbody>
-        <!-- 訂單項目會動態加入 -->
+        <!-- 訂單項目將動態加入 -->
       </tbody>
     </table>
   </section>
@@ -59,10 +59,10 @@
   </section>
 
   <script>
-    // 全域變數：資料庫（database.txt）及菜單（menu.txt）
+    // 全域變數：資料庫 (database.txt) 與菜單 (menu.txt)
     let charMapping = {};
-    let groupMapping = {};
-    // 內建測試用菜單資料（若能正確讀取 menu.txt 則會覆蓋此資料）
+    let groupMapping = {}; // 若資料庫包含群組對應資料，也會讀取
+    // 內建測試用菜單資料，若能讀取 menu.txt 則會覆蓋此預設值
     let menu = [
       {
         "keywords": ["chonyobin", "bujiadan", "bujia"],
@@ -70,7 +70,7 @@
         "price": 20
       },
       {
-        "keywords": ["chonyobinjiadan", "danbin", "jiadan"],
+        "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"],
         "name": "蔥油餅加蛋",
         "price": 30
       }
@@ -120,7 +120,7 @@
     }
     loadMenu();
 
-    // 轉譯函式：根據 database.txt 中的 charMapping 將中文字轉換為對應字母
+    // 轉譯函式：依據 charMapping 將中文字轉換為對應字母
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -144,8 +144,9 @@
     }
 
     // 點餐解析函式：
-    // 用簡單邏輯將一個數字和一個餐點視為一組
-    // 若 token 中包含括號，則括號內內容（假設不含 '#'）直接作為備註輸出
+    // 以簡單邏輯將一個數字和一個餐點視為一組。
+    // 若 token 中包含括號，則括號內內容視為備註；
+    // 如果去除括號後 token 為空，則用括號內內容作為該筆訂單的關鍵字。
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -153,7 +154,7 @@
         return;
       }
       
-      // 先將使用者輸入經轉譯
+      // 將使用者輸入先經轉譯（此處假設使用者輸入已是中文或已包含英文，可依實際需求調整）
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
       
@@ -168,20 +169,26 @@
       let defaultQuantity = null;
       
       tokens.forEach(token => {
-        // 檢查是否包含括號（例如 "danbin3(remark)"）
         let remark = "";
         let tokenWithoutRemark = token;
+        // 如果 token 包含括號，提取括號內文字作為備註
         let parenMatch = token.match(/(.*?)/);
         if (parenMatch) {
-          remark = parenMatch[1];  // 直接取出括號內內容作備註（不替換 '#'，因為假設不會出現）
+          remark = parenMatch[1];
           tokenWithoutRemark = token.replace(/.*?/, "");
+        }
+        
+        // 如果 tokenWithoutRemark 為空，且有括號內容，則以括號內容作為關鍵字
+        if (tokenWithoutRemark === "" && remark !== "") {
+          tokenWithoutRemark = remark;
+          // 此時可選擇清空 remark，或保留備註資訊（這裡保留備註）
         }
         
         // 如果 tokenWithoutRemark 為純數字，則更新預設份數
         if (/^\d+$/.test(tokenWithoutRemark)) {
           defaultQuantity = parseInt(tokenWithoutRemark);
         } else {
-          // tokenWithoutRemark 應為字母或字母＋數字，例如 "danbin3"
+          // tokenWithoutRemark 應為英文字母或英文字母＋數字，例如 "danbin3"
           let m = tokenWithoutRemark.match(/^([a-zA-Z]+)(\d+)?$/);
           if (!m) {
             alert("訂單格式錯誤：" + token);
@@ -192,11 +199,11 @@
           let quantity;
           if (defaultQuantity !== null) {
             quantity = defaultQuantity;
-            defaultQuantity = attachedQuantity; // 如果 token 同時帶數字，更新預設份數為該數字
+            defaultQuantity = attachedQuantity; // 若 token 同時帶數字，則更新預設份數
           } else {
             quantity = attachedQuantity !== null ? attachedQuantity : 1;
           }
-          // 根據 dishKeyword 在菜單中匹配（以 keywords 陣列比對）
+          // 根據 dishKeyword 在菜單中進行匹配（以 keywords 陣列）
           let foundDish = menu.find(item => item.keywords.includes(dishKeyword));
           if (!foundDish) {
             alert("未找到與 " + dishKeyword + " 相符的餐點！");
@@ -208,7 +215,7 @@
       
       if (orderList.length === 0) return;
       
-      // 組合訂單摘要供使用者確認
+      // 組合訂單摘要
       let summary = "";
       orderList.forEach(order => {
         summary += order.dish.name;
@@ -226,7 +233,7 @@
       }
     }
 
-    // 將訂單列加入訂單明細表格，新增備註欄
+    // 將訂單項目加入訂單明細表格（新增備註欄）
     function addOrderRow(dish, quantity, remark) {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
