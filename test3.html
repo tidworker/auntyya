@@ -10,6 +10,7 @@
     table { border-collapse: collapse; width: 100%; margin-top: 10px; }
     table, th, td { border: 1px solid #aaa; }
     th, td { padding: 8px; text-align: center; }
+    #remarksSection { margin-top: 10px; font-size: 16px; }
     @media (max-width: 600px) { input, button { font-size: 18px; } }
   </style>
 </head>
@@ -20,11 +21,11 @@
   <section>
     <h2>請輸入訂單內容</h2>
     <!-- 輸入範例：
-         danbin2/bujiadan1  → 第一個 token "danbin2" → 解析為關鍵字 "danbin"，份數 2；
-                                 第二個 token "bujiadan1" → 解析為關鍵字 "bujiadan"，份數 1。
-         danbin3/la3/      → "danbin3" 解析為主訂單 3 份，"la3"（免費）必須附加在前一筆備註中。
+         danbin3/la3/ 
+         表示第一個 token "danbin3" → 主訂單關鍵字 "danbin" 3 份，
+         第二個 token "la3" → 免費餐點關鍵字 "la" 3 份，會附加到前一筆備註欄中。
     -->
-    <input type="text" id="orderInput" placeholder="例如：danbin2/bujiadan1 或 danbin3/la3/">
+    <input type="text" id="orderInput" placeholder="例如：danbin3/la3/">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
@@ -50,9 +51,14 @@
         </tr>
       </thead>
       <tbody>
-        <!-- 訂單項目將動態加入 -->
+        <!-- 主訂單項目動態加入 -->
       </tbody>
     </table>
+  </section>
+
+  <!-- 備註區：顯示所有免費餐點資訊 -->
+  <section id="remarksSection">
+    <!-- 內容如 "備註：辣×3" -->
   </section>
 
   <!-- 系統狀態 -->
@@ -63,7 +69,7 @@
   </section>
 
   <script>
-    // 全域變數：資料庫（database.txt）與菜單（menu.txt）
+    // 全域變數：資料庫 (database.txt) 與菜單 (menu.txt)
     let charMapping = {};
     let groupMapping = {};
     // 內建測試用菜單資料（若能正確讀取 menu.txt 則會覆蓋此資料）
@@ -144,10 +150,9 @@
     }
 
     // 點餐解析函式：
-    // 1. 將使用者輸入經轉譯後，以 "/" 替換成空白，再以空白分割 token。
-    // 2. 每個 token 若為純數字，則更新預設份數；若 token 為字母或字母＋數字（格式：^[a-zA-Z]+(\d+)?$），則解析關鍵字與份數。
-    // 3. 如果匹配到的餐點價格為 0（免費餐點），則必須附加在前一個非免費訂單的備註欄中，
-    //    如果前一筆不存在或也是免費，則顯示錯誤並終止。
+    // 將使用者輸入經轉譯後，以 "/" 替換成空白並分割成 token。
+    // 每個 token 若為純數字，則更新預設份數；若 token 為英文字母或英文字母＋數字（格式：^[a-zA-Z]+(\d+)?$），則解析出關鍵字及份數。
+    // 如果匹配到的餐點金額為 0（免費），則將該免費餐點的資訊附加到前一筆非免費訂單的備註欄中（累計至備註區）。
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -155,11 +160,11 @@
         return;
       }
       
-      // 轉譯後的結果
+      // 先將使用者輸入經轉譯（依據 charMapping），並顯示轉譯結果
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
       
-      // 將 "/" 替換成空白，再以空白分割 token
+      // 將 "/" 替換為空白，再以空白分割成 token
       let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
       if (tokens.length === 0) {
         alert("未能解析出任何訂單內容！");
@@ -167,16 +172,17 @@
       }
       
       let orderList = [];
-      let defaultQuantity = 3; // 預設主餐份數為3
+      let freeRemarks = "";  // 收集免費餐點的備註
+      let defaultQuantity = 3; // 主餐預設份數為3
       
       tokens.forEach(token => {
-        // 若 token 為純數字，則更新預設份數
+        // 如果 token 為純數字，則更新預設份數
         if (/^\d+$/.test(token)) {
           defaultQuantity = parseInt(token);
           return;
         }
         
-        // token 應為英文字母或英文字母＋數字，例如 "danbin2"
+        // token 格式：應為英文字母或英文字母＋數字，例如 "danbin2"
         let m = token.match(/^([a-zA-Z]+)(\d+)?$/);
         if (!m) {
           alert("訂單格式錯誤：" + token);
@@ -196,14 +202,14 @@
         }
         
         if (foundDish.price === 0) {
-          // 免費餐點必須附加到前一筆非免費訂單中
+          // 免費餐點必須附加到前一筆非免費訂單的備註欄中
           if (orderList.length === 0 || orderList[orderList.length - 1].dish.price === 0) {
             alert("免費餐點必須跟隨在非免費餐點之後！");
             return;
           } else {
-            let prevOrder = orderList[orderList.length - 1];
-            // 將免費餐點資訊附加到前一筆訂單的備註欄中，格式：餐點名稱×份數
             let freeInfo = foundDish.name + "×" + quantity;
+            // 將免費餐點資訊累加到前一筆訂單的備註中
+            let prevOrder = orderList[orderList.length - 1];
             prevOrder.remark = prevOrder.remark ? (prevOrder.remark + ", " + freeInfo) : freeInfo;
           }
         } else {
@@ -226,28 +232,30 @@
         orderList.forEach(order => {
           addOrderRow(order.dish, order.quantity, order.remark);
         });
+        // 在訂單明細表格下方顯示備註區（只顯示免費餐點備註）
+        let remarksSection = document.getElementById("remarksSection");
+        if (!remarksSection) {
+          remarksSection = document.createElement("div");
+          remarksSection.id = "remarksSection";
+          document.body.appendChild(remarksSection);
+        }
+        if (freeRemarks === "" && orderList.some(o => o.remark !== "")) {
+          freeRemarks = orderList.filter(o => o.remark !== "").map(o => o.remark).join("; ");
+        }
+        remarksSection.innerText = freeRemarks ? "備註：" + freeRemarks : "";
         document.getElementById("orderInput").value = "";
       }
     }
 
     // 將訂單項目加入訂單明細表格
-    // 若餐點免費，則在訂單明細中菜品與份數欄留空，備註欄顯示免費餐點資訊（不顯示價格）
     function addOrderRow(dish, quantity, remark) {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
-      if (dish.price === 0) {
-        row.insertCell().innerText = "";  // 菜品名稱留空
-        row.insertCell().innerText = "";  // 份數留空
-        row.insertCell().innerText = remark;
-        row.insertCell().innerText = "";
-        row.insertCell().innerText = "";
-      } else {
-        row.insertCell().innerText = dish.name;
-        row.insertCell().innerText = quantity;
-        row.insertCell().innerText = remark;
-        row.insertCell().innerText = dish.price;
-        row.insertCell().innerText = dish.price * quantity;
-      }
+      row.insertCell().innerText = dish.name;
+      row.insertCell().innerText = quantity;
+      row.insertCell().innerText = remark;
+      row.insertCell().innerText = dish.price;
+      row.insertCell().innerText = dish.price * quantity;
     }
 
     // 重置點餐畫面
@@ -255,6 +263,10 @@
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("convertedText").innerText = "尚未轉譯";
       document.getElementById("orderInput").value = "";
+      let remarksSection = document.getElementById("remarksSection");
+      if (remarksSection) {
+        remarksSection.innerText = "";
+      }
     }
 
     // 語音輸入功能（使用 Web Speech API）
