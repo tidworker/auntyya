@@ -20,13 +20,11 @@
   <section>
     <h2>請輸入訂單內容</h2>
     <!-- 範例：
-         2/(la) → 表示第一個 token "2"更新預設份數為 2，
-                 第二個 token "(la)"因去除括號後為空，則以括號內 "la"作為查詢關鍵字，
-                 並特別選出符合且名稱為「辣」的餐點；備註欄輸出「辣」。
-         danbin3/chonyobin → 第一組 token "danbin3"（關鍵字 "danbin"，份數 3），
-                 第二組 token "chonyobin"（無附帶數字，使用預設 3 份）。
+         danbin(la)1  → 解析後為：關鍵字 "danbin"、附帶數字 1，括號內 "la" 作為備註，
+         依據 menu 中 keywords 包含 "danbin" 的項目（例如 "蔥油餅加蛋"）建立訂單，
+         備註欄顯示 "la"（該餐點內建資料中有一筆 "la" 的記錄，例如 "辣"）。
     -->
-    <input type="text" id="orderInput" placeholder="例如：2/(la) 或 danbin3/chonyobin">
+    <input type="text" id="orderInput" placeholder="例如：danbin(la)1">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
@@ -65,7 +63,7 @@
   </section>
 
   <script>
-    // 全域變數：資料庫（database.txt）及菜單（menu.txt）
+    // 全域變數：資料庫 (database.txt) 與菜單 (menu.txt)
     let charMapping = {};
     let groupMapping = {};
     // 內建測試用菜單資料（若能讀取 menu.txt 則會覆蓋此資料）
@@ -131,13 +129,15 @@
     }
     loadMenu();
 
-    // 轉譯函式：根據 charMapping 將中文字轉換為對應字母
+    // 修改後的轉譯函式：如果字庫中沒有對應，則保留原字元
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
         const ch = dishChinese.charAt(i);
         if (charMapping[ch] !== undefined) {
           converted += charMapping[ch];
+        } else {
+          converted += ch;
         }
       }
       return converted;
@@ -155,11 +155,9 @@
     }
 
     // 點餐解析函式：
-    // 用簡單邏輯將一個數字和一個餐點視為一組。
-    // 若 token 中包含括號，則：
-    //   - 提取括號內文字作為備註，
-    //   - 若去除括號後 token 為空，則以括號內文字作為查詢關鍵字，
-    //     並在匹配時若有多筆結果，優先選擇名稱為「辣」的餐點（例如 (la) → 辣）。
+    // 將一個數字和一個餐點視為一組。
+    // 若 token 中包含括號，提取括號內文字作為備註；如果去除括號後 token 為空，則以括號內文字作為查詢關鍵字，
+    // 並在匹配時，若符合條件（例如名稱為「辣」）則備註欄輸出該餐點名稱。
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -167,7 +165,7 @@
         return;
       }
       
-      // 先將使用者輸入經轉譯 (使用 charMapping)
+      // 將使用者輸入經轉譯（依據 charMapping），轉譯結果顯示在頁面上
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
       
@@ -185,13 +183,13 @@
         let remark = "";
         let tokenWithoutRemark = token;
         let isRemarkOnly = false;
-        // 檢查 token 是否包含括號，提取括號內文字作為備註
+        // 檢查 token 是否包含括號，提取括號內內容作為備註
         let parenMatch = token.match(/(.*?)/);
         if (parenMatch) {
           remark = parenMatch[1];
           tokenWithoutRemark = token.replace(/.*?/, "");
         }
-        // 如果去除括號後 token 為空且有括號內容，則以括號內容作為查詢關鍵字，並記錄為僅括號輸入
+        // 如果 tokenWithoutRemark 為空且有括號內容，則以括號內內容作為查詢關鍵字
         if (tokenWithoutRemark === "" && remark !== "") {
           tokenWithoutRemark = remark;
           isRemarkOnly = true;
@@ -212,13 +210,13 @@
           let quantity;
           if (defaultQuantity !== null) {
             quantity = defaultQuantity;
-            defaultQuantity = attachedQuantity;  // 更新預設份數為 token 附帶的數字（若有）
+            defaultQuantity = attachedQuantity;  // 若 token 同時帶數字，更新預設份數
           } else {
             quantity = attachedQuantity !== null ? attachedQuantity : 1;
           }
           
           let foundDish;
-          // 如果此 token是僅括號輸入，則從符合 dishKeyword 的候選中優先選擇名稱為 "辣"（若存在）
+          // 如果此 token 為僅括號輸入，則優先從符合 dishKeyword 的候選中選擇名稱為 "辣"（如果存在）
           if (isRemarkOnly) {
             let candidates = menu.filter(item => item.keywords.includes(dishKeyword));
             if (candidates.length > 0) {
@@ -228,10 +226,10 @@
               alert("未找到與 " + dishKeyword + " 相符的餐點！");
               return;
             }
-            // 將備註改為該餐點名稱（即 "辣"）
+            // 將備註改為該餐點名稱
             remark = foundDish.name;
           } else {
-            // 正常情況下，根據 dishKeyword 在菜單中匹配
+            // 正常情況下根據 dishKeyword 匹配
             foundDish = menu.find(item => item.keywords.includes(dishKeyword));
             if (!foundDish) {
               alert("未找到與 " + dishKeyword + " 相符的餐點！");
@@ -244,7 +242,7 @@
       
       if (orderList.length === 0) return;
       
-      // 組合訂單摘要供確認
+      // 組合訂單摘要供使用者確認
       let summary = "";
       orderList.forEach(order => {
         summary += order.dish.name;
