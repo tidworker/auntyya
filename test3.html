@@ -19,11 +19,12 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入訂單內容</h2>
-    <!-- 範例：
-         danbin(la)1  → 主關鍵字 "danbin"，數量 1，
-         括號內 "la" 會查詢出對應餐點「辣」，備註欄輸出 "辣×1"
-         多筆可用 "/" 分隔 -->
-    <input type="text" id="orderInput" placeholder="例如：danbin(la)1/(chonyobin)2">
+    <!-- 輸入範例：
+         danbin3/chonyobin  表示第一筆 token "danbin3" → 主關鍵字 "danbin" 3 份，
+         第二筆 token "chonyobin" → 使用預設份數（3），匹配到相應餐點。
+         另例：2/la 表示先用 "2" 設定預設份數，再 token "la" 解析為免費項目，輸出在備註欄。
+    -->
+    <input type="text" id="orderInput" placeholder="例如：danbin3/chonyobin 或 2/la">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
@@ -65,7 +66,7 @@
     // 全域變數：資料庫（database.txt）與菜單（menu.txt）
     let charMapping = {};
     let groupMapping = {};
-    // 內建測試用菜單資料（若能正確讀取 menu.txt 則會覆蓋此資料）
+    // 內建測試用菜單資料，若能讀取 menu.txt 則會覆蓋此預設值
     let menu = [
       {
         "keywords": ["chonyobin", "bujiadan", "bujia"],
@@ -128,7 +129,7 @@
     }
     loadMenu();
 
-    // 轉譯函式：根據 charMapping 將中文字轉換為對應字母，若無對應則保留原字元
+    // 轉譯函式：根據 charMapping 將中文字轉換為對應字母；若無對應則保留原字元
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -154,12 +155,10 @@
     }
 
     // 點餐解析函式：
-    // 依照簡單邏輯，將一個數字與一個餐點視為一組。
-    // 如果 token 符合格式 "^(\[^)]+\)(\\d+)?$"（例如 "(la)1"），則直接取括號內內容作為關鍵字，
-    // 並以後面的數字作為份數，備註輸出該查詢到的餐點名稱加上 "×份數"（備註欄不顯示價格）。
-    // 如果 token 符合格式 "^([a-zA-Z]+)\([^)]+)\(\\d+)?$"（例如 "danbin(la)1"），則主關鍵字用於匹配訂單，
-    // 括號內的文字作為備註查詢；備註輸出為查詢到的餐點名稱加上 "×份數"。
-    // 其他 token 依純數字更新預設份數，或解析關鍵字與附帶數字。
+    // 將使用者輸入經轉譯後，以 "/" 替換成空白，分割成 token。
+    // 每個 token若為純數字，更新預設份數；若 token 為字母或字母＋數字（格式：^[a-zA-Z]+(\d+)?$），
+    // 解析出關鍵字及數量（若無則使用預設份數或默認 1）。
+    // 另外，若匹配到的餐點金額為 0，則將該餐點自動輸出在備註欄（備註欄顯示 "餐點名稱×份數"），且不顯示價錢。
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -167,11 +166,11 @@
         return;
       }
       
-      // 轉譯：使用 charMapping 將使用者輸入轉換（假設使用者可能輸入中文或英文）
+      // 先進行轉譯，並顯示轉譯後的結果
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
       
-      // 將 "/" 替換成空白，再以空白分割 token
+      // 將 "/" 替換為空白，再以空白分割 token
       let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
       if (tokens.length === 0) {
         alert("未能解析出任何訂單內容！");
@@ -182,47 +181,13 @@
       let defaultQuantity = null;
       
       tokens.forEach(token => {
-        // 先檢查是否符合完全括號格式，例如 "(la)1"
-        let fullParenMatch = token.match(/^([^]+)(\d+)?$/);
-        if (fullParenMatch) {
-          let keyword = fullParenMatch[1];  
-          let quantity = fullParenMatch[2] ? parseInt(fullParenMatch[2]) : 1;
-          let foundDish = menu.find(item => item.keywords.includes(keyword));
-          if (!foundDish) {
-            alert("未找到與 " + keyword + " 相符的餐點！");
-            return;
-          }
-          let remark = foundDish.name + "×" + quantity;
-          orderList.push({ dish: foundDish, quantity: quantity, remark: remark });
-          return;
-        }
-        
-        // 再檢查是否符合混合格式，例如 "danbin(la)1"
-        let mixedMatch = token.match(/^([a-zA-Z]+)([^)]+)(\d+)?$/);
-        if (mixedMatch) {
-          let mainKeyword = mixedMatch[1];
-          let remarkKeyword = mixedMatch[2];
-          let quantity = mixedMatch[3] ? parseInt(mixedMatch[3]) : 1;
-          let foundDish = menu.find(item => item.keywords.includes(mainKeyword));
-          if (!foundDish) {
-            alert("未找到與 " + mainKeyword + " 相符的餐點！");
-            return;
-          }
-          // 依據括號內文字 remarkKeyword，從候選中優先選擇名稱為 "辣" 的餐點（若有），否則取第一個候選
-          let remarkCandidates = menu.filter(item => item.keywords.includes(remarkKeyword));
-          let remarkDish = remarkCandidates.find(item => item.name === "辣") || remarkCandidates[0];
-          let remark = remarkDish ? remarkDish.name + "×" + quantity : remarkKeyword + "×" + quantity;
-          orderList.push({ dish: foundDish, quantity: quantity, remark: remark });
-          return;
-        }
-        
         // 如果 token 為純數字，則更新預設份數
         if (/^\d+$/.test(token)) {
           defaultQuantity = parseInt(token);
           return;
         }
         
-        // 否則，token 應為字母或字母＋數字，例如 "danbin3"
+        // token 應為英文字母或英文字母＋數字，例如 "danbin3"
         let m = token.match(/^([a-zA-Z]+)(\d+)?$/);
         if (!m) {
           alert("訂單格式錯誤：" + token);
@@ -230,14 +195,20 @@
         }
         let dishKeyword = m[1];
         let attachedQuantity = m[2] ? parseInt(m[2]) : null;
-        let quantity = (defaultQuantity !== null) ? defaultQuantity : (attachedQuantity !== null ? attachedQuantity : 1);
-        defaultQuantity = attachedQuantity;
+        let quantity = defaultQuantity !== null ? defaultQuantity : (attachedQuantity !== null ? attachedQuantity : 1);
+        defaultQuantity = attachedQuantity; // 更新預設份數
+        
         let foundDish = menu.find(item => item.keywords.includes(dishKeyword));
         if (!foundDish) {
           alert("未找到與 " + dishKeyword + " 相符的餐點！");
           return;
         }
-        orderList.push({ dish: foundDish, quantity: quantity, remark: "" });
+        // 如果該餐點金額為 0，則備註自動設定為 "餐點名稱×份數"，且後續在顯示時不顯示價格
+        let remark = "";
+        if (foundDish.price === 0) {
+          remark = foundDish.name + "×" + quantity;
+        }
+        orderList.push({ dish: foundDish, quantity: quantity, remark: remark });
       });
       
       if (orderList.length === 0) return;
@@ -245,11 +216,16 @@
       // 組合訂單摘要供確認
       let summary = "";
       orderList.forEach(order => {
-        summary += order.dish.name;
-        if (order.remark) {
-          summary += " (" + order.remark + ")";
+        // 如果該餐點免費，備註在摘要中顯示在備註欄，不顯示價格
+        if (order.dish.price === 0) {
+          summary += "(" + order.remark + ") " + order.quantity + " 份\n";
+        } else {
+          summary += order.dish.name;
+          if (order.remark) {
+            summary += " (" + order.remark + ")";
+          }
+          summary += " " + order.quantity + " 份, 單價：" + order.dish.price + " 元\n";
         }
-        summary += " " + order.quantity + " 份, 單價：" + order.dish.price + " 元\n";
       });
       
       if (confirm("您點的是：\n" + summary + "\n確定要下單嗎？")) {
@@ -260,15 +236,24 @@
       }
     }
 
-    // 將訂單項目加入訂單明細表格（含備註欄）
+    // 將訂單項目加入訂單明細表格（免費項目不顯示價錢）
     function addOrderRow(dish, quantity, remark) {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
-      row.insertCell().innerText = dish.name;
-      row.insertCell().innerText = quantity;
-      row.insertCell().innerText = remark;
-      row.insertCell().innerText = dish.price;
-      row.insertCell().innerText = dish.price * quantity;
+      // 如果該餐點免費，則主欄位留空，備註欄顯示備註內容；否則正常顯示
+      if (dish.price === 0) {
+        row.insertCell().innerText = "";  // 菜品名稱留空
+        row.insertCell().innerText = quantity;
+        row.insertCell().innerText = remark;
+        row.insertCell().innerText = "";
+        row.insertCell().innerText = "";
+      } else {
+        row.insertCell().innerText = dish.name;
+        row.insertCell().innerText = quantity;
+        row.insertCell().innerText = remark;
+        row.insertCell().innerText = dish.price;
+        row.insertCell().innerText = dish.price * quantity;
+      }
     }
 
     // 重置點餐畫面
