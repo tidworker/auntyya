@@ -19,8 +19,8 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入中文菜品名稱</h2>
-    <!-- 輸入範例： 蔥油餅2) 辣味3)# -->
-    <input type="text" id="orderInput" placeholder="例如：蔥油餅三份兩份辣">
+    <!-- 輸入範例： danbin3/  表示關鍵字為 "danbin"，份數為 3；若有多筆訂單，可以 "/" 分隔 -->
+    <input type="text" id="orderInput" placeholder="例如：danbin3/">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
@@ -56,6 +56,9 @@
     <h2>系統狀態</h2>
     <p id="dbStatus">尚未載入字庫資料...</p>
     <p id="menuStatus">尚未載入菜單資料...</p>
+    <!-- 上傳菜單資料庫按鈕 -->
+    <button onclick="document.getElementById('uploadMenuFile').click()">上傳菜單資料庫</button>
+    <input type="file" id="uploadMenuFile" accept=".txt" style="display:none;" onchange="uploadMenuData()">
   </section>
 
   <script>
@@ -108,7 +111,29 @@
     }
     loadMenu();
 
-    // 僅轉譯資料庫中有映射的中文字，未映射的字不顯示
+    // 上傳菜單資料庫，格式需為 JSON（與 menu.txt 格式相同）
+    function uploadMenuData() {
+      const fileInput = document.getElementById("uploadMenuFile");
+      if (fileInput.files.length === 0) return;
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data && typeof data === 'object') {
+            menu = data;
+            document.getElementById("menuStatus").innerText = "菜單資料上傳成功！";
+          } else {
+            alert("上傳的菜單資料格式不正確！");
+          }
+        } catch (err) {
+          alert("上傳失敗：" + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // 轉譯菜品名稱：僅轉譯資料庫中有映射的中文字，未映射的字不顯示
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -138,9 +163,7 @@
     }
 
     // 修改後的點餐解析函式：
-    // 1. 先轉譯輸入（包含數字符號），再過濾掉不必要符號保留字母作查詢
-    // 2. 先嘗試精確匹配資料庫菜單；若無則進行模糊匹配
-    // 3. 使用 confirm() 提示使用者確認後下單
+    // 支援多筆訂單以 "/" 分隔，每筆訂單格式：<英文字母部分>[數字部分]
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -148,63 +171,65 @@
         return;
       }
       
-      // 取得轉譯後完整內容（包含數字、符號）
+      // 取得轉譯後的完整內容（可能包含數字、符號及 "/" 分隔）
       let translated = translateDishName(inputText);
-      
-      // 過濾掉數字、括號與 '#'，僅保留字母作為查詢依據
-      let dishKey = translated.replace(/[0-9（）()#]/g, '').trim();
-      if (!dishKey) {
-        alert("未能解析出菜品名稱！");
-        return;
-      }
-      
-      // 顯示原始轉譯結果供參考
       document.getElementById("convertedText").innerText = "轉譯結果：" + translated;
       
-      // 嘗試精確匹配：直接查詢菜單資料
-      let foundDish = menu[dishKey];
-      
-      // 若精確匹配失敗，進行簡單的模糊匹配
-      if (!foundDish) {
-        let bestMatchKey = null;
-        let bestScore = 0;
-        for (let key in menu) {
-          let score = letterMatchScore(dishKey, key);
-          if (score > bestScore) {
-            bestScore = score;
-            bestMatchKey = key;
-          }
-        }
-        // 當最佳匹配得分達到輸入字串長度一半以上時，認為匹配成立
-        if (bestScore >= dishKey.length / 2) {
-          foundDish = menu[bestMatchKey];
-        }
-      }
-      
-      if (!foundDish) {
-        alert("未找到相似菜品！");
+      // 將轉譯結果以 "/" 分割，忽略空字串
+      let orderSegments = translated.split("/").filter(seg => seg.trim() !== "");
+      if (orderSegments.length === 0) {
+        alert("未能解析出任何訂單內容！");
         return;
       }
       
-      // 解析訂單份數與客製數量（原邏輯維持）
-      let quantity = 1;
-      let customRemark = "";
-      const customMatch = translated.match(/(\d+)(?=[）\)]#)/);
-      if (customMatch) {
-        customRemark = customMatch[1];
-      }
-      const quantityMatch = translated.match(/(\d+)(?=[）\)](?!#))/);
-      if (quantityMatch) {
-        quantity = parseInt(quantityMatch[1]);
-      }
-      let remark = extractChinese(translated);
-      if (customRemark) {
-        remark += "×" + customRemark;
+      let orderList = [];
+      for (let segment of orderSegments) {
+        // 解析格式：由英文字母組成的關鍵字，後面跟數字（可選）
+        let match = segment.match(/^([a-zA-Z]+)(\d*)$/);
+        if (!match) {
+          alert("訂單片段格式不正確：" + segment);
+          continue;
+        }
+        let dishKey = match[1];
+        let quantity = match[2] ? parseInt(match[2]) : 1;
+        
+        // 嘗試精確匹配資料庫
+        let foundDish = menu[dishKey];
+        // 若精確匹配失敗，進行簡單模糊匹配
+        if (!foundDish) {
+          let bestMatchKey = null;
+          let bestScore = 0;
+          for (let key in menu) {
+            let score = letterMatchScore(dishKey, key);
+            if (score > bestScore) {
+              bestScore = score;
+              bestMatchKey = key;
+            }
+          }
+          if (bestScore >= dishKey.length / 2) {
+            foundDish = menu[bestMatchKey];
+          }
+        }
+        
+        if (!foundDish) {
+          alert("未找到與 " + dishKey + " 相符的餐點！");
+          continue;
+        }
+        orderList.push({ dish: foundDish, quantity: quantity });
       }
       
-      // 使用 confirm() 提示使用者確認點餐內容
-      if (confirm("您點的是 " + foundDish.name + "，金額為 " + foundDish.price + " 元。\n確定要下單嗎？")) {
-        addOrderRow(foundDish, quantity, remark);
+      if (orderList.length === 0) return;
+      
+      // 建立訂單摘要
+      let summary = "";
+      orderList.forEach(order => {
+        summary += order.dish.name + " " + order.quantity + " 份, 金額：" + order.dish.price + " 元\n";
+      });
+      
+      if (confirm("您點的是：\n" + summary + "\n確定要下單嗎？")) {
+        orderList.forEach(order => {
+          addOrderRow(order.dish, order.quantity, "");
+        });
         document.getElementById("orderInput").value = "";
       }
     }
