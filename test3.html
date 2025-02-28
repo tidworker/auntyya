@@ -19,14 +19,17 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入訂單內容</h2>
-    <!-- 輸入例如：2/(la) 或 danbin3/chonyobin -->
+    <!-- 範例：
+         2/(la) 表示第一個 token "2"（預設份數為2），第二個 token "(la)"則表示該訂單的關鍵字來自括號，
+         匹配到內建菜單中 keywords 為 "la" 的餐點（其 name 為 "辣"），並在備註欄輸出 "辣" 。
+         其他情形例如 "danbin3/chonyobin" 則依原邏輯解析。 -->
     <input type="text" id="orderInput" placeholder="例如：2/(la) 或 danbin3/chonyobin">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
   </section>
 
-  <!-- 顯示轉譯後的結果（辨識用） -->
+  <!-- 轉譯後文字（僅供參考） -->
   <section>
     <h2>轉譯後文字</h2>
     <p id="convertedText">尚未轉譯</p>
@@ -46,6 +49,7 @@
         </tr>
       </thead>
       <tbody>
+        <!-- 訂單項目會動態加入 -->
       </tbody>
     </table>
   </section>
@@ -60,8 +64,8 @@
   <script>
     // 全域變數：資料庫 (database.txt) 與菜單 (menu.txt)
     let charMapping = {};
-    let groupMapping = {}; // 如有群組資料也讀入
-    // 內建測試用菜單資料（若讀取 menu.txt 成功會覆蓋此資料）
+    let groupMapping = {}; // 若有群組資料也讀入
+    // 內建測試用菜單資料，若能讀取 menu.txt 則會覆蓋此資料
     let menu = [
       {
         "keywords": ["chonyobin", "bujiadan", "bujia"],
@@ -69,13 +73,18 @@
         "price": 20
       },
       {
-        "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"],
+        "keywords": ["chonyobinjiadan", "danbin", "jiadan"],
         "name": "蔥油餅加蛋",
         "price": 30
+      },
+      {
+        "keywords": ["la"],
+        "name": "辣",
+        "price": 0
       }
     ];
 
-    // 讀取 database.txt，格式必須包含 charMapping（groupMapping 可選）
+    // 讀取 database.txt（必須包含 charMapping；如有 groupMapping 亦讀入）
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -119,7 +128,7 @@
     }
     loadMenu();
 
-    // 轉譯函式：根據 charMapping 將中文字轉換成對應字母（這裡假設使用者輸入為中文）
+    // 轉譯函式：根據 charMapping 將中文字轉換為對應字母
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -131,11 +140,22 @@
       return converted;
     }
 
-    // 簡單解析邏輯：  
-    // 1. 將輸入經轉譯後（轉譯結果會顯示），再將 "/" 替換成空白後以空白分割 token  
-    // 2. 每個 token 若為純數字，則更新預設份數；若為字母或字母＋數字，則解析出英文字母部分與附帶數字  
-    // 3. 若 token 包含括號，則括號內內容視為備註；如果去除括號後 token 為空，則用括號內內容作為查詢關鍵字  
-    // 4. 根據 token 中的字母部分，依 menu 中的 keywords 陣列進行匹配，建立訂單  
+    // 輔助函式：計算兩個字串的字母匹配得分（簡單匹配）
+    function letterMatchScore(input, target) {
+      let score = 0;
+      for (let char of input) {
+        if (target.indexOf(char) !== -1) {
+          score++;
+        }
+      }
+      return score;
+    }
+
+    // 點餐解析函式：
+    // 以簡單邏輯將一個數字和一個餐點視為一組
+    // 如果 token 中含有括號，則括號內內容作為備註
+    // 當 token 去除括號後為空時，則以括號內內容作為查詢關鍵字，
+    // 並在備註欄輸出該餐點的名稱（例如 (la) → 辣）。
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -143,11 +163,11 @@
         return;
       }
       
-      // 先將使用者輸入經轉譯 (辨識轉譯後的結果)
+      // 先將使用者輸入經轉譯（使用 database.txt 的 charMapping）
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
       
-      // 將 "/" 替換成空白，再以空白分割成 token
+      // 將 "/" 替換成空白，再以空白分割 token
       let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
       if (tokens.length === 0) {
         alert("未能解析出任何訂單內容！");
@@ -160,23 +180,24 @@
       tokens.forEach(token => {
         let remark = "";
         let tokenWithoutRemark = token;
-        // 檢查 token 是否包含括號，提取括號內文字作為備註
+        let isRemarkOnly = false;
+        // 若 token 包含括號，提取括號內內容作為備註
         let parenMatch = token.match(/(.*?)/);
         if (parenMatch) {
-          remark = parenMatch[1];  // 括號內文字作為備註
+          remark = parenMatch[1];
           tokenWithoutRemark = token.replace(/.*?/, "");
         }
-        
-        // 如果 tokenWithoutRemark 為空且有括號備註，則將備註作為關鍵字
+        // 若去除括號後 token 為空，則使用括號內文字作為查詢關鍵字，並記錄此為僅括號輸入
         if (tokenWithoutRemark === "" && remark !== "") {
           tokenWithoutRemark = remark;
+          isRemarkOnly = true;
         }
         
-        // 如果 tokenWithoutRemark 為純數字，更新預設份數
+        // 若 tokenWithoutRemark 為純數字，則更新預設份數
         if (/^\d+$/.test(tokenWithoutRemark)) {
           defaultQuantity = parseInt(tokenWithoutRemark);
         } else {
-          // tokenWithoutRemark 應為字母或字母＋數字，例如 "danbin3"
+          // tokenWithoutRemark 應為英文字母或英文字母＋數字，如 "danbin3"
           let m = tokenWithoutRemark.match(/^([a-zA-Z]+)(\d+)?$/);
           if (!m) {
             alert("訂單格式錯誤：" + token);
@@ -187,15 +208,19 @@
           let quantity;
           if (defaultQuantity !== null) {
             quantity = defaultQuantity;
-            defaultQuantity = attachedQuantity;  // 更新預設份數為 token 附帶的數字（若有）
+            defaultQuantity = attachedQuantity; // 若 token 同時帶數字，更新預設份數
           } else {
             quantity = attachedQuantity !== null ? attachedQuantity : 1;
           }
-          // 根據 dishKeyword 在菜單中進行匹配（比對 keywords 陣列）
+          // 根據 dishKeyword 在菜單中匹配，使用 keywords 陣列
           let foundDish = menu.find(item => item.keywords.includes(dishKeyword));
           if (!foundDish) {
             alert("未找到與 " + dishKeyword + " 相符的餐點！");
             return;
+          }
+          // 如果此 token 是僅括號輸入（即 token 原本只有括號內內容），則以 foundDish.name 作為備註
+          if (isRemarkOnly) {
+            remark = foundDish.name;
           }
           orderList.push({ dish: foundDish, quantity: quantity, remark: remark });
         }
