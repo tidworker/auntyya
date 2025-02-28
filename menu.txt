@@ -16,5 +16,120 @@
     ],
     "name": "蔥油餅加蛋",
     "price": 30
+  },
+  {
+    "keywords": [
+      "dacharngmiansian",
+      "dacharng",
+      "miansian",
+      "charng"
+    ],
+    "name": "大腸麵線",
+    "price": 50
+  },
+  {
+    "keywords": [
+      "rougengmiansian",
+      "rougeng",
+      "geng"
+    ],
+    "name": "肉羹麵線",
+    "price": 50
+  },
+  {
+    "keywords": [
+      "zonghemiansian",
+      "zonghe"
+    ],
+    "name": "綜合麵線",
+    "price": 50
+  },
+  {
+    "keywords": [
+      "chingmiansian",
+      "ching"
+    ],
+    "name": "清麵線",
+    "price": 40
+  },
+  {
+    "keywords": [
+      "chunmiansian",
+      "chun"
+    ],
+    "name": "純麵線",
+    "price": 40
+  },
+  {
+    "keywords": [
+      "rougengtong",
+      "gengtong"
+    ],
+    "name": "肉羹湯",
+    "price": 35
+  },
+  {
+    "keywords": [
+      "gongwantong",
+      "gongwan"
+    ],
+    "name": "貢丸湯",
+    "price": 35
+  },
+  {
+    "keywords": [
+      "zonghetong"
+    ],
+    "name": "綜合湯",
+    "price": 35
+  },
+  {
+    "keywords": [
+      "dachaomian",
+      "dachao",
+      "chaomian"
+    ],
+    "name": "大炒麵",
+    "price": 40
+  },
+  {
+    "keywords": [
+      "siaochaomian",
+      "siaochao"
+    ],
+    "name": "小炒麵",
+    "price": 30
+  },
+  {
+    "keywords": [
+      "hongcha",
+      "hong"
+    ],
+    "name": "紅茶",
+    "price": 10
+  },
+  {
+    "keywords": [
+      "naicha",
+      "nai"
+    ],
+    "name": "奶茶",
+    "price": 15
+  },
+  {
+    "keywords": [
+      "mijiang",
+      "mi"
+    ],
+    "name": "米漿",
+    "price": 15
+  },
+  {
+    "keywords": [
+      "doujiang",
+      "dou"
+    ],
+    "name": "豆漿",
+    "price": 15
   }
 ]
