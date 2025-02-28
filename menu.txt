@@ -134,7 +134,7 @@
   },
   {
     "keywords": [
-      "(la)"
+      "la"
     ],
     "name": "辣",
     "price": 0
