@@ -19,7 +19,6 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入中文菜品名稱</h2>
-    <!-- 輸入範例： danbin3/  表示關鍵字為 "danbin"，份數為 3；若有多筆訂單，可以 "/" 分隔 -->
     <input type="text" id="orderInput" placeholder="例如：danbin3/">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
@@ -40,13 +39,11 @@
         <tr>
           <th>菜品</th>
           <th>份數</th>
-          <th>備註</th>
           <th>單價</th>
           <th>總價</th>
         </tr>
       </thead>
       <tbody>
-        <!-- 訂單項目將動態加入 -->
       </tbody>
     </table>
   </section>
@@ -54,47 +51,15 @@
   <!-- 系統狀態 -->
   <section>
     <h2>系統狀態</h2>
-    <p id="dbStatus">尚未載入字庫資料...</p>
     <p id="menuStatus">尚未載入菜單資料...</p>
-    <!-- 上傳菜單資料庫按鈕 -->
     <button onclick="document.getElementById('uploadMenuFile').click()">上傳菜單資料庫</button>
     <input type="file" id="uploadMenuFile" accept=".txt" style="display:none;" onchange="uploadMenuData()">
   </section>
 
   <script>
-    // 全域變數：轉譯字庫與菜單
-    let charMapping = {};
-    let groupMapping = {}; // 若新資料庫包含群組對應資料，也一併載入
-    let menu = {};
+    let menu = [];
 
-    // 讀取 database.txt (必須包含 charMapping；若有 groupMapping 也一併載入)
-    function loadTranslationDatabase() {
-      fetch("database.txt")
-        .then(response => {
-          if (!response.ok) throw new Error("無法讀取 database.txt");
-          return response.text();
-        })
-        .then(text => {
-          const db = JSON.parse(text);
-          if (db.charMapping) {
-            charMapping = db.charMapping;
-            if (db.groupMapping) {
-              groupMapping = db.groupMapping;
-              document.getElementById("dbStatus").innerText = "字庫資料及群組資料載入成功！";
-            } else {
-              document.getElementById("dbStatus").innerText = "字庫資料載入成功！（未包含群組資料）";
-            }
-          } else {
-            document.getElementById("dbStatus").innerText = "database.txt 格式不正確！";
-          }
-        })
-        .catch(err => {
-          document.getElementById("dbStatus").innerText = "載入字庫資料失敗：" + err.message;
-        });
-    }
-    loadTranslationDatabase();
-
-    // 讀取菜單資料 (menu.txt，JSON 格式)
+    // 讀取菜單資料 (menu.txt)
     function loadMenu() {
       fetch("menu.txt")
         .then(response => {
@@ -111,7 +76,7 @@
     }
     loadMenu();
 
-    // 上傳菜單資料庫，格式需為 JSON（與 menu.txt 格式相同）
+    // 上傳菜單資料庫
     function uploadMenuData() {
       const fileInput = document.getElementById("uploadMenuFile");
       if (fileInput.files.length === 0) return;
@@ -120,7 +85,7 @@
       reader.onload = function(e) {
         try {
           const data = JSON.parse(e.target.result);
-          if (data && typeof data === 'object') {
+          if (Array.isArray(data)) {
             menu = data;
             document.getElementById("menuStatus").innerText = "菜單資料上傳成功！";
           } else {
@@ -133,145 +98,72 @@
       reader.readAsText(file);
     }
 
-    // 轉譯菜品名稱：僅轉譯資料庫中有映射的中文字，未映射的字不顯示
-    function translateDishName(dishChinese) {
-      let converted = "";
-      for (let i = 0; i < dishChinese.length; i++) {
-        const ch = dishChinese.charAt(i);
-        if (charMapping[ch] !== undefined) {
-          converted += charMapping[ch];
-        }
-      }
-      return converted;
-    }
-
-    // 輔助函式：僅擷取中文字（Unicode 範圍）
-    function extractChinese(text) {
-      const matches = text.match(/[\u4e00-\u9fa5]+/g);
-      return matches ? matches.join('') : "";
-    }
-
-    // 輔助函式：計算兩個字串的字母匹配得分
-    function letterMatchScore(input, target) {
-      let score = 0;
-      for (let char of input) {
-        if (target.indexOf(char) !== -1) {
-          score++;
-        }
-      }
-      return score;
-    }
-
-    // 修改後的點餐解析函式：
-    // 支援多筆訂單以 "/" 分隔，每筆訂單格式：<英文字母部分>[數字部分]
+    // 解析點餐內容
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
         alert("請輸入訂單內容！");
         return;
       }
-      
-      // 取得轉譯後的完整內容（可能包含數字、符號及 "/" 分隔）
-      let translated = translateDishName(inputText);
-      document.getElementById("convertedText").innerText = "轉譯結果：" + translated;
-      
-      // 將轉譯結果以 "/" 分割，忽略空字串
-      let orderSegments = translated.split("/").filter(seg => seg.trim() !== "");
+
+      // 以 "/" 分割多筆訂單
+      let orderSegments = inputText.split("/").filter(seg => seg.trim() !== "");
       if (orderSegments.length === 0) {
         alert("未能解析出任何訂單內容！");
         return;
       }
-      
+
       let orderList = [];
       for (let segment of orderSegments) {
-        // 解析格式：由英文字母組成的關鍵字，後面跟數字（可選）
         let match = segment.match(/^([a-zA-Z]+)(\d*)$/);
         if (!match) {
-          alert("訂單片段格式不正確：" + segment);
+          alert("訂單格式錯誤：" + segment);
           continue;
         }
-        let dishKey = match[1];
-        let quantity = match[2] ? parseInt(match[2]) : 1;
-        
-        // 嘗試精確匹配資料庫
-        let foundDish = menu[dishKey];
-        // 若精確匹配失敗，進行簡單模糊匹配
+        let keyword = match[1];  // 關鍵字
+        let quantity = match[2] ? parseInt(match[2]) : 1; // 預設 1 份
+
+        // 在菜單中尋找匹配的關鍵字
+        let foundDish = menu.find(item => item.keywords.includes(keyword));
+
         if (!foundDish) {
-          let bestMatchKey = null;
-          let bestScore = 0;
-          for (let key in menu) {
-            let score = letterMatchScore(dishKey, key);
-            if (score > bestScore) {
-              bestScore = score;
-              bestMatchKey = key;
-            }
-          }
-          if (bestScore >= dishKey.length / 2) {
-            foundDish = menu[bestMatchKey];
-          }
-        }
-        
-        if (!foundDish) {
-          alert("未找到與 " + dishKey + " 相符的餐點！");
+          alert("未找到與 " + keyword + " 相符的餐點！");
           continue;
         }
         orderList.push({ dish: foundDish, quantity: quantity });
       }
-      
+
       if (orderList.length === 0) return;
-      
-      // 建立訂單摘要
+
+      // 顯示訂單摘要並確認
       let summary = "";
       orderList.forEach(order => {
-        summary += order.dish.name + " " + order.quantity + " 份, 金額：" + order.dish.price + " 元\n";
+        summary += order.dish.name + " " + order.quantity + " 份, 單價：" + order.dish.price + " 元\n";
       });
-      
+
       if (confirm("您點的是：\n" + summary + "\n確定要下單嗎？")) {
         orderList.forEach(order => {
-          addOrderRow(order.dish, order.quantity, "");
+          addOrderRow(order.dish, order.quantity);
         });
         document.getElementById("orderInput").value = "";
       }
     }
 
     // 將訂單列加入訂單表格中
-    function addOrderRow(dish, quantity, remark) {
+    function addOrderRow(dish, quantity) {
       const tableBody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tableBody.insertRow();
       row.insertCell().innerText = dish.name;
       row.insertCell().innerText = quantity;
-      row.insertCell().innerText = remark;
       row.insertCell().innerText = dish.price;
       row.insertCell().innerText = dish.price * quantity;
     }
 
-    // 重置點餐：清空訂單表格與轉譯結果顯示
+    // 重置點餐
     function resetOrder() {
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("convertedText").innerText = "尚未轉譯";
       document.getElementById("orderInput").value = "";
-    }
-
-    // 語音輸入功能：使用 Web Speech API
-    function startVoiceInput() {
-      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        alert("您的瀏覽器不支援語音輸入功能。");
-        return;
-      }
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'zh-TW';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-      recognition.start();
-      recognition.onresult = function(event) {
-        const transcript = event.results[0][0].transcript;
-        document.getElementById("orderInput").value = transcript;
-        orderFromChinese();
-      };
-      recognition.onerror = function(event) {
-        alert("語音輸入發生錯誤：" + event.error);
-      };
     }
   </script>
 </body>
