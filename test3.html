@@ -129,21 +129,21 @@
     }
     loadMenu();
     
-    // 轉譯函式：依據 charMapping 將中文字轉換為對應字母，若無對應則保留原字元
+    // 轉譯函式：依據 charMapping 將中文字轉換為對應字母
+    // 若字元不在轉譯字庫中，則自動略過（不加入轉譯結果）
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
         const ch = dishChinese.charAt(i);
         if (charMapping[ch] !== undefined) {
           converted += charMapping[ch];
-        } else {
-          converted += ch;
         }
+        // 若不在字庫中則略過
       }
       return converted;
     }
     
-    // 解析訂單，支援多輪點餐：每輪最多兩個餐點
+    // 解析訂單，支援多輪點餐：每輪最多包含 2 個餐點
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -181,7 +181,7 @@
             currentRound.defaultQuantity = parseInt(m[2]);
           }
           currentRound.dishOrders.push({ keyword: m[1], quantity: qty });
-          // 當本輪餐點數達 2 筆時，自動換行（分成一輪訂單）
+          // 當本輪餐點數達 2 筆時，自動換行分成一輪訂單
           if (currentRound.dishOrders.length === 2) {
             rounds.push(currentRound);
             currentRound = { dishOrders: [], defaultQuantity: null };
