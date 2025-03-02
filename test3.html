@@ -130,7 +130,7 @@
     loadMenu();
     
     // 轉譯函式：依據 charMapping 將中文字轉換為對應字母
-    // 若字元不在轉譯字庫中，則自動略過（不加入轉譯結果）
+    // 若字元不在字庫中則自動略過（不加入轉譯結果）
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -138,7 +138,6 @@
         if (charMapping[ch] !== undefined) {
           converted += charMapping[ch];
         }
-        // 若不在字庫中則略過
       }
       return converted;
     }
@@ -208,11 +207,20 @@
             alert("未找到與 " + order.keyword + " 相符的餐點！");
             return;
           }
-          // 處理免費餐點：若前一筆訂單非免費則附加備註，否則獨立顯示（份數欄留空）
           if (foundDish.price === 0) {
-            if (orderList.length > 0 && orderList[orderList.length - 1].dish.price !== 0) {
-              let prevRemark = orderList[orderList.length - 1].remark;
-              orderList[orderList.length - 1].remark = prevRemark 
+            // 處理免費商品：
+            // 從目前該輪訂單中，從最後一筆向前查找最近一筆非免費的訂單項目，
+            // 若找到，將免費商品資訊附加到其備註欄；若找不到，則獨立新增一筆免費項目（份數欄留空）
+            let targetIndex = -1;
+            for (let i = orderList.length - 1; i >= 0; i--) {
+              if (orderList[i].dish.price !== 0) {
+                targetIndex = i;
+                break;
+              }
+            }
+            if (targetIndex !== -1) {
+              let prevRemark = orderList[targetIndex].remark;
+              orderList[targetIndex].remark = prevRemark 
                 ? (prevRemark + ", " + foundDish.name + "×" + order.quantity)
                 : (foundDish.name + "×" + order.quantity);
             } else {
@@ -245,7 +253,7 @@
     }
     
     // 將訂單項目加入訂單明細表格
-    // 若餐點為免費，菜品及份數欄留空，備註顯示免費餐點資訊
+    // 若餐點為免費，則菜品及份數欄留空，備註顯示免費商品資訊
     function addOrderRow(dish, quantity, remark) {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
