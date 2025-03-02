@@ -20,9 +20,10 @@
   <section>
     <h2>請輸入訂單內容</h2>
     <!-- 輸入範例：
-         danbin3/chonyobin        → 蔥油餅加蛋 3 份、蔥油餅預設份數
-         2/danbin3/chonyobin/3/la  → 預設份數更新為2，第一筆 "danbin3"；接著預設份數更新為3，再遇到免費餐點 "la"，
-                                    免費餐點將附加到上一筆非免費訂單的備註欄（若有）
+         danbin3/chonyobin        → 第一筆 "danbin3"：若前值為 null則採用附帶數字 3，並更新 defaultQuantity 為 3；  
+                                     第二筆 "chonyobin" 沒有附數字，故使用 defaultQuantity 3  
+         2/la                    → 第一筆 "2" 設定 defaultQuantity 為 2；  
+                                     第二筆 "la" 沒有附數字，故採用 defaultQuantity（2），若免費商品則附加到上一筆
     -->
     <input type="text" id="orderInput" placeholder="例如：danbin3/chonyobin 或 2/danbin3/chonyobin/3/la">
     <button onclick="orderFromChinese()">送出訂單</button>
@@ -73,7 +74,7 @@
       { "keywords": ["la"], "name": "辣", "price": 0 }
     ];
     
-    // 載入 database.txt（必須包含 charMapping，如有 groupMapping 亦讀入）
+    // 載入 database.txt（必須包含 charMapping；如有 groupMapping 亦讀入）
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -130,7 +131,7 @@
       return converted;
     }
     
-    // 解析訂單：依序處理所有 token，全部結果累積在同一組訂單中
+    // 解析訂單：所有 token 累積在同一組訂單中
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -142,25 +143,29 @@
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
     
-      // 以 "/" 與空白作為分隔，拆解成 tokens
+      // 以 "/" 與空白作為分隔符拆解 token
       let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
     
-      // 解析 token：若為數字則更新預設份數；若為餐點 token，則儲存解析結果
+      // 使用原本的數量匹配模式：
+      // 若 token 為純數字則更新 defaultQuantity，
+      // 否則將數量設定為 (defaultQuantity ≠ null ? defaultQuantity : (附帶數字 ≠ null ? 附帶數字 : 1))，
+      // 並將 defaultQuantity 更新為附帶數字（若有）。
       let dishOrders = [];
       let defaultQuantity = null;
       tokens.forEach(token => {
         if (/^\d+$/.test(token)) {
           defaultQuantity = parseInt(token);
-        } else {
-          let m = token.match(/^([a-zA-Z]+)(\d+)?$/);
-          if (!m) {
-            alert("訂單格式錯誤：" + token);
-            return;
-          }
-          let qty = m[2] ? parseInt(m[2]) : (defaultQuantity !== null ? defaultQuantity : 1);
-          if (m[2]) defaultQuantity = parseInt(m[2]);
-          dishOrders.push({ keyword: m[1], quantity: qty });
+          return;
         }
+        let m = token.match(/^([a-zA-Z]+)(\d+)?$/);
+        if (!m) {
+          alert("訂單格式錯誤：" + token);
+          return;
+        }
+        let attachedQuantity = m[2] ? parseInt(m[2]) : null;
+        let quantity = (defaultQuantity !== null) ? defaultQuantity : (attachedQuantity !== null ? attachedQuantity : 1);
+        defaultQuantity = attachedQuantity;
+        dishOrders.push({ keyword: m[1], quantity: quantity });
       });
     
       if (dishOrders.length === 0) {
@@ -168,8 +173,7 @@
         return;
       }
     
-      // 依序處理 dishOrders，建立最終訂單列表（orderList）
-      // 非免費餐點將獨立產生一筆訂單；免費餐點將附加到最近的非免費訂單備註欄中
+      // 建立最終訂單列表：非免費商品獨立產生一筆；免費商品則附加到上一筆非免費訂單的備註欄中
       let orderList = [];
       dishOrders.forEach(order => {
         let foundDish = menu.find(item => item.keywords.includes(order.keyword));
@@ -178,7 +182,7 @@
           return;
         }
         if (foundDish.price === 0) {
-          // 若免費餐點，向上尋找最近的非免費訂單
+          // 免費商品：向上尋找最近的非免費訂單進行附加
           let attached = false;
           for (let i = orderList.length - 1; i >= 0; i--) {
             if (orderList[i].dish.price !== 0) {
@@ -192,11 +196,9 @@
             }
           }
           if (!attached) {
-            // 若沒有找到可附加的訂單，則顯示警告並略過該免費餐點
             alert("免費商品 " + foundDish.name + " 無法匹配至上一筆非免費訂單，已略過。");
           }
         } else {
-          // 非免費餐點，新增一筆訂單
           orderList.push({ dish: foundDish, quantity: order.quantity, remark: "" });
         }
       });
@@ -206,7 +208,7 @@
         return;
       }
     
-      // 組合訂單摘要，供確認下單
+      // 組合訂單摘要供確認下單
       let summary = "";
       orderList.forEach(order => {
         summary += order.dish.name + " " + order.quantity + " 份, 單價：" + order.dish.price + " 元";
