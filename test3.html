@@ -20,10 +20,12 @@
   <section>
     <h2>請輸入訂單內容</h2>
     <!-- 輸入範例：
-         danbin3/chonyobin        → 第一筆 "danbin3"：若前值為 null則採用附帶數字 3，並更新 defaultQuantity 為 3；  
-                                     第二筆 "chonyobin" 沒有附數字，故使用 defaultQuantity 3  
-         2/la                    → 第一筆 "2" 設定 defaultQuantity 為 2；  
-                                     第二筆 "la" 沒有附數字，故採用 defaultQuantity（2），若免費商品則附加到上一筆
+         danbin3/chonyobin        → 第一筆 "danbin3"：若 defaultQuantity 為 null 則採用附帶數字 3，並更新 defaultQuantity 為 3；
+                                     第二筆 "chonyobin" 沒有附數字，故使用 defaultQuantity（即 3）
+         2/danbin3/chonyobin/3/la  → 第一筆 "2" 設定 defaultQuantity 為 2；
+                                     第二筆 "danbin3" 以 2 份，下單後若 token 附帶數字則更新 defaultQuantity；
+                                     接著 "chonyobin" 使用最新 defaultQuantity；
+                                     最後 "la" 為免費商品，將依序優先向上匹配，若上方無符合則向下匹配
     -->
     <input type="text" id="orderInput" placeholder="例如：danbin3/chonyobin 或 2/danbin3/chonyobin/3/la">
     <button onclick="orderFromChinese()">送出訂單</button>
@@ -131,7 +133,9 @@
       return converted;
     }
     
-    // 解析訂單：所有 token 累積在同一組訂單中
+    // 解析訂單：依序處理所有 token，保留原本的數量匹配模式，
+    // 同時在處理免費（0元）商品時，先向上尋找最近的非免費訂單，
+    // 若上方無符合則向下尋找，匹配成功後免費商品資訊直接附加到該筆訂單備註中。
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -146,10 +150,10 @@
       // 以 "/" 與空白作為分隔符拆解 token
       let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
     
-      // 使用原本的數量匹配模式：
+      // 原本數量匹配模式：
       // 若 token 為純數字則更新 defaultQuantity，
-      // 否則將數量設定為 (defaultQuantity ≠ null ? defaultQuantity : (附帶數字 ≠ null ? 附帶數字 : 1))，
-      // 並將 defaultQuantity 更新為附帶數字（若有）。
+      // 否則數量為 (defaultQuantity !== null ? defaultQuantity : (附帶數字 !== null ? 附帶數字 : 1))，
+      // 並更新 defaultQuantity 為 token 附帶的數字（若有）。
       let dishOrders = [];
       let defaultQuantity = null;
       tokens.forEach(token => {
@@ -173,33 +177,64 @@
         return;
       }
     
-      // 建立最終訂單列表：非免費商品獨立產生一筆；免費商品則附加到上一筆非免費訂單的備註欄中
-      let orderList = [];
+      // 第一階段：依序將 dishOrders 轉換成包含 foundDish、freeAttachments 等屬性的 processed 陣列
+      let processed = [];
       dishOrders.forEach(order => {
         let foundDish = menu.find(item => item.keywords.includes(order.keyword));
         if (!foundDish) {
           alert("未找到與 " + order.keyword + " 相符的餐點！");
           return;
         }
-        if (foundDish.price === 0) {
-          // 免費商品：向上尋找最近的非免費訂單進行附加
+        processed.push({
+          keyword: order.keyword,
+          quantity: order.quantity,
+          foundDish: foundDish,
+          freeAttachments: [], // 用於儲存後續匹配到的免費商品資訊
+          skip: false // 標記是否跳過獨立新增（例如免費商品附加後即略過獨立列出）
+        });
+      });
+    
+      // 第二階段：處理免費（0元）商品匹配
+      // 當遇到免費商品，先嘗試向上尋找最近的非免費商品，
+      // 若上方無符合則向下尋找，匹配成功後該免費商品不獨立列出。
+      for (let i = 0; i < processed.length; i++) {
+        let order = processed[i];
+        if (order.foundDish.price === 0) {
           let attached = false;
-          for (let i = orderList.length - 1; i >= 0; i--) {
-            if (orderList[i].dish.price !== 0) {
-              if (orderList[i].remark) {
-                orderList[i].remark += ", " + foundDish.name + "×" + order.quantity;
-              } else {
-                orderList[i].remark = foundDish.name + "×" + order.quantity;
-              }
+          // 向上尋找
+          for (let j = i - 1; j >= 0; j--) {
+            if (processed[j].foundDish.price !== 0) {
+              processed[j].freeAttachments.push({ name: order.foundDish.name, quantity: order.quantity });
               attached = true;
               break;
             }
           }
+          // 若向上未匹配到，再向下尋找
           if (!attached) {
-            alert("免費商品 " + foundDish.name + " 無法匹配至上一筆非免費訂單，已略過。");
+            for (let j = i + 1; j < processed.length; j++) {
+              if (processed[j].foundDish.price !== 0) {
+                processed[j].freeAttachments.push({ name: order.foundDish.name, quantity: order.quantity });
+                attached = true;
+                break;
+              }
+            }
           }
-        } else {
-          orderList.push({ dish: foundDish, quantity: order.quantity, remark: "" });
+          if (!attached) {
+            alert("免費商品 " + order.foundDish.name + " 無法匹配，已略過。");
+          }
+          order.skip = true; // 標記此免費商品不獨立產生訂單
+        }
+      }
+    
+      // 第三階段：建立最終訂單列表，只將非免費（或未被跳過）的商品加入
+      let orderList = [];
+      processed.forEach(order => {
+        if (!order.skip && order.foundDish.price !== 0) {
+          let remark = "";
+          if (order.freeAttachments.length > 0) {
+            remark = order.freeAttachments.map(item => item.name + "×" + item.quantity).join(", ");
+          }
+          orderList.push({ dish: order.foundDish, quantity: order.quantity, remark: remark });
         }
       });
     
