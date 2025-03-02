@@ -20,17 +20,18 @@
   <section>
     <h2>請輸入訂單內容</h2>
     <!-- 輸入範例：
-         danbin3/chonyobin        → 第一筆 "danbin3"：若 defaultQuantity 為 null 則採用附帶數字 3，並更新 defaultQuantity 為 3；
-                                     第二筆 "chonyobin" 沒有附數字，故使用 defaultQuantity（即 3）
-         2/danbin3/chonyobin/3/la  → 第一筆 "2" 設定 defaultQuantity 為 2；
-                                     第二筆 "danbin3" 以 2 份，下單後若 token 附帶數字則更新 defaultQuantity；
-                                     接著 "chonyobin" 使用最新 defaultQuantity；
-                                     最後 "la" 為免費商品，將依序優先向上匹配，若上方無符合則向下匹配
+         danbin3/chonyobin        → 蔥油餅加蛋 3 份、蔥油餅（採用附帶數字或預設數量）
+         2/danbin3/chonyobin/3/la  → 第一個 token "2" 設定 defaultQuantity 為 2，
+                                    第二筆 "danbin3" 以 2 份，下單後若 token 附帶數字則更新 defaultQuantity，
+                                    接著 "chonyobin" 使用最新 defaultQuantity，
+                                    最後 "la" 為免費商品，將附加到上一筆非免費訂單中
     -->
     <input type="text" id="orderInput" placeholder="例如：danbin3/chonyobin 或 2/danbin3/chonyobin/3/la">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
+    <!-- 新增：語音輸入的中文內容顯示 -->
+    <p id="voiceTranscript">語音輸入內容：無</p>
   </section>
   
   <!-- 轉譯後文字（僅供參考） -->
@@ -133,25 +134,22 @@
       return converted;
     }
     
-    // 解析訂單：依序處理所有 token，保留原本的數量匹配模式，
-    // 同時在處理免費（0元）商品時，先向上尋找最近的非免費訂單，
-    // 若上方無符合則向下尋找，匹配成功後免費商品資訊直接附加到該筆訂單備註中。
+    // 解析訂單：所有 token 累積在同一組訂單中，採用原本數量匹配模式
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
         alert("請輸入訂單內容！");
         return;
       }
-    
+      
       // 轉譯並顯示結果
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
-    
+      
       // 以 "/" 與空白作為分隔符拆解 token
       let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
-    
-      // 原本數量匹配模式：
-      // 若 token 為純數字則更新 defaultQuantity，
+      
+      // 使用原本數量匹配模式：若 token 為數字則更新 defaultQuantity，
       // 否則數量為 (defaultQuantity !== null ? defaultQuantity : (附帶數字 !== null ? 附帶數字 : 1))，
       // 並更新 defaultQuantity 為 token 附帶的數字（若有）。
       let dishOrders = [];
@@ -171,78 +169,55 @@
         defaultQuantity = attachedQuantity;
         dishOrders.push({ keyword: m[1], quantity: quantity });
       });
-    
+      
       if (dishOrders.length === 0) {
         alert("未能解析出任何餐點！");
         return;
       }
-    
-      // 第一階段：依序將 dishOrders 轉換成包含 foundDish、freeAttachments 等屬性的 processed 陣列
-      let processed = [];
+      
+      // 檢查第一筆商品是否為0元
+      let firstDish = menu.find(item => item.keywords.includes(dishOrders[0].keyword));
+      if (firstDish && firstDish.price === 0) {
+        alert("第一個商品不能為0元商品，請重新輸入！");
+        return;
+      }
+      
+      // 建立最終訂單列表：
+      // 非免費商品獨立產生一筆；免費商品附加到上一筆非免費訂單的備註欄中
+      let orderList = [];
       dishOrders.forEach(order => {
         let foundDish = menu.find(item => item.keywords.includes(order.keyword));
         if (!foundDish) {
           alert("未找到與 " + order.keyword + " 相符的餐點！");
           return;
         }
-        processed.push({
-          keyword: order.keyword,
-          quantity: order.quantity,
-          foundDish: foundDish,
-          freeAttachments: [], // 用於儲存後續匹配到的免費商品資訊
-          skip: false // 標記是否跳過獨立新增（例如免費商品附加後即略過獨立列出）
-        });
-      });
-    
-      // 第二階段：處理免費（0元）商品匹配
-      // 當遇到免費商品，先嘗試向上尋找最近的非免費商品，
-      // 若上方無符合則向下尋找，匹配成功後該免費商品不獨立列出。
-      for (let i = 0; i < processed.length; i++) {
-        let order = processed[i];
-        if (order.foundDish.price === 0) {
+        if (foundDish.price === 0) {
+          // 免費商品：向上尋找最近的非免費訂單
           let attached = false;
-          // 向上尋找
-          for (let j = i - 1; j >= 0; j--) {
-            if (processed[j].foundDish.price !== 0) {
-              processed[j].freeAttachments.push({ name: order.foundDish.name, quantity: order.quantity });
+          for (let i = orderList.length - 1; i >= 0; i--) {
+            if (orderList[i].dish.price !== 0) {
+              if (orderList[i].remark) {
+                orderList[i].remark += ", " + foundDish.name + "×" + order.quantity;
+              } else {
+                orderList[i].remark = foundDish.name + "×" + order.quantity;
+              }
               attached = true;
               break;
             }
           }
-          // 若向上未匹配到，再向下尋找
           if (!attached) {
-            for (let j = i + 1; j < processed.length; j++) {
-              if (processed[j].foundDish.price !== 0) {
-                processed[j].freeAttachments.push({ name: order.foundDish.name, quantity: order.quantity });
-                attached = true;
-                break;
-              }
-            }
+            alert("免費商品 " + foundDish.name + " 無法匹配至上一筆非免費訂單，已略過。");
           }
-          if (!attached) {
-            alert("免費商品 " + order.foundDish.name + " 無法匹配，已略過。");
-          }
-          order.skip = true; // 標記此免費商品不獨立產生訂單
-        }
-      }
-    
-      // 第三階段：建立最終訂單列表，只將非免費（或未被跳過）的商品加入
-      let orderList = [];
-      processed.forEach(order => {
-        if (!order.skip && order.foundDish.price !== 0) {
-          let remark = "";
-          if (order.freeAttachments.length > 0) {
-            remark = order.freeAttachments.map(item => item.name + "×" + item.quantity).join(", ");
-          }
-          orderList.push({ dish: order.foundDish, quantity: order.quantity, remark: remark });
+        } else {
+          orderList.push({ dish: foundDish, quantity: order.quantity, remark: "" });
         }
       });
-    
+      
       if (orderList.length === 0) {
         alert("無有效訂單被解析！");
         return;
       }
-    
+      
       // 組合訂單摘要供確認下單
       let summary = "";
       orderList.forEach(order => {
@@ -250,7 +225,7 @@
         if (order.remark) summary += "，備註：" + order.remark;
         summary += "\n";
       });
-    
+      
       if (confirm("您點的是：\n" + summary + "\n確定要下單嗎？")) {
         orderList.forEach(order => {
           addOrderRow(order.dish, order.quantity, order.remark);
@@ -275,6 +250,7 @@
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("convertedText").innerText = "尚未轉譯";
       document.getElementById("orderInput").value = "";
+      document.getElementById("voiceTranscript").innerText = "語音輸入內容：無";
     }
     
     // 語音輸入功能（使用 Web Speech API）
@@ -291,6 +267,8 @@
       recognition.start();
       recognition.onresult = function(event) {
         const transcript = event.results[0][0].transcript;
+        // 顯示語音輸入的中文內容
+        document.getElementById("voiceTranscript").innerText = "語音輸入內容：" + transcript;
         document.getElementById("orderInput").value = transcript;
         orderFromChinese();
       };
