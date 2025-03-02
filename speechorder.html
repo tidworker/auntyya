@@ -5,52 +5,39 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>中文點餐系統</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 10px;
-      padding: 0;
-    }
-    input, button {
-      margin: 5px;
-      padding: 10px;
-      font-size: 16px;
-    }
-    table {
-      border-collapse: collapse;
-      width: 100%;
-      margin-top: 10px;
-    }
-    table, th, td {
-      border: 1px solid #aaa;
-    }
-    th, td {
-      padding: 8px;
-      text-align: center;
-    }
-    @media (max-width: 600px) {
-      input, button { font-size: 18px; }
-    }
+    body { font-family: Arial, sans-serif; margin: 10px; padding: 0; }
+    input, button { margin: 5px; padding: 10px; font-size: 16px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    table, th, td { border: 1px solid #aaa; }
+    th, td { padding: 8px; text-align: center; }
+    @media (max-width: 600px) { input, button { font-size: 18px; } }
   </style>
 </head>
 <body>
   <h1>中文點餐系統</h1>
-
-  <!-- 點餐區：包含語音輸入按鈕 -->
+  
+  <!-- 點餐區 -->
   <section>
-    <h2>請輸入中文菜品名稱</h2>
-    <!-- 輸入舉例： 蔥油餅(2)微辣 -->
-    <input type="text" id="orderInput" placeholder="例如：蔥油餅微辣">
+    <h2>請輸入訂單內容</h2>
+    <!-- 輸入範例：
+         danbin3/chonyobin        → 第一筆 "danbin3"：若前值為 null則採用附帶數字 3，並更新 defaultQuantity 為 3；  
+                                     第二筆 "chonyobin" 沒有附數字，故使用 defaultQuantity 3  
+         2/la                    → 第一筆 "2" 設定 defaultQuantity 為 2；  
+                                     第二筆 "la" 沒有附數字，故採用 defaultQuantity（2），若免費商品則附加到上一筆
+    -->
+    <input type="text" id="orderInput" placeholder="例如：danbin3/chonyobin 或 2/danbin3/chonyobin/3/la">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
+    <button onclick="resetOrder()">重置點餐</button>
   </section>
-
-  <!-- 顯示轉譯後文字 -->
+  
+  <!-- 轉譯後文字（僅供參考） -->
   <section>
     <h2>轉譯後文字</h2>
     <p id="convertedText">尚未轉譯</p>
   </section>
-
-  <!-- 顯示訂單結果以表格 -->
+  
+  <!-- 訂單明細 -->
   <section>
     <h2>訂單明細</h2>
     <table id="orderTable">
@@ -64,24 +51,30 @@
         </tr>
       </thead>
       <tbody>
-        <!-- 訂單項目會動態加入 -->
+        <!-- 訂單項目將動態加入 -->
       </tbody>
     </table>
   </section>
-
-  <!-- 顯示系統載入狀態 -->
+  
+  <!-- 系統狀態 -->
   <section>
     <h2>系統狀態</h2>
     <p id="dbStatus">尚未載入字庫資料...</p>
     <p id="menuStatus">尚未載入菜單資料...</p>
   </section>
-
+  
   <script>
-    // 全域變數：轉譯字庫與菜單
+    // 全域變數：字庫資料與菜單資料
     let charMapping = {};
-    let menu = {};
-
-    // 讀取 database.txt (必須包含 charMapping)
+    let groupMapping = {};
+    // 內建測試用菜單（若能正確讀取 menu.txt 則會覆蓋此資料）
+    let menu = [
+      { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
+      { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
+      { "keywords": ["la"], "name": "辣", "price": 0 }
+    ];
+    
+    // 載入 database.txt（必須包含 charMapping；如有 groupMapping 亦讀入）
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -92,7 +85,12 @@
           const db = JSON.parse(text);
           if (db.charMapping) {
             charMapping = db.charMapping;
-            document.getElementById("dbStatus").innerText = "字庫資料載入成功！";
+            if (db.groupMapping) {
+              groupMapping = db.groupMapping;
+              document.getElementById("dbStatus").innerText = "字庫及群組資料載入成功！";
+            } else {
+              document.getElementById("dbStatus").innerText = "字庫資料載入成功！（未包含群組資料）";
+            }
           } else {
             document.getElementById("dbStatus").innerText = "database.txt 格式不正確！";
           }
@@ -102,8 +100,8 @@
         });
     }
     loadTranslationDatabase();
-
-    // 讀取菜單資料 (menu.txt，JSON 格式)
+    
+    // 載入菜單資料（menu.txt），格式為 JSON 陣列
     function loadMenu() {
       fetch("menu.txt")
         .then(response => {
@@ -119,9 +117,9 @@
         });
     }
     loadMenu();
-
-    // 將中文菜品名稱轉譯成英文關鍵字
-    // 僅對資料庫中有映射的中文字進行轉譯，未在資料庫中的字不顯示
+    
+    // 轉譯函式：依據字庫 (charMapping) 將中文字轉換成對應字母，
+    // 若字元不在字庫中則略過（不加入轉譯結果）
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -132,99 +130,119 @@
       }
       return converted;
     }
-
-    // 輔助函式：僅保留中文字（Unicode 範圍）
-    function extractChinese(text) {
-      const matches = text.match(/[\u4e00-\u9fa5]+/g);
-      return matches ? matches.join('') : "";
-    }
-
-    // 從轉譯結果中解析訂單資訊，所有資訊均從轉譯結果取得
+    
+    // 解析訂單：所有 token 累積在同一組訂單中
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
         alert("請輸入訂單內容！");
         return;
       }
-      
-      // 取得完整轉譯結果（僅顯示有映射的部分）
-      let translated = translateDishName(inputText);
-      
-      // 從轉譯結果中擷取「)」前的數字作為份數，支援半形與全形右括號
-      let quantity = 1;
-      const parenMatch = translated.match(/(\d+)(?=[）\)])/);
-      if (parenMatch) {
-        quantity = parseInt(parenMatch[1]);
-      }
-      
-      // 以整個轉譯結果作為訂單關鍵字
-      const dishKey = translated.trim();
-      if (!dishKey) {
-        alert("未能解析出菜品名稱！");
+    
+      // 轉譯並顯示結果
+      const translatedText = translateDishName(inputText);
+      document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
+    
+      // 以 "/" 與空白作為分隔符拆解 token
+      let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
+    
+      // 使用原本的數量匹配模式：
+      // 若 token 為純數字則更新 defaultQuantity，
+      // 否則將數量設定為 (defaultQuantity ≠ null ? defaultQuantity : (附帶數字 ≠ null ? 附帶數字 : 1))，
+      // 並將 defaultQuantity 更新為附帶數字（若有）。
+      let dishOrders = [];
+      let defaultQuantity = null;
+      tokens.forEach(token => {
+        if (/^\d+$/.test(token)) {
+          defaultQuantity = parseInt(token);
+          return;
+        }
+        let m = token.match(/^([a-zA-Z]+)(\d+)?$/);
+        if (!m) {
+          alert("訂單格式錯誤：" + token);
+          return;
+        }
+        let attachedQuantity = m[2] ? parseInt(m[2]) : null;
+        let quantity = (defaultQuantity !== null) ? defaultQuantity : (attachedQuantity !== null ? attachedQuantity : 1);
+        defaultQuantity = attachedQuantity;
+        dishOrders.push({ keyword: m[1], quantity: quantity });
+      });
+    
+      if (dishOrders.length === 0) {
+        alert("未能解析出任何餐點！");
         return;
       }
-      
-      // 顯示完整轉譯結果（僅有映射的內容，不包含未在資料庫中的文字）
-      document.getElementById("convertedText").innerText = "轉譯結果：" + dishKey;
-      
-      // 從轉譯結果中僅擷取中文作為備註顯示
-      const chineseOnly = extractChinese(dishKey);
-      
-      // 根據轉譯結果匹配菜單：先檢查精確匹配，否則模糊比對
-      let dish = null;
-      if (menu[dishKey]) {
-        dish = menu[dishKey];
-      } else {
-        const bestMatch = findBestMatch(dishKey);
-        if (bestMatch) {
-          dish = menu[bestMatch.key];
+    
+      // 建立最終訂單列表：非免費商品獨立產生一筆；免費商品則附加到上一筆非免費訂單的備註欄中
+      let orderList = [];
+      dishOrders.forEach(order => {
+        let foundDish = menu.find(item => item.keywords.includes(order.keyword));
+        if (!foundDish) {
+          alert("未找到與 " + order.keyword + " 相符的餐點！");
+          return;
         }
-      }
-      if (!dish) {
-        alert("未找到相似菜品！");
+        if (foundDish.price === 0) {
+          // 免費商品：向上尋找最近的非免費訂單進行附加
+          let attached = false;
+          for (let i = orderList.length - 1; i >= 0; i--) {
+            if (orderList[i].dish.price !== 0) {
+              if (orderList[i].remark) {
+                orderList[i].remark += ", " + foundDish.name + "×" + order.quantity;
+              } else {
+                orderList[i].remark = foundDish.name + "×" + order.quantity;
+              }
+              attached = true;
+              break;
+            }
+          }
+          if (!attached) {
+            alert("免費商品 " + foundDish.name + " 無法匹配至上一筆非免費訂單，已略過。");
+          }
+        } else {
+          orderList.push({ dish: foundDish, quantity: order.quantity, remark: "" });
+        }
+      });
+    
+      if (orderList.length === 0) {
+        alert("無有效訂單被解析！");
         return;
       }
-      
-      // 表格中資訊皆從轉譯結果取得，其中備註欄顯示僅包含中文字的內容
-      addOrderRow(dish, quantity, chineseOnly);
-      document.getElementById("orderInput").value = "";
-    }
-
-    // 模糊比對：計算轉譯結果與菜單中每個關鍵字的匹配分數
-    function findBestMatch(input) {
-      let bestKey = null;
-      let bestScore = 0;
-      for (let key in menu) {
-        const score = letterMatchScore(input, key);
-        if (score > bestScore) {
-          bestScore = score;
-          bestKey = key;
-        }
+    
+      // 組合訂單摘要供確認下單
+      let summary = "";
+      orderList.forEach(order => {
+        summary += order.dish.name + " " + order.quantity + " 份, 單價：" + order.dish.price + " 元";
+        if (order.remark) summary += "，備註：" + order.remark;
+        summary += "\n";
+      });
+    
+      if (confirm("您點的是：\n" + summary + "\n確定要下單嗎？")) {
+        orderList.forEach(order => {
+          addOrderRow(order.dish, order.quantity, order.remark);
+        });
+        document.getElementById("orderInput").value = "";
       }
-      return bestKey ? { key: bestKey, similarity: bestScore } : null;
     }
-    function letterMatchScore(input, target) {
-      let score = 0;
-      for (let char of target) {
-        if (input.indexOf(char) >= 0) {
-          score++;
-        }
-      }
-      return score;
-    }
-
-    // 將訂單列加入訂單表格中
+    
+    // 將訂單項目加入訂單明細表格
     function addOrderRow(dish, quantity, remark) {
-      const tableBody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-      const row = tableBody.insertRow();
+      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      const row = tbody.insertRow();
       row.insertCell().innerText = dish.name;
       row.insertCell().innerText = quantity;
       row.insertCell().innerText = remark;
       row.insertCell().innerText = dish.price;
       row.insertCell().innerText = dish.price * quantity;
     }
-
-    // 語音輸入功能：使用 Web Speech API
+    
+    // 重置點餐畫面
+    function resetOrder() {
+      document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
+      document.getElementById("convertedText").innerText = "尚未轉譯";
+      document.getElementById("orderInput").value = "";
+    }
+    
+    // 語音輸入功能（使用 Web Speech API）
     function startVoiceInput() {
       if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
         alert("您的瀏覽器不支援語音輸入功能。");
