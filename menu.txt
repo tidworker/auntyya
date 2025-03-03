@@ -141,14 +141,14 @@
   },
   {
     "keywords": [
-      "/wen"
+      "wen"
     ],
     "name": "溫",
     "price": 0
   },
   {
    "keywords": [
-      "/ben"
+      "ben"
     ],
     "name": "冰",
     "price": 0
