@@ -266,6 +266,8 @@
             <input type="number" id="generalQuantityInput" min="1" value="1">
             <button onclick="changeValue('generalQuantityInput', 1, 'allSpicy')">+</button>
           </div>
+          <!-- 調整按鈕：左側「上一頁」(回到種類選擇)、右側「下一步」 -->
+          <button class="menu-button-sm" onclick="gotoPreviousStep()">上一頁</button>
           <button class="menu-button-sm" onclick="nextStep()">下一步</button>
         </div>
         <div id="drinkTotalBlock" class="hidden">
@@ -275,6 +277,8 @@
             <input type="number" id="drinkTotalInput" min="1" value="1">
             <button onclick="changeValue('drinkTotalInput', 1, 'allIce')">+</button>
           </div>
+          <!-- 同上，左側「上一頁」、右側「下一步」 -->
+          <button class="menu-button-sm" onclick="gotoPreviousStep()">上一頁</button>
           <button class="menu-button-sm" onclick="nextStep()">下一步</button>
         </div>
       </div>
@@ -320,7 +324,7 @@
             <button onclick="changeValue('soupQuantityInput', 1)">+</button>
           </div>
         </div>
-        <!-- 確認點餐按鈕容器 -->
+        <!-- 確認點餐按鈕容器，調整按鈕順序：左側「上一頁」、右側「確認點餐」 -->
         <div id="confirmContainer"></div>
       </div>
     </div>
@@ -396,7 +400,6 @@
     };
 
     // orders 用來儲存目前點餐資料
-    // 若該品項包含荷包蛋，eggCost 會單獨存放（不乘以數量）
     let orders = {};
 
     /* ===================== 2) 多步驟點餐流程 ===================== */
@@ -418,6 +421,7 @@
       currentStepIndex = 0;
       resetInputs();
       document.getElementById("mainModal").style.display = "block";
+      // 初始顯示種類選擇
       document.getElementById("stepSubType").style.display = "block";
       document.getElementById("stepSecond").classList.add("hidden");
       document.getElementById("stepThird").classList.add("hidden");
@@ -485,8 +489,22 @@
     function nextStep() {
       gotoNextStep();
     }
+    function gotoPreviousStep() {
+      if(currentStepIndex > 0) {
+        currentStepIndex--;
+        renderStep();
+      }
+    }
 
     function renderStep() {
+      // 若為第 0 步驟，顯示種類選擇
+      if(currentStepIndex === 0) {
+        document.getElementById("stepSubType").style.display = "block";
+        document.getElementById("stepSecond").classList.add("hidden");
+        document.getElementById("stepThird").classList.add("hidden");
+        return;
+      }
+      // 隱藏所有步驟區塊
       document.getElementById("stepSubType").style.display = "none";
       document.getElementById("stepSecond").classList.add("hidden");
       document.getElementById("stepThird").classList.add("hidden");
@@ -536,7 +554,8 @@
       if(document.getElementById("confirmContainer")) return;
       var confirmContainer = document.createElement("div");
       confirmContainer.id = "confirmContainer";
-      confirmContainer.innerHTML = "<br><button class='menu-button-sm' onclick='confirmOrder()'>確認點餐</button>";
+      // 按鈕：左側「上一頁」、右側「確認點餐」
+      confirmContainer.innerHTML = "<br><button class='menu-button-sm' onclick='gotoPreviousStep()'>上一頁</button> <button class='menu-button-sm' onclick='confirmOrder()'>確認點餐</button>";
       document.getElementById("stepThird").appendChild(confirmContainer);
     }
 
@@ -592,7 +611,6 @@
       }
     }
 
-    // 修改後的 confirmOrder，將 eggCost 變數宣告在 switch 外部，避免重複宣告
     function confirmOrder() {
       let gQ = document.getElementById("generalQuantityInput");
       if(gQ) generalQuantity = parseInt(gQ.value) || 1;
@@ -609,8 +627,8 @@
 
       let finalItemName = "";
       let finalQuantity = 1;
-      let remark = "";  // 備註資訊
-      let eggCost = 0;  // 單獨計算荷包蛋費用，不乘上品項數量
+      let remark = "";
+      let eggCost = 0;
 
       switch(currentCategory) {
         case "蔥油餅":
@@ -654,12 +672,10 @@
       closeModal();
     }
 
-    // 修改後的 addToOrder，新增 eggCost 參數
     function addToOrder(itemName, unitPrice, quantity, eggCost = 0, remark = "") {
       if(!itemName || !unitPrice) return;
       if(orders[itemName]) {
         orders[itemName].quantity += quantity;
-        // 若該品項尚未設定 eggCost，且這次有 eggCost，則設定之
         if(eggCost > 0 && !orders[itemName].eggCost) {
           orders[itemName].eggCost = eggCost;
         }
@@ -695,7 +711,6 @@
       localStorage.setItem("currentOrder", JSON.stringify(orders));
     }
 
-    // 取得下一個訂單編號（固定三位數）
     function getNextOrderNumber() {
       let counter = localStorage.getItem("orderNumberCounter");
       if(!counter) {
