@@ -219,7 +219,7 @@
   },
   {
     "keywords": [
-      "busuan",
+      "busuan"
     ],
     "name": "不蒜",
     "price": 0
