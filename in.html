@@ -17,6 +17,7 @@
     #currentOrder { margin-top: 20px; padding: 15px; background-color: #fff; border: 1px solid #aaa; width: 90%; max-width: 600px; margin-left: auto; margin-right: auto; text-align: left; }
     #currentOrder h3 { margin: 0 0 10px; font-size: 20px; text-align: center; }
     #currentOrderList { font-size: 18px; line-height: 1.6; }
+    /* Modal 樣式 */
     .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
     .modal-content { background-color: #f9f9f9; margin: 15% auto; padding: 20px; width: 80%; max-width: 400px; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.3); text-align: left; }
     .close { position: absolute; right: 15px; top: 10px; font-size: 24px; color: #f00; cursor: pointer; }
@@ -29,6 +30,7 @@
     <h2>內用訂單桌號</h2>
   </header>
   <div class="table-buttons">
+    <!-- 桌 1, 3, 7 預設鎖定 -->
     <button id="table1" class="table-button locked" disabled>桌 1 (已結帳)</button>
     <button id="table2" class="table-button" onclick="handleTableClick(2)">中3</button>
     <button id="table3" class="table-button locked" disabled>桌 3 (已結帳)</button>
@@ -46,6 +48,7 @@
     <div id="currentOrderList">目前無訂單</div>
   </div>
   
+  <!-- 模態框：顯示詳細訂單、追加、結帳 -->
   <div id="orderModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeModal()">&times;</span>
@@ -55,6 +58,7 @@
   </div>
   
   <script>
+    // 桌號對應文字
     const tableNames = {
       1: "桌 1",
       2: "中3",
@@ -78,23 +82,20 @@
       return total;
     }
     
-    // 合併訂單：若相同品項則累加數量、蛋費、備註
-    function mergeOrders(existing, addition) {
-      for (let item in addition) {
-        if (existing[item]) {
-          existing[item].quantity += addition[item].quantity;
-          if (addition[item].eggCost)
-            existing[item].eggCost = (existing[item].eggCost || 0) + addition[item].eggCost;
-          if (addition[item].remark)
-            existing[item].remark = existing[item].remark ? existing[item].remark + ", " + addition[item].remark : addition[item].remark;
-        } else {
-          existing[item] = addition[item];
-        }
+    // 訂單格式：例如 "蔥油餅 × 5 , 加辣x2 , $20"
+    function formatOrderLine(item, details) {
+      let line = item + " × " + details.quantity;
+      let remarkParts = [];
+      if (details.remark) remarkParts.push(details.remark);
+      if (details.eggCost) remarkParts.push("蛋費$" + details.eggCost);
+      if (remarkParts.length > 0) {
+        line += " , " + remarkParts.join(" ");
       }
-      return existing;
+      line += " , $" + details.price;
+      return line;
     }
     
-    // 頁面載入時，顯示最新訂單並更新各桌號按鈕（僅更新非鎖定桌號）
+    // 頁面載入時：讀取最新訂單並更新下方區塊與各桌號按鈕（非鎖定桌號）
     window.onload = function() {
       let orderRecord = localStorage.getItem("inHouseOrderRecord") || localStorage.getItem("currentOrder");
       if (orderRecord) {
@@ -104,7 +105,7 @@
         document.getElementById("currentOrderList").innerText = "目前無訂單";
       }
       for (let i = 1; i <= 9; i++) {
-        if ([1, 3, 7].includes(i)) continue;
+        if ([1,3,7].includes(i)) continue; // 預設鎖定
         let tableKey = "inHouseOrder_" + i;
         let stored = localStorage.getItem(tableKey);
         if (stored) {
@@ -115,16 +116,12 @@
       }
     };
     
-    // 顯示最新訂單內容於下方區塊
+    // 將最新訂單以新格式顯示於下方區塊（依每筆訂單換行）
     function displayLatestOrder(order) {
       let orderDiv = document.getElementById("currentOrderList");
       let details = "";
       for (let item in order) {
-        let d = order[item];
-        details += `${item}: 數量 ${d.quantity}, 單價 $${d.price}`;
-        if (d.eggCost) details += `, 蛋費 $${d.eggCost}`;
-        if (d.remark) details += `, 備註: ${d.remark}`;
-        details += "<br>";
+        details += formatOrderLine(item, order[item]) + "<br>";
       }
       orderDiv.innerHTML = details || "目前無訂單";
     }
@@ -153,18 +150,14 @@
       }
     }
     
-    // 模態框：顯示詳細訂單內容及【追加訂單】、【結帳】按鈕
+    // 模態框：顯示該桌詳細訂單及【追加訂單】、【結帳】按鈕
     function showOrderModal(tableNumber, order) {
       let modal = document.getElementById("orderModal");
       let modalDetails = document.getElementById("modalOrderDetails");
       let modalButtons = document.getElementById("modalButtons");
       let details = "<strong>" + tableNames[tableNumber] + " 的訂單:</strong><br>";
       for (let item in order) {
-        let d = order[item];
-        details += `${item}: 數量 ${d.quantity}, 單價 $${d.price}`;
-        if (d.eggCost) details += `, 蛋費 $${d.eggCost}`;
-        if (d.remark) details += `, 備註: ${d.remark}`;
-        details += "<br>";
+        details += formatOrderLine(item, order[item]) + "<br>";
       }
       modalDetails.innerHTML = details;
       modalButtons.innerHTML = "";
@@ -179,7 +172,7 @@
       modal.style.display = "block";
     }
     
-    // 追加訂單：詢問是否追加最新訂單，再合併後更新
+    // 追加訂單：詢問是否追加最新訂單，再與現有訂單合併更新
     function appendOrder(tableNumber) {
       if (confirm("是否追加最新訂單到 " + tableNames[tableNumber] + "？")) {
         let orderRecord = localStorage.getItem("inHouseOrderRecord") || localStorage.getItem("currentOrder");
@@ -199,7 +192,7 @@
       }
     }
     
-    // 結帳：詢問是否結帳，確認後清空該桌訂單並更新按鈕文字
+    // 結帳：詢問是否結帳，確認後清空該桌訂單並更新按鈕文字（此處不鎖定按鈕）
     function checkoutOrder(tableNumber) {
       let tableKey = "inHouseOrder_" + tableNumber;
       let storedOrder = localStorage.getItem(tableKey);
@@ -209,7 +202,6 @@
         if (confirm("是否結帳？總金額：$" + total)) {
           localStorage.removeItem(tableKey);
           let btn = document.getElementById("table" + tableNumber);
-          // 更新按鈕文字為原始名稱
           btn.textContent = tableNames[tableNumber];
           closeModal();
         }
