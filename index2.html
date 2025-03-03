@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title>葉阿姨點餐系統</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* 基本樣式 */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+      background-color: #f0f0f0;
+      color: #333;
+    }
+    header {
+      background: #ddd;
+      padding: 15px 0;
+      margin-bottom: 20px;
+    }
+    header h2 {
+      margin: 0;
+      font-size: 24px;
+      color: #333;
+    }
+    /* 主選單按鈕區 */
+    .menu-container {
+      margin: 20px auto;
+      max-width: 600px;
+    }
+    .menu-button {
+      display: block;
+      width: 100%;
+      font-size: 20px;
+      padding: 20px;
+      margin: 5px 0;
+      cursor: pointer;
+      border: none;
+      background-color: #555;
+      color: #fff;
+      transition: background-color 0.2s;
+    }
+    .menu-button:hover {
+      background-color: #333;
+    }
+    /* 訂單列表 */
+    .order-list {
+      margin: 20px auto;
+      width: 90%;
+      max-width: 600px;
+      border-collapse: collapse;
+      background-color: #fff;
+    }
+    .order-list th,
+    .order-list td {
+      border: 1px solid #aaa;
+      padding: 10px;
+      font-size: 18px;
+    }
+    .order-list th {
+      background-color: #ddd;
+      color: #333;
+    }
+    /* 總金額區塊 (左右置中) */
+    #totalAmount {
+      margin: 10px auto;
+      font-size: 20px;
+      font-weight: bold;
+      text-align: center;
+      max-width: 600px;
+    }
+    /* 底部動作按鈕區 */
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      margin: 20px auto;
+      max-width: 600px;
+    }
+    .menu-button-action {
+      font-size: 20px;
+      padding: 14px 22px;
+      cursor: pointer;
+      border: none;
+      background-color: #555;
+      color: #fff;
+      transition: background-color 0.2s;
+      width: 48%;
+    }
+    .menu-button-action:hover {
+      background-color: #333;
+    }
+    /* Modal 與其他區塊 */
+    .modal,
+    .modal-cust {
+      display: none;
+      position: fixed;
+      z-index: 9999;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      overflow-y: auto;
+    }
+    .modal-content,
+    .modal-content-cust {
+      background-color: #f9f9f9;
+      margin: 10% auto;
+      padding: 20px;
+      width: 400px;
+      max-width: 90%;
+      border-radius: 0;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    .close,
+    .close-cust {
+      position: absolute;
+      right: 15px;
+      top: 10px;
+      font-size: 24px;
+      color: #f00;
+      cursor: pointer;
+    }
+    .menu-button-sm {
+      font-size: 18px;
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      background-color: #666;
+      color: #fff;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .menu-button-sm:hover {
+      background-color: #444;
+    }
+    .counter {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 12px 0;
+    }
+    .counter button {
+      font-size: 22px;
+      padding: 8px 18px;
+      margin: 0 12px;
+      cursor: pointer;
+      background-color: #888;
+      color: #fff;
+      border: none;
+    }
+    .counter button:hover {
+      background-color: #666;
+    }
+    .counter input {
+      font-size: 22px;
+      width: 60px;
+      text-align: center;
+      margin: 0 5px;
+    }
+    .switch {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 12px 0;
+    }
+    .switch label {
+      margin-left: 10px;
+      font-size: 18px;
+      cursor: pointer;
+    }
+    .hidden {
+      display: none;
+    }
+    .key-section {
+      margin: 12px 0;
+    }
+    .key-row {
+      display: flex;
+      justify-content: center;
+      margin: 8px 0;
+      flex-wrap: nowrap;
+    }
+    .key-btn {
+      width: 70px;
+      height: 50px;
+      margin: 5px;
+      font-size: 20px;
+      cursor: pointer;
+      border: none;
+      background-color: #ccc;
+      color: #333;
+      transition: background-color 0.2s;
+    }
+    .key-btn:hover {
+      background-color: #aaa;
+    }
+    #remarkArea {
+      width: 90%;
+      margin: 0 auto;
+      margin-top: 12px;
+      font-size: 20px;
+      text-align: center;
+      height: 40px;
+      line-height: 40px;
+      border: 1px solid #999;
+      padding: 0 10px;
+      box-sizing: border-box;
+      background-color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>葉阿姨點餐系統</h2>
+  </header>
+  
+  <!-- 主選單按鈕區 -->
+  <div class="menu-container">
+    <button class="menu-button" onclick="openModal('蔥油餅')">蔥油餅</button>
+    <button class="menu-button" onclick="openModal('麵線')">麵線</button>
+    <button class="menu-button" onclick="openModal('炒麵')">炒麵</button>
+    <button class="menu-button" onclick="openModal('飲料')">飲料</button>
+    <button class="menu-button" onclick="openModal('熱湯')">熱湯</button>
+  </div>
+  
+  <!-- 訂單列表 -->
+  <h3>訂單列表</h3>
+  <table class="order-list">
+    <thead>
+      <tr>
+        <th>品項</th>
+        <th>數量</th>
+        <th>備註</th>
+      </tr>
+    </thead>
+    <tbody id="orderTable"></tbody>
+  </table>
+  <!-- 顯示總金額 (左右置中) -->
+  <div id="totalAmount">總金額: $0</div>
+  
+  <!-- 底部動作按鈕區 -->
+  <div class="actions">
+    <button class="menu-button-action" onclick="goToOrderPage()">查看目前訂單</button>
+    <button class="menu-button-action" onclick="completeOrder()">完成訂單</button>
+  </div>
+  
+  <!-- 多步驟點餐 Modal -->
+  <div id="mainModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <!-- STEP 1: 選擇子選項 -->
+      <div id="stepSubType">
+        <h3 id="stepSubTypeTitle"></h3>
+        <div id="subTypeButtons"></div>
+      </div>
+      <!-- STEP 2: 數量/飲料總杯數 -->
+      <div id="stepSecond" class="hidden">
+        <div id="generalQuantityBlock" class="hidden">
+          <h3>選擇數量</h3>
+          <div class="counter">
+            <button onclick="changeValue('generalQuantityInput', -1, 'allSpicy')">-</button>
+            <input type="number" id="generalQuantityInput" min="1" value="1">
+            <button onclick="changeValue('generalQuantityInput', 1, 'allSpicy')">+</button>
+          </div>
+          <!-- 調整按鈕：左側「上一頁」(回到種類選擇)、右側「下一步」 -->
+          <button class="menu-button-sm" onclick="gotoPreviousStep()">上一頁</button>
+          <button class="menu-button-sm" onclick="nextStep()">下一步</button>
+        </div>
+        <div id="drinkTotalBlock" class="hidden">
+          <h3>選擇總杯數</h3>
+          <div class="counter">
+            <button onclick="changeValue('drinkTotalInput', -1, 'allIce')">-</button>
+            <input type="number" id="drinkTotalInput" min="1" value="1">
+            <button onclick="changeValue('drinkTotalInput', 1, 'allIce')">+</button>
+          </div>
+          <!-- 同上，左側「上一頁」、右側「下一步」 -->
+          <button class="menu-button-sm" onclick="gotoPreviousStep()">上一頁</button>
+          <button class="menu-button-sm" onclick="nextStep()">下一步</button>
+        </div>
+      </div>
+      <!-- STEP 3: 辣度/冰數/湯數量+荷包蛋選擇 -->
+      <div id="stepThird" class="hidden">
+        <div id="spicyBlock" class="hidden">
+          <h3>選擇辣數量</h3>
+          <div class="switch">
+            <input type="checkbox" id="allSpicy" onchange="toggleAllSpicy()">
+            <label for="allSpicy">全部辣</label>
+          </div>
+          <div class="counter">
+            <button onclick="changeValue('spicyInput', -1)">-</button>
+            <input type="number" id="spicyInput" min="0" value="0">
+            <button onclick="changeValue('spicyInput', 1)">+</button>
+          </div>
+        </div>
+        <div id="eggBlock" class="hidden">
+          <h3>選擇荷包蛋數量</h3>
+          <div class="counter">
+            <button onclick="changeValue('eggInput', -1)">-</button>
+            <input type="number" id="eggInput" min="0" value="0">
+            <button onclick="changeValue('eggInput', 1)">+</button>
+          </div>
+        </div>
+        <div id="drinkIceBlock" class="hidden">
+          <h3>選擇冰的杯數</h3>
+          <div class="switch">
+            <input type="checkbox" id="allIce" onchange="toggleAllIce()">
+            <label for="allIce">全數冰</label>
+          </div>
+          <div class="counter">
+            <button onclick="changeValue('drinkIceInput', -1)">-</button>
+            <input type="number" id="drinkIceInput" min="0" value="0">
+            <button onclick="changeValue('drinkIceInput', 1)">+</button>
+          </div>
+        </div>
+        <div id="soupQuantityBlock" class="hidden">
+          <h3>選擇數量</h3>
+          <div class="counter">
+            <button onclick="changeValue('soupQuantityInput', -1)">-</button>
+            <input type="number" id="soupQuantityInput" min="1" value="1">
+            <button onclick="changeValue('soupQuantityInput', 1)">+</button>
+          </div>
+        </div>
+        <!-- 確認點餐按鈕容器，調整按鈕順序：左側「上一頁」、右側「確認點餐」 -->
+        <div id="confirmContainer"></div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 客製(備註) Modal -->
+  <div id="customModal" class="modal-cust">
+    <div class="modal-content-cust">
+      <span class="close-cust" onclick="closeCustomModal()">&times;</span>
+      <h3>快速客製</h3>
+      <div id="remarkArea"></div>
+      <div class="key-section">
+        <div class="key-row">
+          <button class="key-btn" onclick="appendRemark('不')">不</button>
+          <button class="key-btn" onclick="appendRemark('多')">多</button>
+          <button class="key-btn" onclick="appendRemark('少')">少</button>
+          <button class="key-btn" onclick="appendRemark('辣')">辣</button>
+        </div>
+        <div class="key-row">
+          <button class="key-btn" onclick="appendRemark('菜')">菜</button>
+          <button class="key-btn" onclick="appendRemark('蒜')">蒜</button>
+          <button class="key-btn" onclick="appendRemark('醋')">醋</button>
+          <button class="key-btn" onclick="appendRemark('粉')">粉</button>
+        </div>
+        <div class="key-row">
+          <button class="key-btn" onclick="appendRemark('油膏')">油膏</button>
+          <button class="key-btn" onclick="appendRemark('辣油')">辣油</button>
+          <button class="key-btn" onclick="appendRemark('豆瓣')">豆瓣</button>
+          <button class="key-btn" onclick="appendRemark('×')">×</button>
+        </div>
+      </div>
+      <div class="key-section">
+        <div class="key-row">
+          <button class="key-btn" onclick="appendRemark('1')">1</button>
+          <button class="key-btn" onclick="appendRemark('2')">2</button>
+          <button class="key-btn" onclick="appendRemark('3')">3</button>
+          <button class="key-btn" onclick="appendRemark('4')">4</button>
+          <button class="key-btn" onclick="appendRemark('5')">5</button>
+        </div>
+        <div class="key-row">
+          <button class="key-btn" onclick="appendRemark('6')">6</button>
+          <button class="key-btn" onclick="appendRemark('7')">7</button>
+          <button class="key-btn" onclick="appendRemark('8')">8</button>
+          <button class="key-btn" onclick="appendRemark('9')">9</button>
+          <button class="key-btn" onclick="appendRemark('0')">0</button>
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <button class="menu-button-sm" onclick="clearRemark()">清除</button>
+        <button class="menu-button-sm" onclick="backspaceRemark()">退格</button>
+        <button class="menu-button-sm" onclick="confirmRemark()">確定</button>
+        <button class="menu-button-sm" style="background-color:#900; color:white;" onclick="deleteItemInCustom()">刪除品項</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    /* ===================== 1) 資料設定 ===================== */
+    const subTypes = {
+      "蔥油餅": { "加蛋": 30, "不加蛋": 20 },
+      "麵線": { "大腸麵線": 50, "肉羹麵線": 50, "綜合麵線": 50, "清麵線": 40 },
+      "炒麵": { "大炒麵": 40, "小炒麵": 30, "荷包蛋": 15 },
+      "飲料": { "豆漿": 15, "米漿": 15, "紅茶": 10, "奶茶": 15 },
+      "熱湯": { "貢丸湯": 35, "肉羹湯": 35, "綜合湯": 35 }
+    };
+
+    let flows = {
+      "蔥油餅": ["SUB_TYPE", "QUANTITY", "SPICY"],
+      "麵線": ["SUB_TYPE", "QUANTITY", "SPICY"],
+      "炒麵": ["SUB_TYPE", "QUANTITY", "SPICY"],
+      "飲料": ["SUB_TYPE", "DRINK_TOTAL", "DRINK_ICE"],
+      "熱湯": ["SUB_TYPE", "SOUP_QTY"]
+    };
+
+    // orders 用來儲存目前點餐資料
+    let orders = {};
+
+    /* ===================== 2) 多步驟點餐流程 ===================== */
+    let currentCategory = "";
+    let currentFlowSteps = [];
+    let currentStepIndex = 0;
+    let selectedSubType = "";
+    let selectedPrice = 0;
+    let generalQuantity = 1;
+    let spicyQty = 0;
+    let eggQty = 0;
+    let drinkTotal = 1;
+    let drinkIce = 0;
+    let soupQty = 1;
+
+    function openModal(category) {
+      currentCategory = category;
+      currentFlowSteps = flows[category];
+      currentStepIndex = 0;
+      resetInputs();
+      document.getElementById("mainModal").style.display = "block";
+      // 初始顯示種類選擇
+      document.getElementById("stepSubType").style.display = "block";
+      document.getElementById("stepSecond").classList.add("hidden");
+      document.getElementById("stepThird").classList.add("hidden");
+      // 清除確認按鈕容器
+      var confirmContainer = document.getElementById("confirmContainer");
+      if (confirmContainer) { confirmContainer.remove(); }
+      loadSubTypeButtons(category);
+    }
+
+    function resetInputs() {
+      selectedSubType = "";
+      selectedPrice = 0;
+      generalQuantity = 1;
+      spicyQty = 0;
+      eggQty = 0;
+      drinkTotal = 1;
+      drinkIce = 0;
+      soupQty = 1;
+      let gQ = document.getElementById("generalQuantityInput");
+      if(gQ) gQ.value = 1;
+      let spI = document.getElementById("spicyInput");
+      if(spI) { spI.value = 0; spI.disabled = false; }
+      let allSp = document.getElementById("allSpicy");
+      if(allSp) allSp.checked = false;
+      let eI = document.getElementById("eggInput");
+      if(eI) eI.value = 0;
+      let dT = document.getElementById("drinkTotalInput");
+      if(dT) dT.value = 1;
+      let dI = document.getElementById("drinkIceInput");
+      if(dI) { dI.value = 0; dI.disabled = false; }
+      let allIc = document.getElementById("allIce");
+      if(allIc) allIc.checked = false;
+      let sQ = document.getElementById("soupQuantityInput");
+      if(sQ) sQ.value = 1;
+    }
+
+    function closeModal() {
+      document.getElementById("mainModal").style.display = "none";
+    }
+
+    function loadSubTypeButtons(category) {
+      let title = document.getElementById("stepSubTypeTitle");
+      let container = document.getElementById("subTypeButtons");
+      container.innerHTML = "";
+      title.innerText = "選擇 " + category + " 種類";
+      let items = subTypes[category];
+      for(let name in items) {
+        let price = items[name];
+        let btn = document.createElement("button");
+        btn.className = "menu-button-sm";
+        btn.innerText = `${name} ($${price})`;
+        btn.onclick = function() {
+          selectedSubType = name;
+          selectedPrice = price;
+          gotoNextStep();
+        };
+        container.appendChild(btn);
+      }
+    }
+
+    function gotoNextStep() {
+      currentStepIndex++;
+      renderStep();
+    }
+    function nextStep() {
+      gotoNextStep();
+    }
+    function gotoPreviousStep() {
+      if(currentStepIndex > 0) {
+        currentStepIndex--;
+        renderStep();
+      }
+    }
+
+    function renderStep() {
+      // 若為第 0 步驟，顯示種類選擇
+      if(currentStepIndex === 0) {
+        document.getElementById("stepSubType").style.display = "block";
+        document.getElementById("stepSecond").classList.add("hidden");
+        document.getElementById("stepThird").classList.add("hidden");
+        return;
+      }
+      // 隱藏所有步驟區塊
+      document.getElementById("stepSubType").style.display = "none";
+      document.getElementById("stepSecond").classList.add("hidden");
+      document.getElementById("stepThird").classList.add("hidden");
+      document.getElementById("generalQuantityBlock").classList.add("hidden");
+      document.getElementById("drinkTotalBlock").classList.add("hidden");
+      document.getElementById("spicyBlock").classList.add("hidden");
+      document.getElementById("drinkIceBlock").classList.add("hidden");
+      document.getElementById("soupQuantityBlock").classList.add("hidden");
+      document.getElementById("eggBlock").classList.add("hidden");
+        
+      // 移除已存在的確認按鈕容器
+      var confirmContainer = document.getElementById("confirmContainer");
+      if (confirmContainer) { confirmContainer.remove(); }
+
+      let stepKey = currentFlowSteps[currentStepIndex];
+      switch(stepKey) {
+        case "QUANTITY":
+          document.getElementById("stepSecond").classList.remove("hidden");
+          document.getElementById("generalQuantityBlock").classList.remove("hidden");
+          break;
+        case "SPICY":
+          document.getElementById("stepThird").classList.remove("hidden");
+          document.getElementById("spicyBlock").classList.remove("hidden");
+          if(["蔥油餅", "麵線", "炒麵"].includes(currentCategory)) {
+            document.getElementById("eggBlock").classList.remove("hidden");
+          }
+          appendConfirmButton();
+          break;
+        case "DRINK_TOTAL":
+          document.getElementById("stepSecond").classList.remove("hidden");
+          document.getElementById("drinkTotalBlock").classList.remove("hidden");
+          break;
+        case "DRINK_ICE":
+          document.getElementById("stepThird").classList.remove("hidden");
+          document.getElementById("drinkIceBlock").classList.remove("hidden");
+          appendConfirmButton();
+          break;
+        case "SOUP_QTY":
+          document.getElementById("stepThird").classList.remove("hidden");
+          document.getElementById("soupQuantityBlock").classList.remove("hidden");
+          appendConfirmButton();
+          break;
+      }
+    }
+
+    function appendConfirmButton() {
+      if(document.getElementById("confirmContainer")) return;
+      var confirmContainer = document.createElement("div");
+      confirmContainer.id = "confirmContainer";
+      // 按鈕：左側「上一頁」、右側「確認點餐」
+      confirmContainer.innerHTML = "<br><button class='menu-button-sm' onclick='gotoPreviousStep()'>上一頁</button> <button class='menu-button-sm' onclick='confirmOrder()'>確認點餐</button>";
+      document.getElementById("stepThird").appendChild(confirmContainer);
+    }
+
+    function changeValue(inputId, amount, extraCheck="") {
+      let input = document.getElementById(inputId);
+      if(!input) return;
+      let val = parseInt(input.value) || 0;
+      let minVal = parseInt(input.min) || 0;
+      let newVal = val + amount;
+      if(newVal < minVal) newVal = minVal;
+      input.value = newVal;
+      if(extraCheck === "allSpicy") {
+        let allSp = document.getElementById("allSpicy");
+        if(allSp && allSp.checked) {
+          let qty = parseInt(document.getElementById("generalQuantityInput").value) || 1;
+          document.getElementById("spicyInput").value = qty;
+        }
+      }
+      if(extraCheck === "allIce") {
+        let allIc = document.getElementById("allIce");
+        if(allIc && allIc.checked) {
+          let total = parseInt(document.getElementById("drinkTotalInput").value) || 1;
+          document.getElementById("drinkIceInput").value = total;
+        }
+      }
+    }
+
+    function toggleAllSpicy() {
+      let allSp = document.getElementById("allSpicy").checked;
+      let spI = document.getElementById("spicyInput");
+      if(spI) {
+        if(allSp) {
+          let qty = parseInt(document.getElementById("generalQuantityInput").value) || 1;
+          spI.value = qty;
+          spI.disabled = true;
+        } else {
+          spI.disabled = false;
+        }
+      }
+    }
+
+    function toggleAllIce() {
+      let allIc = document.getElementById("allIce").checked;
+      let dI = document.getElementById("drinkIceInput");
+      if(dI) {
+        if(allIc) {
+          let total = parseInt(document.getElementById("drinkTotalInput").value) || 1;
+          dI.value = total;
+          dI.disabled = true;
+        } else {
+          dI.disabled = false;
+        }
+      }
+    }
+
+    function confirmO
