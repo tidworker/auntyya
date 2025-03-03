@@ -11,6 +11,21 @@
     table, th, td { border: 1px solid #aaa; }
     th, td { padding: 8px; text-align: center; }
     @media (max-width: 600px) { input, button { font-size: 18px; } }
+    /* 簡單模態框樣式 */
+    #editModal {
+      display: none;
+      position: fixed;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+    }
+    #editModalContent {
+      background: #fff;
+      margin: 10% auto;
+      padding: 20px;
+      width: 300px;
+      position: relative;
+    }
   </style>
 </head>
 <body>
@@ -69,10 +84,25 @@
     <p id="menuStatus">尚未載入菜單資料...</p>
   </section>
   
+  <!-- 模態框：編輯訂單項目 -->
+  <div id="editModal">
+    <div id="editModalContent">
+      <h3 id="modalDishName">編輯品項</h3>
+      <label for="modalQuantity">份數:</label>
+      <input type="number" id="modalQuantity" min="1" style="width:100%;">
+      <div style="margin-top:10px;">
+        <button onclick="saveModal()">儲存</button>
+        <button onclick="deleteModal()">刪除</button>
+        <button onclick="closeModal()">取消</button>
+      </div>
+    </div>
+  </div>
+  
   <script>
     // 全域變數：字庫資料與菜單資料
     let charMapping = {};
     let groupMapping = {};
+    let currentEditRow = null; // 目前編輯的訂單列
     // 內建測試用菜單（若能正確讀取 menu.txt 則會覆蓋此資料）
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
@@ -139,7 +169,8 @@
     
     // 解析訂單並直接輸出，格式正確時不再確認
     function orderFromChinese() {
-      const inputText = document.getElementById("orderInput").value.trim();
+      const inputElem = document.getElementById("orderInput");
+      const inputText = inputElem.value.trim();
       if (!inputText) {
         alert("請輸入訂單內容！");
         return;
@@ -174,6 +205,7 @@
       
       if (errorOccurred || dishOrders.length === 0) {
         alert("請重新輸入");
+        inputElem.value = "";
         return;
       }
       
@@ -181,6 +213,7 @@
       let firstDish = menu.find(item => item.keywords.includes(dishOrders[0].keyword));
       if (firstDish && firstDish.price === 0) {
         alert("請重新輸入");
+        inputElem.value = "";
         return;
       }
       
@@ -191,6 +224,7 @@
         let foundDish = menu.find(item => item.keywords.includes(order.keyword));
         if (!foundDish) {
           alert("請重新輸入");
+          inputElem.value = "";
           return;
         }
         if (foundDish.price === 0) {
@@ -209,6 +243,7 @@
           }
           if (!attached) {
             alert("請重新輸入");
+            inputElem.value = "";
             return;
           }
         } else {
@@ -218,6 +253,7 @@
       
       if (orderList.length === 0) {
         alert("請重新輸入");
+        inputElem.value = "";
         return;
       }
       
@@ -225,14 +261,22 @@
       orderList.forEach(order => {
         addOrderRow(order.dish, order.quantity, order.remark);
       });
-      document.getElementById("orderInput").value = "";
+      inputElem.value = "";
     }
     
-    // 將訂單項目加入訂單明細表格
+    // 將訂單項目加入訂單明細表格，並在菜品名稱處加入點擊事件以編輯該筆資料
     function addOrderRow(dish, quantity, remark) {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
-      row.insertCell().innerText = dish.name;
+      
+      // 菜品名稱欄（加上點擊事件）
+      const nameCell = row.insertCell();
+      nameCell.innerText = dish.name;
+      nameCell.style.cursor = 'pointer';
+      nameCell.onclick = function() {
+        openModal(row);
+      };
+      
       row.insertCell().innerText = quantity;
       row.insertCell().innerText = remark;
       row.insertCell().innerText = dish.price;
@@ -282,6 +326,40 @@
         }
       }
       document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
+    }
+    
+    // 模態框相關功能
+    function openModal(row) {
+      currentEditRow = row;
+      document.getElementById("modalDishName").innerText = row.cells[0].innerText;
+      document.getElementById("modalQuantity").value = row.cells[1].innerText;
+      document.getElementById("editModal").style.display = "block";
+    }
+    
+    function closeModal() {
+      document.getElementById("editModal").style.display = "none";
+      currentEditRow = null;
+    }
+    
+    // 儲存模態框修改
+    function saveModal() {
+      if (!currentEditRow) return;
+      let newQuantity = parseInt(document.getElementById("modalQuantity").value);
+      if (isNaN(newQuantity) || newQuantity < 1) {
+        alert("份數必須大於或等於1");
+        return;
+      }
+      currentEditRow.cells[1].innerText = newQuantity;
+      let price = parseFloat(currentEditRow.cells[3].innerText);
+      currentEditRow.cells[4].innerText = price * newQuantity;
+      closeModal();
+    }
+    
+    // 刪除該筆訂單項目
+    function deleteModal() {
+      if (!currentEditRow) return;
+      currentEditRow.parentNode.removeChild(currentEditRow);
+      closeModal();
     }
   </script>
 </body>
