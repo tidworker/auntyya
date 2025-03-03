@@ -9,17 +9,14 @@
     header { background: #ddd; padding: 15px 0; margin-bottom: 20px; }
     header h2 { margin: 0; font-size: 24px; }
     .table-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 20px auto; max-width: 600px; }
-    /* 桌號按鈕樣式 */
     .table-button { width: 100px; height: 100px; font-size: 16px; cursor: pointer; border: none; background-color: #555; color: #fff; border-radius: 10px; transition: background-color 0.2s; white-space: pre-line; }
     .table-button:hover { background-color: #333; }
-    /* 已鎖定的桌號按鈕 */
     .table-button.locked { background-color: #f0f0f0; color: #333; cursor: not-allowed; }
     .back-button { margin-top: 20px; font-size: 20px; padding: 10px 20px; cursor: pointer; border: none; background-color: #555; color: #fff; transition: background-color 0.2s; }
     .back-button:hover { background-color: #333; }
     #currentOrder { margin-top: 20px; padding: 15px; background-color: #fff; border: 1px solid #aaa; width: 90%; max-width: 600px; margin-left: auto; margin-right: auto; text-align: left; }
     #currentOrder h3 { margin: 0 0 10px; font-size: 20px; text-align: center; }
     #currentOrderList { font-size: 18px; line-height: 1.6; }
-    /* Modal 樣式 */
     .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
     .modal-content { background-color: #f9f9f9; margin: 15% auto; padding: 20px; width: 80%; max-width: 400px; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.3); text-align: left; }
     .close { position: absolute; right: 15px; top: 10px; font-size: 24px; color: #f00; cursor: pointer; }
@@ -32,16 +29,15 @@
     <h2>內用訂單桌號</h2>
   </header>
   <div class="table-buttons">
-    <!-- 桌號 1、3、7 預設鎖定 -->
-    <button id="table1" class="table-button locked" disabled></button>
-    <button id="table2" class="table-button" onclick="handleTableClick(2)">中-3</button>
-    <button id="table3" class="table-button locked" disabled></button>
-    <button id="table4" class="table-button" onclick="handleTableClick(4)">冰箱後</button>
-    <button id="table5" class="table-button" onclick="handleTableClick(5)">中-2</button>
-    <button id="table6" class="table-button" onclick="handleTableClick(6)">右-2</button>
-    <button id="table7" class="table-button locked" disabled></button>
-    <button id="table8" class="table-button" onclick="handleTableClick(8)">中-1</button>
-    <button id="table9" class="table-button" onclick="handleTableClick(9)">右-1</button>
+    <button id="table1" class="table-button locked" disabled>桌 1 (已結帳)</button>
+    <button id="table2" class="table-button" onclick="handleTableClick(2)">中3</button>
+    <button id="table3" class="table-button locked" disabled>桌 3 (已結帳)</button>
+    <button id="table4" class="table-button" onclick="handleTableClick(4)">冰箱</button>
+    <button id="table5" class="table-button" onclick="handleTableClick(5)">中2</button>
+    <button id="table6" class="table-button" onclick="handleTableClick(6)">右2</button>
+    <button id="table7" class="table-button locked" disabled>桌 7 (已結帳)</button>
+    <button id="table8" class="table-button" onclick="handleTableClick(8)">中1</button>
+    <button id="table9" class="table-button" onclick="handleTableClick(9)">右1</button>
   </div>
   <button class="back-button" onclick="window.location.href='index2.html'">返回點餐主頁</button>
   
@@ -50,7 +46,6 @@
     <div id="currentOrderList">目前無訂單</div>
   </div>
   
-  <!-- 模態框：顯示詳細訂單、追加訂單與結帳 -->
   <div id="orderModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeModal()">&times;</span>
@@ -60,6 +55,18 @@
   </div>
   
   <script>
+    const tableNames = {
+      1: "桌 1",
+      2: "中3",
+      3: "桌 3",
+      4: "冰箱",
+      5: "中2",
+      6: "右2",
+      7: "桌 7",
+      8: "中1",
+      9: "右1"
+    };
+    
     // 計算訂單總金額
     function calculateTotal(order) {
       let total = 0;
@@ -71,7 +78,7 @@
       return total;
     }
     
-    // 合併訂單：相同品項數量、蛋費、備註累加
+    // 合併訂單：若相同品項則累加數量、蛋費、備註
     function mergeOrders(existing, addition) {
       for (let item in addition) {
         if (existing[item]) {
@@ -87,7 +94,7 @@
       return existing;
     }
     
-    // 頁面載入時：顯示最新訂單內容，更新可用桌號按鈕文字
+    // 頁面載入時，顯示最新訂單並更新各桌號按鈕（僅更新非鎖定桌號）
     window.onload = function() {
       let orderRecord = localStorage.getItem("inHouseOrderRecord") || localStorage.getItem("currentOrder");
       if (orderRecord) {
@@ -96,20 +103,19 @@
       } else {
         document.getElementById("currentOrderList").innerText = "目前無訂單";
       }
-      // 更新其他桌號（1,3,7已預設鎖定，不更新）
       for (let i = 1; i <= 9; i++) {
-        if (i === 1 || i === 3 || i === 7) continue;
+        if ([1, 3, 7].includes(i)) continue;
         let tableKey = "inHouseOrder_" + i;
         let stored = localStorage.getItem(tableKey);
         if (stored) {
           let order = JSON.parse(stored);
           let total = calculateTotal(order);
-          document.getElementById("table" + i).textContent = "桌 " + i + " - 總金額: $" + total;
+          document.getElementById("table" + i).textContent = tableNames[i] + " - 總金額: $" + total;
         }
       }
     };
     
-    // 將最新訂單顯示於下方區塊
+    // 顯示最新訂單內容於下方區塊
     function displayLatestOrder(order) {
       let orderDiv = document.getElementById("currentOrderList");
       let details = "";
@@ -123,19 +129,18 @@
       orderDiv.innerHTML = details || "目前無訂單";
     }
     
-    // 點選桌號按鈕（僅針對未鎖定桌號）
+    // 點選桌號按鈕（僅對未鎖定桌號）
     function handleTableClick(tableNumber) {
-      // 檢查是否為鎖定桌號（1,3,7不會觸發，因為 disabled）
       let tableKey = "inHouseOrder_" + tableNumber;
       let storedOrder = localStorage.getItem(tableKey);
       if (!storedOrder) {
-        if (confirm("是否將最新訂單存入桌 " + tableNumber + "?")) {
+        if (confirm("是否將最新訂單存入 " + tableNames[tableNumber] + "?")) {
           let orderRecord = localStorage.getItem("inHouseOrderRecord") || localStorage.getItem("currentOrder");
           if (orderRecord) {
             localStorage.setItem(tableKey, orderRecord);
             let order = JSON.parse(orderRecord);
             let total = calculateTotal(order);
-            document.getElementById("table" + tableNumber).textContent = "桌 " + tableNumber + " - 總金額: $" + total;
+            document.getElementById("table" + tableNumber).textContent = tableNames[tableNumber] + " - 總金額: $" + total;
             displayLatestOrder(order);
             localStorage.removeItem("inHouseOrderRecord");
           } else {
@@ -153,7 +158,7 @@
       let modal = document.getElementById("orderModal");
       let modalDetails = document.getElementById("modalOrderDetails");
       let modalButtons = document.getElementById("modalButtons");
-      let details = "<strong>桌 " + tableNumber + " 的訂單:</strong><br>";
+      let details = "<strong>" + tableNames[tableNumber] + " 的訂單:</strong><br>";
       for (let item in order) {
         let d = order[item];
         details += `${item}: 數量 ${d.quantity}, 單價 $${d.price}`;
@@ -176,7 +181,7 @@
     
     // 追加訂單：詢問是否追加最新訂單，再合併後更新
     function appendOrder(tableNumber) {
-      if (confirm("是否追加最新訂單到此桌？")) {
+      if (confirm("是否追加最新訂單到 " + tableNames[tableNumber] + "？")) {
         let orderRecord = localStorage.getItem("inHouseOrderRecord") || localStorage.getItem("currentOrder");
         if (orderRecord) {
           let newOrder = JSON.parse(orderRecord);
@@ -185,7 +190,7 @@
           let mergedOrder = mergeOrders(existingOrder, newOrder);
           localStorage.setItem(tableKey, JSON.stringify(mergedOrder));
           let total = calculateTotal(mergedOrder);
-          document.getElementById("table" + tableNumber).textContent = "桌 " + tableNumber + " - 總金額: $" + total;
+          document.getElementById("table" + tableNumber).textContent = tableNames[tableNumber] + " - 總金額: $" + total;
           showOrderModal(tableNumber, mergedOrder);
           localStorage.removeItem("inHouseOrderRecord");
         } else {
@@ -194,7 +199,7 @@
       }
     }
     
-    // 結帳：詢問是否結帳，確認後清空該桌訂單
+    // 結帳：詢問是否結帳，確認後清空該桌訂單並更新按鈕文字
     function checkoutOrder(tableNumber) {
       let tableKey = "inHouseOrder_" + tableNumber;
       let storedOrder = localStorage.getItem(tableKey);
@@ -203,9 +208,9 @@
         let total = calculateTotal(order);
         if (confirm("是否結帳？總金額：$" + total)) {
           localStorage.removeItem(tableKey);
-          // 對於已結帳的桌號（假如此處若有特定要求，可自行判斷，此範例中不做額外鎖定動作，因為已預先鎖定的桌號1,3,7不會觸發）
           let btn = document.getElementById("table" + tableNumber);
-          btn.textContent = "桌 " + tableNumber;
+          // 更新按鈕文字為原始名稱
+          btn.textContent = tableNames[tableNumber];
           closeModal();
         }
       }
