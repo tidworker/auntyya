@@ -154,5 +154,13 @@
     ],
     "name": "豆漿-溫",
     "price": 15
+  },
+  {
+    "keywords": [
+      "wenmijiang",
+      "wenmi"
+    ],
+    "name": "米漿-冰",
+    "price": 15
   }
 ]
