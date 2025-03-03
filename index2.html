@@ -7,19 +7,19 @@
   <style>
     body { font-family: Arial, sans-serif; margin: 0; padding: 0; text-align: center; background-color: #f0f0f0; color: #333; }
     header { background: #ddd; padding: 15px 0; margin-bottom: 20px; }
-    header h2 { margin: 0; font-size: 24px; color: #333; }
+    header h2 { margin: 0; font-size: 24px; }
     .menu-container { margin: 20px auto; max-width: 600px; }
     .menu-button { display: block; width: 100%; font-size: 20px; padding: 20px; margin: 5px 0; cursor: pointer; border: none; background-color: #555; color: #fff; transition: background-color 0.2s; }
     .menu-button:hover { background-color: #333; }
     .order-list { margin: 20px auto; width: 90%; max-width: 600px; border-collapse: collapse; background-color: #fff; }
     .order-list th, .order-list td { border: 1px solid #aaa; padding: 10px; font-size: 18px; }
-    .order-list th { background-color: #ddd; color: #333; }
+    .order-list th { background-color: #ddd; }
     #totalAmount { margin: 10px auto; font-size: 20px; font-weight: bold; text-align: center; max-width: 600px; }
     .actions { display: flex; justify-content: space-between; margin: 20px auto; max-width: 600px; }
     .menu-button-action { font-size: 20px; padding: 14px 22px; cursor: pointer; border: none; background-color: #555; color: #fff; transition: background-color 0.2s; width: 32%; }
     .menu-button-action:hover { background-color: #333; }
     .modal, .modal-cust { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); overflow-y: auto; }
-    .modal-content, .modal-content-cust { background-color: #f9f9f9; margin: 10% auto; padding: 20px; width: 400px; max-width: 90%; border-radius: 0; text-align: center; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
+    .modal-content, .modal-content-cust { background-color: #f9f9f9; margin: 10% auto; padding: 20px; width: 400px; max-width: 90%; text-align: center; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
     .close, .close-cust { position: absolute; right: 15px; top: 10px; font-size: 24px; color: #f00; cursor: pointer; }
     .menu-button-sm { font-size: 18px; padding: 10px 20px; margin: 5px; border: none; background-color: #666; color: #fff; cursor: pointer; transition: background-color 0.2s; }
     .menu-button-sm:hover { background-color: #444; }
@@ -31,10 +31,10 @@
     .switch label { margin-left: 10px; font-size: 18px; cursor: pointer; }
     .hidden { display: none; }
     .key-section { margin: 12px 0; }
-    .key-row { display: flex; justify-content: center; margin: 8px 0; flex-wrap: nowrap; }
+    .key-row { display: flex; justify-content: center; margin: 8px 0; }
     .key-btn { width: 70px; height: 50px; margin: 5px; font-size: 20px; cursor: pointer; border: none; background-color: #ccc; color: #333; transition: background-color 0.2s; }
     .key-btn:hover { background-color: #aaa; }
-    #remarkArea { width: 90%; margin: 0 auto; margin-top: 12px; font-size: 20px; text-align: center; height: 40px; line-height: 40px; border: 1px solid #999; padding: 0 10px; box-sizing: border-box; background-color: #fff; }
+    #remarkArea { width: 90%; margin: 12px auto 0; font-size: 20px; text-align: center; height: 40px; line-height: 40px; border: 1px solid #999; padding: 0 10px; background-color: #fff; }
   </style>
 </head>
 <body>
@@ -63,7 +63,7 @@
   <div class="actions">
     <button class="menu-button-action" onclick="goToOrderPage()">查看目前訂單</button>
     <button class="menu-button-action" onclick="completeOrder()">完成訂單</button>
-    <button class="menu-button-action" onclick="window.location.href='in.html'">內用</button>
+    <button class="menu-button-action" onclick="recordInHouseOrder()">內用</button>
   </div>
   <div id="mainModal" class="modal">
     <div class="modal-content">
@@ -254,9 +254,7 @@
       let sQ = document.getElementById("soupQuantityInput");
       if(sQ) sQ.value = 1;
     }
-    function closeModal() {
-      document.getElementById("mainModal").style.display = "none";
-    }
+    function closeModal() { document.getElementById("mainModal").style.display = "none"; }
     function loadSubTypeButtons(category) {
       let title = document.getElementById("stepSubTypeTitle");
       let container = document.getElementById("subTypeButtons");
@@ -268,22 +266,13 @@
         let btn = document.createElement("button");
         btn.className = "menu-button-sm";
         btn.innerText = `${name} ($${price})`;
-        btn.onclick = function() {
-          selectedSubType = name;
-          selectedPrice = price;
-          gotoNextStep();
-        };
+        btn.onclick = function() { selectedSubType = name; selectedPrice = price; gotoNextStep(); };
         container.appendChild(btn);
       }
     }
-    function gotoNextStep() {
-      currentStepIndex++;
-      renderStep();
-    }
+    function gotoNextStep() { currentStepIndex++; renderStep(); }
     function nextStep() { gotoNextStep(); }
-    function gotoPreviousStep() {
-      if(currentStepIndex > 0) { currentStepIndex--; renderStep(); }
-    }
+    function gotoPreviousStep() { if(currentStepIndex > 0) { currentStepIndex--; renderStep(); } }
     function renderStep() {
       if(currentStepIndex === 0) {
         document.getElementById("stepSubType").style.display = "block";
@@ -347,17 +336,11 @@
       input.value = newVal;
       if(extraCheck === "allSpicy") {
         let allSp = document.getElementById("allSpicy");
-        if(allSp && allSp.checked) {
-          let qty = parseInt(document.getElementById("generalQuantityInput").value) || 1;
-          document.getElementById("spicyInput").value = qty;
-        }
+        if(allSp && allSp.checked) { let qty = parseInt(document.getElementById("generalQuantityInput").value) || 1; document.getElementById("spicyInput").value = qty; }
       }
       if(extraCheck === "allIce") {
         let allIc = document.getElementById("allIce");
-        if(allIc && allIc.checked) {
-          let total = parseInt(document.getElementById("drinkTotalInput").value) || 1;
-          document.getElementById("drinkIceInput").value = total;
-        }
+        if(allIc && allIc.checked) { let total = parseInt(document.getElementById("drinkTotalInput").value) || 1; document.getElementById("drinkIceInput").value = total; }
       }
     }
     function toggleAllSpicy() {
@@ -496,15 +479,21 @@
     function confirmRemark() {
       let remarkDiv = document.getElementById("remarkArea");
       let newText = remarkDiv.textContent;
-      if(currentItemForCust && orders[currentItemForCust]) {
-        orders[currentItemForCust].remark = newText;
-        updateOrderList();
-      }
+      if(currentItemForCust && orders[currentItemForCust]) { orders[currentItemForCust].remark = newText; updateOrderList(); }
       closeCustomModal();
     }
     function deleteItemInCustom() {
       if(currentItemForCust && orders[currentItemForCust]) { delete orders[currentItemForCust]; updateOrderList(); }
       closeCustomModal();
+    }
+    function recordInHouseOrder() {
+      let currentOrder = localStorage.getItem("currentOrder");
+      if(currentOrder) {
+         localStorage.setItem("inHouseOrderRecord", currentOrder);
+         window.location.href = "in.html";
+      } else {
+         alert("目前沒有訂單可以記錄！");
+      }
     }
   </script>
 </body>
