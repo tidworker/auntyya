@@ -23,7 +23,7 @@
       background: #fff;
       margin: 10% auto;
       padding: 20px;
-      width: 300px;
+      width: 270px;
       position: relative;
     }
   </style>
@@ -41,7 +41,7 @@
                                     接著 "chonyobin" 使用最新 defaultQuantity，
                                     最後 "la" 為免費商品，將附加到上一筆非免費訂單中
     -->
-    <input type="text" id="orderInput" placeholder="例如：danbin3/chonyobin 或 2/danbin3/chonyobin/3/la">
+    <input type="text" id="orderInput" placeholder="請輸入餐點及份數">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
@@ -61,7 +61,7 @@
     <table id="orderTable">
       <thead>
         <tr>
-          <th>菜品</th>
+          <th>品項</th>
           <th>份數</th>
           <th>備註</th>
           <th>單價</th>
@@ -73,7 +73,7 @@
       </tbody>
     </table>
     <!-- 新增計算總金額按鈕與顯示區 -->
-    <button onclick="calculateTotal()">計算總金額</button>
+    <button onclick="calculateTotal()">總金額</button>
     <p id="totalAmount">總金額：0 元</p>
   </section>
   
