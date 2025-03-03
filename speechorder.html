@@ -20,15 +20,18 @@
   <section>
     <h2>請輸入訂單內容</h2>
     <!-- 輸入範例：
-         danbin3/chonyobin        → 第一筆 "danbin3"：若前值為 null則採用附帶數字 3，並更新 defaultQuantity 為 3；  
-                                     第二筆 "chonyobin" 沒有附數字，故使用 defaultQuantity 3  
-         2/la                    → 第一筆 "2" 設定 defaultQuantity 為 2；  
-                                     第二筆 "la" 沒有附數字，故採用 defaultQuantity（2），若免費商品則附加到上一筆
+         danbin3/chonyobin        → 蔥油餅加蛋 3 份、蔥油餅（採用附帶數字或預設數量）
+         2/danbin3/chonyobin/3/la  → 第一個 token "2" 設定 defaultQuantity 為 2，
+                                    第二筆 "danbin3" 以 2 份，下單後若 token 附帶數字則更新 defaultQuantity，
+                                    接著 "chonyobin" 使用最新 defaultQuantity，
+                                    最後 "la" 為免費商品，將附加到上一筆非免費訂單中
     -->
     <input type="text" id="orderInput" placeholder="例如：danbin3/chonyobin 或 2/danbin3/chonyobin/3/la">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
+    <!-- 新增：語音輸入的中文內容顯示 -->
+    <p id="voiceTranscript">語音輸入內容：無</p>
   </section>
   
   <!-- 轉譯後文字（僅供參考） -->
@@ -131,25 +134,24 @@
       return converted;
     }
     
-    // 解析訂單：所有 token 累積在同一組訂單中
+    // 解析訂單：所有 token 累積在同一組訂單中，採用原本數量匹配模式
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
         alert("請輸入訂單內容！");
         return;
       }
-    
+      
       // 轉譯並顯示結果
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
-    
+      
       // 以 "/" 與空白作為分隔符拆解 token
       let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
-    
-      // 使用原本的數量匹配模式：
-      // 若 token 為純數字則更新 defaultQuantity，
-      // 否則將數量設定為 (defaultQuantity ≠ null ? defaultQuantity : (附帶數字 ≠ null ? 附帶數字 : 1))，
-      // 並將 defaultQuantity 更新為附帶數字（若有）。
+      
+      // 使用原本數量匹配模式：若 token 為數字則更新 defaultQuantity，
+      // 否則數量為 (defaultQuantity !== null ? defaultQuantity : (附帶數字 !== null ? 附帶數字 : 1))，
+      // 並更新 defaultQuantity 為 token 附帶的數字（若有）。
       let dishOrders = [];
       let defaultQuantity = null;
       tokens.forEach(token => {
@@ -167,13 +169,21 @@
         defaultQuantity = attachedQuantity;
         dishOrders.push({ keyword: m[1], quantity: quantity });
       });
-    
+      
       if (dishOrders.length === 0) {
         alert("未能解析出任何餐點！");
         return;
       }
-    
-      // 建立最終訂單列表：非免費商品獨立產生一筆；免費商品則附加到上一筆非免費訂單的備註欄中
+      
+      // 檢查第一筆商品是否為0元
+      let firstDish = menu.find(item => item.keywords.includes(dishOrders[0].keyword));
+      if (firstDish && firstDish.price === 0) {
+        alert("第一個商品不能為0元商品，請重新輸入！");
+        return;
+      }
+      
+      // 建立最終訂單列表：
+      // 非免費商品獨立產生一筆；免費商品附加到上一筆非免費訂單的備註欄中
       let orderList = [];
       dishOrders.forEach(order => {
         let foundDish = menu.find(item => item.keywords.includes(order.keyword));
@@ -182,7 +192,7 @@
           return;
         }
         if (foundDish.price === 0) {
-          // 免費商品：向上尋找最近的非免費訂單進行附加
+          // 免費商品：向上尋找最近的非免費訂單
           let attached = false;
           for (let i = orderList.length - 1; i >= 0; i--) {
             if (orderList[i].dish.price !== 0) {
@@ -202,12 +212,12 @@
           orderList.push({ dish: foundDish, quantity: order.quantity, remark: "" });
         }
       });
-    
+      
       if (orderList.length === 0) {
         alert("無有效訂單被解析！");
         return;
       }
-    
+      
       // 組合訂單摘要供確認下單
       let summary = "";
       orderList.forEach(order => {
@@ -215,7 +225,7 @@
         if (order.remark) summary += "，備註：" + order.remark;
         summary += "\n";
       });
-    
+      
       if (confirm("您點的是：\n" + summary + "\n確定要下單嗎？")) {
         orderList.forEach(order => {
           addOrderRow(order.dish, order.quantity, order.remark);
@@ -240,6 +250,7 @@
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("convertedText").innerText = "尚未轉譯";
       document.getElementById("orderInput").value = "";
+      document.getElementById("voiceTranscript").innerText = "語音輸入內容：無";
     }
     
     // 語音輸入功能（使用 Web Speech API）
@@ -256,6 +267,8 @@
       recognition.start();
       recognition.onresult = function(event) {
         const transcript = event.results[0][0].transcript;
+        // 顯示語音輸入的中文內容
+        document.getElementById("voiceTranscript").innerText = "語音輸入內容：" + transcript;
         document.getElementById("orderInput").value = transcript;
         orderFromChinese();
       };
