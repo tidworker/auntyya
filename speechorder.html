@@ -23,7 +23,7 @@
       background: #fff;
       margin: 10% auto;
       padding: 20px;
-      width: 270px;
+      width: 300px;
       position: relative;
     }
   </style>
@@ -41,7 +41,7 @@
                                     接著 "chonyobin" 使用最新 defaultQuantity，
                                     最後 "la" 為免費商品，將附加到上一筆非免費訂單中
     -->
-    <input type="text" id="orderInput" placeholder="請輸入餐點及份數">
+    <input type="text" id="orderInput" placeholder="例如：danbin3/chonyobin 或 2/danbin3/chonyobin/3/la">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
@@ -61,7 +61,7 @@
     <table id="orderTable">
       <thead>
         <tr>
-          <th>品項</th>
+          <th>菜品</th>
           <th>份數</th>
           <th>備註</th>
           <th>單價</th>
@@ -73,7 +73,7 @@
       </tbody>
     </table>
     <!-- 新增計算總金額按鈕與顯示區 -->
-    <button onclick="calculateTotal()">總金額</button>
+    <button onclick="calculateTotal()">計算總金額</button>
     <p id="totalAmount">總金額：0 元</p>
   </section>
   
@@ -185,7 +185,7 @@
       let defaultQuantity = null;
       let errorOccurred = false;
       
-      // 檢查各 token 格式是否正確
+      // 解析各 token，當 token 中有附帶數字時以該數字為準
       for (let i = 0; i < tokens.length; i++) {
         let token = tokens[i];
         if (/^\d+$/.test(token)) {
@@ -198,8 +198,13 @@
           break;
         }
         let attachedQuantity = m[2] ? parseInt(m[2]) : null;
-        let quantity = (defaultQuantity !== null) ? defaultQuantity : (attachedQuantity !== null ? attachedQuantity : 1);
-        defaultQuantity = attachedQuantity;
+        let quantity;
+        if (attachedQuantity !== null) {
+          quantity = attachedQuantity;
+          defaultQuantity = attachedQuantity;  // 更新預設數量
+        } else {
+          quantity = (defaultQuantity !== null) ? defaultQuantity : 1;
+        }
         dishOrders.push({ keyword: m[1], quantity: quantity });
       }
       
