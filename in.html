@@ -32,25 +32,38 @@
   </div>
   <button class="back-button" onclick="window.location.href='index.html'">返回點餐主頁</button>
   
+  <!-- 當前訂單顯示區 -->
   <div id="currentOrder">
     <h3>當前訂單</h3>
     <div id="currentOrderList">目前無訂單</div>
   </div>
   
   <script>
-    // 當桌號按鈕被點選
+    // 頁面載入時，先嘗試讀取訂單記錄（優先取 inHouseOrderRecord，其次 currentOrder）
+    window.onload = function() {
+      let orderRecord = localStorage.getItem("inHouseOrderRecord");
+      if (orderRecord) {
+        displayOrder(JSON.parse(orderRecord));
+      } else {
+        let currentOrder = localStorage.getItem("currentOrder");
+        if (currentOrder) {
+          displayOrder(JSON.parse(currentOrder));
+        } else {
+          document.getElementById("currentOrderList").innerText = "目前無訂單";
+        }
+      }
+    };
+    
+    // 當桌號按鈕被點選：若該桌無訂單，則從 inHouseOrderRecord 取最新訂單記錄存入該桌；若有，則顯示詳細內容
     function handleTableClick(tableNumber) {
       let orderKey = "inHouseOrder_" + tableNumber;
       let storedOrder = localStorage.getItem(orderKey);
       if (!storedOrder) {
-        // 如果該桌尚未存入訂單，則從 inHouseOrderRecord 讀取
         let recordedOrder = localStorage.getItem("inHouseOrderRecord");
         if (recordedOrder) {
           localStorage.setItem(orderKey, recordedOrder);
           updateButton(tableNumber, JSON.parse(recordedOrder));
-          // 顯示該桌訂單於下方區塊
-          displayCurrentOrder(tableNumber, JSON.parse(recordedOrder));
-          // 清除 inHouseOrderRecord（避免重複存入）
+          displayOrder(JSON.parse(recordedOrder));
           localStorage.removeItem("inHouseOrderRecord");
           alert("已將訂單記錄存入桌 " + tableNumber);
         } else {
@@ -58,11 +71,11 @@
         }
       } else {
         let order = JSON.parse(storedOrder);
-        displayCurrentOrder(tableNumber, order);
+        displayOrder(order);
       }
     }
     
-    // 更新桌號按鈕的文字顯示
+    // 更新桌號按鈕文字：顯示簡易訂單摘要
     function updateButton(tableNumber, order) {
       let button = document.getElementById("table" + tableNumber);
       let summary = "桌 " + tableNumber;
@@ -73,10 +86,10 @@
       button.textContent = summary;
     }
     
-    // 將該桌訂單內容顯示在下方區塊
-    function displayCurrentOrder(tableNumber, order) {
+    // 顯示訂單詳細內容於下方當前訂單區
+    function displayOrder(order) {
       let orderDiv = document.getElementById("currentOrderList");
-      let details = `<strong>桌 ${tableNumber} 的訂單:</strong><br>`;
+      let details = "";
       for (let item in order) {
         let d = order[item];
         details += `${item}: 數量 ${d.quantity}, 單價 $${d.price}`;
@@ -84,16 +97,8 @@
         if (d.remark) details += `, 備註: ${d.remark}`;
         details += "<br>";
       }
-      orderDiv.innerHTML = details;
+      orderDiv.innerHTML = details || "目前無訂單";
     }
-    
-    // 頁面載入時也可以嘗試讀取是否已有 inHouseOrderRecord 並顯示（非必要）
-    window.onload = function() {
-      let rec = localStorage.getItem("inHouseOrderRecord");
-      if (rec) {
-        document.getElementById("currentOrderList").innerText = "尚未分配桌號的訂單待存入。";
-      }
-    };
   </script>
 </body>
 </html>
