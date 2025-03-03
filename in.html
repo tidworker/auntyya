@@ -84,7 +84,7 @@
     
     // 訂單格式：例如 "蔥油餅 × 5 , 加辣x2 , $20"
     function formatOrderLine(item, details) {
-      let line = item + " × " + details.quantity;
+      let line = item + "×" + details.quantity;
       let remarkParts = [];
       if (details.remark) remarkParts.push(details.remark);
       if (details.eggCost) remarkParts.push("蛋費$" + details.eggCost);
