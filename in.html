@@ -16,6 +16,10 @@
     #currentOrder { margin-top: 20px; padding: 15px; background-color: #fff; border: 1px solid #aaa; width: 90%; max-width: 600px; margin-left: auto; margin-right: auto; text-align: left; }
     #currentOrder h3 { margin: 0 0 10px; font-size: 20px; text-align: center; }
     #currentOrderList { font-size: 18px; line-height: 1.6; }
+    /* Modal 樣式 */
+    .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+    .modal-content { background-color: #f9f9f9; margin: 15% auto; padding: 20px; width: 80%; max-width: 400px; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.3); text-align: left; }
+    .close { position: absolute; right: 15px; top: 10px; font-size: 24px; color: #f00; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -32,62 +36,54 @@
   </div>
   <button class="back-button" onclick="window.location.href='index.html'">返回點餐主頁</button>
   
-  <!-- 當前訂單顯示區 -->
   <div id="currentOrder">
-    <h3>當前訂單</h3>
+    <h3>最新訂單</h3>
     <div id="currentOrderList">目前無訂單</div>
   </div>
   
+  <!-- 訂單詳細內容的模態框 -->
+  <div id="orderModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <div id="modalOrderDetails"></div>
+    </div>
+  </div>
+  
   <script>
-    // 頁面載入時，先嘗試讀取訂單記錄（優先取 inHouseOrderRecord，其次 currentOrder）
+    // 計算訂單總金額
+    function calculateTotal(order) {
+      let total = 0;
+      for (let item in order) {
+        let details = order[item];
+        total += details.price * details.quantity;
+        if (details.eggCost) total += details.eggCost;
+      }
+      return total;
+    }
+    
+    // 頁面載入時，讀取最新訂單並更新當前訂單區
     window.onload = function() {
-      let orderRecord = localStorage.getItem("inHouseOrderRecord");
+      let orderRecord = localStorage.getItem("inHouseOrderRecord") || localStorage.getItem("currentOrder");
       if (orderRecord) {
-        displayOrder(JSON.parse(orderRecord));
+        let order = JSON.parse(orderRecord);
+        displayLatestOrder(order);
       } else {
-        let currentOrder = localStorage.getItem("currentOrder");
-        if (currentOrder) {
-          displayOrder(JSON.parse(currentOrder));
-        } else {
-          document.getElementById("currentOrderList").innerText = "目前無訂單";
+        document.getElementById("currentOrderList").innerText = "目前無訂單";
+      }
+      // 更新已分配桌號的按鈕（若有）
+      for (let i = 1; i <= 6; i++) {
+        let tableKey = "inHouseOrder_" + i;
+        let stored = localStorage.getItem(tableKey);
+        if (stored) {
+          let order = JSON.parse(stored);
+          let total = calculateTotal(order);
+          document.getElementById("table" + i).textContent = "桌 " + i + " - 總金額: $" + total;
         }
       }
     };
     
-    // 當桌號按鈕被點選：若該桌無訂單，則從 inHouseOrderRecord 取最新訂單記錄存入該桌；若有，則顯示詳細內容
-    function handleTableClick(tableNumber) {
-      let orderKey = "inHouseOrder_" + tableNumber;
-      let storedOrder = localStorage.getItem(orderKey);
-      if (!storedOrder) {
-        let recordedOrder = localStorage.getItem("inHouseOrderRecord");
-        if (recordedOrder) {
-          localStorage.setItem(orderKey, recordedOrder);
-          updateButton(tableNumber, JSON.parse(recordedOrder));
-          displayOrder(JSON.parse(recordedOrder));
-          localStorage.removeItem("inHouseOrderRecord");
-          alert("已將訂單記錄存入桌 " + tableNumber);
-        } else {
-          alert("沒有訂單記錄可供存入！");
-        }
-      } else {
-        let order = JSON.parse(storedOrder);
-        displayOrder(order);
-      }
-    }
-    
-    // 更新桌號按鈕文字：顯示簡易訂單摘要
-    function updateButton(tableNumber, order) {
-      let button = document.getElementById("table" + tableNumber);
-      let summary = "桌 " + tableNumber;
-      for (let item in order) {
-        let details = order[item];
-        summary += "\n" + item + " x" + details.quantity;
-      }
-      button.textContent = summary;
-    }
-    
-    // 顯示訂單詳細內容於下方當前訂單區
-    function displayOrder(order) {
+    // 顯示最新訂單於下方區塊
+    function displayLatestOrder(order) {
       let orderDiv = document.getElementById("currentOrderList");
       let details = "";
       for (let item in order) {
@@ -99,6 +95,57 @@
       }
       orderDiv.innerHTML = details || "目前無訂單";
     }
+    
+    // 點選桌號按鈕
+    function handleTableClick(tableNumber) {
+      let tableKey = "inHouseOrder_" + tableNumber;
+      let storedOrder = localStorage.getItem(tableKey);
+      if (!storedOrder) {
+        // 如果該桌尚未存入訂單，從最新訂單記錄取得
+        let orderRecord = localStorage.getItem("inHouseOrderRecord") || localStorage.getItem("currentOrder");
+        if (orderRecord) {
+          localStorage.setItem(tableKey, orderRecord);
+          let order = JSON.parse(orderRecord);
+          let total = calculateTotal(order);
+          document.getElementById("table" + tableNumber).textContent = "桌 " + tableNumber + " - 總金額: $" + total;
+          displayLatestOrder(order);
+          localStorage.removeItem("inHouseOrderRecord");
+          alert("已將最新訂單記錄存入桌 " + tableNumber);
+        } else {
+          alert("沒有最新訂單可供存入！");
+        }
+      } else {
+        let order = JSON.parse(storedOrder);
+        showOrderModal(tableNumber, order);
+      }
+    }
+    
+    // 顯示模態框，呈現該桌詳細訂單
+    function showOrderModal(tableNumber, order) {
+      let modal = document.getElementById("orderModal");
+      let modalDetails = document.getElementById("modalOrderDetails");
+      let details = "<strong>桌 " + tableNumber + " 的訂單:</strong><br>";
+      for (let item in order) {
+        let d = order[item];
+        details += `${item}: 數量 ${d.quantity}, 單價 $${d.price}`;
+        if (d.eggCost) details += `, 蛋費 $${d.eggCost}`;
+        if (d.remark) details += `, 備註: ${d.remark}`;
+        details += "<br>";
+      }
+      modalDetails.innerHTML = details;
+      modal.style.display = "block";
+    }
+    
+    function closeModal() {
+      document.getElementById("orderModal").style.display = "none";
+    }
+    
+    window.onclick = function(event) {
+      let modal = document.getElementById("orderModal");
+      if (event.target == modal) {
+        modal.style.display = "none";
+      }
+    };
   </script>
 </body>
 </html>
