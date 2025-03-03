@@ -141,8 +141,8 @@
   },
   {
     "keywords": [
-      "bindoujiang",
-      "bindou"
+      "bendoujiang",
+      "bendou"
     ],
     "name": "豆漿-冰",
     "price": 15
