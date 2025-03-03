@@ -16,7 +16,7 @@
     #currentOrder { margin-top: 20px; padding: 15px; background-color: #fff; border: 1px solid #aaa; width: 90%; max-width: 600px; margin-left: auto; margin-right: auto; text-align: left; }
     #currentOrder h3 { margin: 0 0 10px; font-size: 20px; text-align: center; }
     #currentOrderList { font-size: 18px; line-height: 1.6; }
-    /* Modal */
+    /* Modal 樣式 */
     .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
     .modal-content { background-color: #f9f9f9; margin: 15% auto; padding: 20px; width: 80%; max-width: 400px; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.3); text-align: left; }
     .close { position: absolute; right: 15px; top: 10px; font-size: 24px; color: #f00; cursor: pointer; }
@@ -35,6 +35,9 @@
     <button id="table4" class="table-button" onclick="handleTableClick(4)">桌 4</button>
     <button id="table5" class="table-button" onclick="handleTableClick(5)">桌 5</button>
     <button id="table6" class="table-button" onclick="handleTableClick(6)">桌 6</button>
+    <button id="table7" class="table-button" onclick="handleTableClick(7)">桌 7</button>
+    <button id="table8" class="table-button" onclick="handleTableClick(8)">桌 8</button>
+    <button id="table9" class="table-button" onclick="handleTableClick(9)">桌 9</button>
   </div>
   <button class="back-button" onclick="window.location.href='index.html'">返回點餐主頁</button>
   
@@ -64,17 +67,15 @@
       return total;
     }
     
-    // 合併訂單：若相同品項則數量相加、蛋費累加、備註合併
+    // 合併訂單：若相同品項則數量、蛋費、備註累加
     function mergeOrders(existing, addition) {
       for (let item in addition) {
         if (existing[item]) {
           existing[item].quantity += addition[item].quantity;
-          if (addition[item].eggCost) {
+          if (addition[item].eggCost)
             existing[item].eggCost = (existing[item].eggCost || 0) + addition[item].eggCost;
-          }
-          if (addition[item].remark) {
+          if (addition[item].remark)
             existing[item].remark = existing[item].remark ? existing[item].remark + ", " + addition[item].remark : addition[item].remark;
-          }
         } else {
           existing[item] = addition[item];
         }
@@ -82,7 +83,7 @@
       return existing;
     }
     
-    // 頁面載入時，讀取最新訂單並更新下方區塊及各桌號按鈕（若已有訂單）
+    // 頁面載入時，顯示最新訂單，並更新已分配桌號按鈕（桌號 1~9）
     window.onload = function() {
       let orderRecord = localStorage.getItem("inHouseOrderRecord") || localStorage.getItem("currentOrder");
       if (orderRecord) {
@@ -91,8 +92,7 @@
       } else {
         document.getElementById("currentOrderList").innerText = "目前無訂單";
       }
-      // 更新各桌已存訂單的按鈕文字
-      for (let i = 1; i <= 6; i++) {
+      for (let i = 1; i <= 9; i++) {
         let tableKey = "inHouseOrder_" + i;
         let stored = localStorage.getItem(tableKey);
         if (stored) {
@@ -103,7 +103,7 @@
       }
     };
     
-    // 將最新訂單顯示於下方區塊
+    // 顯示最新訂單於下方區塊
     function displayLatestOrder(order) {
       let orderDiv = document.getElementById("currentOrderList");
       let details = "";
@@ -122,8 +122,7 @@
       let tableKey = "inHouseOrder_" + tableNumber;
       let storedOrder = localStorage.getItem(tableKey);
       if (!storedOrder) {
-        // 詢問是否存入最新訂單到此桌
-        if (confirm("是否存入最新訂單到桌 " + tableNumber + "?")) {
+        if (confirm("是否將最新訂單存入桌 " + tableNumber + "?")) {
           let orderRecord = localStorage.getItem("inHouseOrderRecord") || localStorage.getItem("currentOrder");
           if (orderRecord) {
             localStorage.setItem(tableKey, orderRecord);
@@ -132,19 +131,17 @@
             document.getElementById("table" + tableNumber).textContent = "桌 " + tableNumber + " - 總金額: $" + total;
             displayLatestOrder(order);
             localStorage.removeItem("inHouseOrderRecord");
-            alert("訂單已存入桌 " + tableNumber);
           } else {
             alert("沒有最新訂單可供存入！");
           }
         }
       } else {
-        // 該桌已有訂單，顯示模態框供追加或結帳
         let order = JSON.parse(storedOrder);
         showOrderModal(tableNumber, order);
       }
     }
     
-    // 顯示模態框（包含詳細訂單與兩個按鈕：追加訂單、結帳）
+    // 顯示模態框：詳細訂單內容及【追加訂單】與【結帳】按鈕
     function showOrderModal(tableNumber, order) {
       let modal = document.getElementById("orderModal");
       let modalDetails = document.getElementById("modalOrderDetails");
@@ -158,7 +155,6 @@
         details += "<br>";
       }
       modalDetails.innerHTML = details;
-      // 清空原有按鈕，新增追加訂單與結帳按鈕
       modalButtons.innerHTML = "";
       let appendBtn = document.createElement("button");
       appendBtn.textContent = "追加訂單";
@@ -171,7 +167,7 @@
       modal.style.display = "block";
     }
     
-    // 追加訂單：詢問是否追加最新訂單，再與該桌訂單合併
+    // 追加訂單：詢問是否追加最新訂單，再合併後更新
     function appendOrder(tableNumber) {
       if (confirm("是否追加最新訂單到此桌？")) {
         let orderRecord = localStorage.getItem("inHouseOrderRecord") || localStorage.getItem("currentOrder");
@@ -185,14 +181,13 @@
           document.getElementById("table" + tableNumber).textContent = "桌 " + tableNumber + " - 總金額: $" + total;
           showOrderModal(tableNumber, mergedOrder);
           localStorage.removeItem("inHouseOrderRecord");
-          alert("訂單已追加到桌 " + tableNumber);
         } else {
           alert("沒有最新訂單可供追加！");
         }
       }
     }
     
-    // 結帳：詢問是否結帳，確認後清空該桌訂單
+    // 結帳：詢問是否結帳，確認後清空該桌訂單，並鎖定按鈕（背景顏色變為頁面背景色，且禁用）
     function checkoutOrder(tableNumber) {
       let tableKey = "inHouseOrder_" + tableNumber;
       let storedOrder = localStorage.getItem(tableKey);
@@ -201,9 +196,12 @@
         let total = calculateTotal(order);
         if (confirm("是否結帳？總金額：$" + total)) {
           localStorage.removeItem(tableKey);
-          document.getElementById("table" + tableNumber).textContent = "桌 " + tableNumber;
+          let btn = document.getElementById("table" + tableNumber);
+          btn.textContent = "桌 " + tableNumber;
+          btn.disabled = true;
+          btn.style.backgroundColor = "#f0f0f0";
+          btn.style.cursor = "not-allowed";
           closeModal();
-          alert("訂單已結帳！");
         }
       }
     }
@@ -212,7 +210,6 @@
       document.getElementById("orderModal").style.display = "none";
     }
     
-    // 點選模態框背景也可關閉
     window.onclick = function(event) {
       let modal = document.getElementById("orderModal");
       if (event.target == modal) {
