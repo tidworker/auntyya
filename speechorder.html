@@ -11,7 +11,7 @@
     table, th, td { border: 1px solid #aaa; }
     th, td { padding: 8px; text-align: center; }
     @media (max-width: 600px) { input, button { font-size: 18px; } }
-    /* 簡單模態框樣式 */
+    /* 模態框樣式 */
     #editModal {
       display: none;
       position: fixed;
@@ -35,14 +35,10 @@
   <section>
     <h2>請輸入訂單內容</h2>
     <!-- 輸入範例：
-         danbin3/chonyobin        → 蔥油餅加蛋 3 份、蔥油餅（採用附帶數字或預設數量）
-         2/danbin3/chonyobin/3/la  → 第一個 token "2" 設定 defaultQuantity 為 2，
-                                    第二筆 "danbin3" 以 2 份，下單後若 token 附帶數字則更新 defaultQuantity，
-                                    接著 "chonyobin" 使用最新 defaultQuantity，
-                                    最後 "la" 為免費商品，將附加到上一筆非免費訂單中
-         3danbin/2miansian/       → 第一筆解析為 3 份 danbin，第二筆解析為 2 份 miansian
+         danbin3/miansian2/         → 解析結果：danbin 3 份、miansian 2 份
+         2/miansian3/danbin          → 解析結果：miansian 2 份、danbin 3 份
     -->
-    <input type="text" id="orderInput" placeholder="例如：danbin3/chonyobin 或 3danbin/2miansian/">
+    <input type="text" id="orderInput" placeholder="例如：danbin3/miansian2/ 或 2/miansian3/danbin">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
@@ -73,7 +69,7 @@
         <!-- 訂單項目將動態加入 -->
       </tbody>
     </table>
-    <!-- 新增計算總金額按鈕與顯示區 -->
+    <!-- 計算總金額 -->
     <button onclick="calculateTotal()">計算總金額</button>
     <p id="totalAmount">總金額：0 元</p>
   </section>
@@ -184,37 +180,44 @@
       
       let dishOrders = [];
       let defaultQuantity = null;
+      let defaultMode = false; // 是否遇到純數字 token
       let errorOccurred = false;
       
-      // 使用新的正則表達式進行兩兩一組的匹配
-      // 可接受格式：數字在前（如 3danbin）、或數字在後（如 danbin3）
+      // 逐一處理 token
       for (let i = 0; i < tokens.length; i++) {
         let token = tokens[i];
-        // 如果 token 全為數字，則更新預設數量並跳過
+        // 純數字 token：更新預設數量並啟動預設模式
         if (/^\d+$/.test(token)) {
           defaultQuantity = parseInt(token);
+          defaultMode = true;
           continue;
         }
-        // 正則：可選的前置數字、必填的字母、可選的後置數字
+        // 使用正則：可接受數字在前或數字在後，但不得同時出現
         let m = token.match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
         if (!m) {
           errorOccurred = true;
           break;
         }
-        // 若同時出現前置與後置數字，格式錯誤
+        // 若同時出現前置與後置數字，視為格式錯誤
         if (m[1] && m[3]) {
           errorOccurred = true;
           break;
         }
-        let quantity = null;
-        if (m[1]) {
-          quantity = parseInt(m[1]);
-          defaultQuantity = quantity;
-        } else if (m[3]) {
-          quantity = parseInt(m[3]);
-          defaultQuantity = quantity;
+        let quantity = 0;
+        if (defaultMode) {
+          // 在預設模式下，無論 token 是否附帶數字，皆採用目前 defaultQuantity 作為訂單份數
+          quantity = defaultQuantity;
+          // 若 token 有附帶數字（前置或後置），則更新 defaultQuantity
+          if (m[1] || m[3]) {
+            defaultQuantity = parseInt(m[1] ? m[1] : m[3]);
+          }
         } else {
-          quantity = (defaultQuantity !== null) ? defaultQuantity : 1;
+          // 尚未進入預設模式時，直接使用 token 中附帶的數字；若無附帶則預設為 1
+          if (m[1] || m[3]) {
+            quantity = parseInt(m[1] ? m[1] : m[3]);
+          } else {
+            quantity = 1;
+          }
         }
         dishOrders.push({ keyword: m[2], quantity: quantity });
       }
@@ -280,12 +283,12 @@
       inputElem.value = "";
     }
     
-    // 將訂單項目加入訂單明細表格，並在菜品名稱處加入點擊事件以編輯該筆資料
+    // 將訂單項目加入訂單明細表格，並為菜品名稱加上點擊事件以編輯該筆資料
     function addOrderRow(dish, quantity, remark) {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
       
-      // 菜品名稱欄（加上點擊事件）
+      // 菜品名稱欄（點擊後可編輯）
       const nameCell = row.insertCell();
       nameCell.innerText = dish.name;
       nameCell.style.cursor = 'pointer';
@@ -322,7 +325,6 @@
       recognition.start();
       recognition.onresult = function(event) {
         const transcript = event.results[0][0].transcript;
-        // 將語音結果直接填入訂單輸入框（語音內容區已隱藏）
         document.getElementById("orderInput").value = transcript;
         orderFromChinese();
       };
@@ -344,7 +346,7 @@
       document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
     }
     
-    // 模態框相關功能
+    // 模態框相關功能：打開、關閉、儲存及刪除編輯的訂單項目
     function openModal(row) {
       currentEditRow = row;
       document.getElementById("modalDishName").innerText = row.cells[0].innerText;
@@ -357,7 +359,6 @@
       currentEditRow = null;
     }
     
-    // 儲存模態框修改
     function saveModal() {
       if (!currentEditRow) return;
       let newQuantity = parseInt(document.getElementById("modalQuantity").value);
@@ -371,7 +372,6 @@
       closeModal();
     }
     
-    // 刪除該筆訂單項目
     function deleteModal() {
       if (!currentEditRow) return;
       currentEditRow.parentNode.removeChild(currentEditRow);
