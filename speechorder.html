@@ -30,12 +30,12 @@
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
-    <!-- 新增：語音輸入的中文內容顯示 -->
-    <p id="voiceTranscript">語音輸入內容：無</p>
+    <!-- 隱藏語音輸入後內容 -->
+    <p id="voiceTranscript" style="display:none;">語音輸入內容：無</p>
   </section>
   
-  <!-- 轉譯後文字（僅供參考） -->
-  <section>
+  <!-- 隱藏轉譯後內容 -->
+  <section style="display:none;">
     <h2>轉譯後文字</h2>
     <p id="convertedText">尚未轉譯</p>
   </section>
@@ -57,10 +57,13 @@
         <!-- 訂單項目將動態加入 -->
       </tbody>
     </table>
+    <!-- 新增計算總金額按鈕與顯示區 -->
+    <button onclick="calculateTotal()">計算總金額</button>
+    <p id="totalAmount">總金額：0 元</p>
   </section>
   
-  <!-- 系統狀態 -->
-  <section>
+  <!-- 隱藏系統狀態 -->
+  <section style="display:none;">
     <h2>系統狀態</h2>
     <p id="dbStatus">尚未載入字庫資料...</p>
     <p id="menuStatus">尚未載入菜單資料...</p>
@@ -142,7 +145,7 @@
         return;
       }
       
-      // 轉譯並顯示結果
+      // 轉譯並顯示結果（即使轉譯後內容區已隱藏，此步驟仍可執行）
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
       
@@ -251,6 +254,7 @@
       document.getElementById("convertedText").innerText = "尚未轉譯";
       document.getElementById("orderInput").value = "";
       document.getElementById("voiceTranscript").innerText = "語音輸入內容：無";
+      document.getElementById("totalAmount").innerText = "總金額：0 元";
     }
     
     // 語音輸入功能（使用 Web Speech API）
@@ -267,14 +271,26 @@
       recognition.start();
       recognition.onresult = function(event) {
         const transcript = event.results[0][0].transcript;
-        // 顯示語音輸入的中文內容
-        document.getElementById("voiceTranscript").innerText = "語音輸入內容：" + transcript;
+        // 將語音結果直接填入訂單輸入框（語音內容區已隱藏）
         document.getElementById("orderInput").value = transcript;
         orderFromChinese();
       };
       recognition.onerror = function(event) {
         alert("語音輸入發生錯誤：" + event.error);
       };
+    }
+    
+    // 新增：計算總金額功能，遍歷訂單明細表格的總價欄位並計算加總
+    function calculateTotal() {
+      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      let total = 0;
+      for (let i = 0; i < tbody.rows.length; i++) {
+        let cellValue = parseFloat(tbody.rows[i].cells[4].innerText);
+        if (!isNaN(cellValue)) {
+          total += cellValue;
+        }
+      }
+      document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
     }
   </script>
 </body>
