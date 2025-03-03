@@ -216,5 +216,12 @@
     ],
     "name": "米漿-冰",
     "price": 15
+  },
+  {
+    "keywords": [
+      "busuan",
+    ],
+    "name": "不蒜",
+    "price": 0
   }
 ]
