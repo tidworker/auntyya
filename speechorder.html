@@ -137,7 +137,7 @@
       return converted;
     }
     
-    // 解析訂單：所有 token 累積在同一組訂單中，採用原本數量匹配模式
+    // 解析訂單並直接輸出，格式正確時不再確認
     function orderFromChinese() {
       const inputText = document.getElementById("orderInput").value.trim();
       if (!inputText) {
@@ -145,96 +145,87 @@
         return;
       }
       
-      // 轉譯並顯示結果（即使轉譯後內容區已隱藏，此步驟仍可執行）
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
       
-      // 以 "/" 與空白作為分隔符拆解 token
       let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
       
-      // 使用原本數量匹配模式：若 token 為數字則更新 defaultQuantity，
-      // 否則數量為 (defaultQuantity !== null ? defaultQuantity : (附帶數字 !== null ? 附帶數字 : 1))，
-      // 並更新 defaultQuantity 為 token 附帶的數字（若有）。
       let dishOrders = [];
       let defaultQuantity = null;
-      tokens.forEach(token => {
+      let errorOccurred = false;
+      
+      // 檢查各 token 格式是否正確
+      for (let i = 0; i < tokens.length; i++) {
+        let token = tokens[i];
         if (/^\d+$/.test(token)) {
           defaultQuantity = parseInt(token);
-          return;
+          continue;
         }
         let m = token.match(/^([a-zA-Z]+)(\d+)?$/);
         if (!m) {
-          alert("訂單格式錯誤：" + token);
-          return;
+          errorOccurred = true;
+          break;
         }
         let attachedQuantity = m[2] ? parseInt(m[2]) : null;
         let quantity = (defaultQuantity !== null) ? defaultQuantity : (attachedQuantity !== null ? attachedQuantity : 1);
         defaultQuantity = attachedQuantity;
         dishOrders.push({ keyword: m[1], quantity: quantity });
-      });
+      }
       
-      if (dishOrders.length === 0) {
-        alert("未能解析出任何餐點！");
+      if (errorOccurred || dishOrders.length === 0) {
+        alert("請重新輸入");
         return;
       }
       
-      // 檢查第一筆商品是否為0元
+      // 檢查第一筆商品不能為 0 元
       let firstDish = menu.find(item => item.keywords.includes(dishOrders[0].keyword));
       if (firstDish && firstDish.price === 0) {
-        alert("第一個商品不能為0元商品，請重新輸入！");
+        alert("請重新輸入");
         return;
       }
       
-      // 建立最終訂單列表：
-      // 非免費商品獨立產生一筆；免費商品附加到上一筆非免費訂單的備註欄中
+      // 建立最終訂單列表，若有錯誤也只顯示一次提示
       let orderList = [];
-      dishOrders.forEach(order => {
+      for (let i = 0; i < dishOrders.length; i++) {
+        let order = dishOrders[i];
         let foundDish = menu.find(item => item.keywords.includes(order.keyword));
         if (!foundDish) {
-          alert("未找到與 " + order.keyword + " 相符的餐點！");
+          alert("請重新輸入");
           return;
         }
         if (foundDish.price === 0) {
-          // 免費商品：向上尋找最近的非免費訂單
+          // 免費商品：附加到上一筆非免費訂單
           let attached = false;
-          for (let i = orderList.length - 1; i >= 0; i--) {
-            if (orderList[i].dish.price !== 0) {
-              if (orderList[i].remark) {
-                orderList[i].remark += ", " + foundDish.name + "×" + order.quantity;
+          for (let j = orderList.length - 1; j >= 0; j--) {
+            if (orderList[j].dish.price !== 0) {
+              if (orderList[j].remark) {
+                orderList[j].remark += ", " + foundDish.name + "×" + order.quantity;
               } else {
-                orderList[i].remark = foundDish.name + "×" + order.quantity;
+                orderList[j].remark = foundDish.name + "×" + order.quantity;
               }
               attached = true;
               break;
             }
           }
           if (!attached) {
-            alert("免費商品 " + foundDish.name + " 無法匹配至上一筆非免費訂單，已略過。");
+            alert("請重新輸入");
+            return;
           }
         } else {
           orderList.push({ dish: foundDish, quantity: order.quantity, remark: "" });
         }
-      });
+      }
       
       if (orderList.length === 0) {
-        alert("無有效訂單被解析！");
+        alert("請重新輸入");
         return;
       }
       
-      // 組合訂單摘要供確認下單
-      let summary = "";
+      // 直接輸出訂單（不再確認）
       orderList.forEach(order => {
-        summary += order.dish.name + " " + order.quantity + " 份, 單價：" + order.dish.price + " 元";
-        if (order.remark) summary += "，備註：" + order.remark;
-        summary += "\n";
+        addOrderRow(order.dish, order.quantity, order.remark);
       });
-      
-      if (confirm("您點的是：\n" + summary + "\n確定要下單嗎？")) {
-        orderList.forEach(order => {
-          addOrderRow(order.dish, order.quantity, order.remark);
-        });
-        document.getElementById("orderInput").value = "";
-      }
+      document.getElementById("orderInput").value = "";
     }
     
     // 將訂單項目加入訂單明細表格
@@ -280,7 +271,7 @@
       };
     }
     
-    // 新增：計算總金額功能，遍歷訂單明細表格的總價欄位並計算加總
+    // 計算訂單總金額
     function calculateTotal() {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       let total = 0;
