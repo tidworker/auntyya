@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <title>訂單管理 - 葉阿姨點餐系統</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- 引入 html2canvas CDN，用於下載訂單圖片 -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    /* 基本樣式 */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      text-align: center;
+      background-color: #f0f0f0;
+      color: #333;
+    }
+    header {
+      background: #ddd;
+      padding: 15px 0;
+      margin-bottom: 20px;
+    }
+    header h2 {
+      margin: 0;
+      font-size: 24px;
+      color: #333;
+    }
+    .order-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 0 10px;
+    }
+    .order-block {
+      background-color: #fff;
+      border: 1px solid #aaa;
+      margin-bottom: 20px;
+      padding: 10px;
+      text-align: left;
+    }
+    .order-list {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    .order-list th, .order-list td {
+      border: 1px solid #aaa;
+      padding: 8px;
+      font-size: 16px;
+      text-align: center;
+    }
+    .order-list th {
+      background: #ddd;
+      color: #333;
+    }
+    .total-price {
+      font-size: 18px;
+      text-align: right;
+      margin-top: 5px;
+      font-weight: bold;
+    }
+    /* 顯示外帶／內用資訊 */
+    .order-type {
+      margin-top: 10px;
+      font-size: 16px;
+      padding: 8px;
+      text-align: center;
+    }
+    .takeout {
+      background-color: #ffcccc;
+    }
+    .dinein {
+      background-color: #cce5ff;
+    }
+    .actions {
+      display: flex;
+      justify-content: space-between;
+      margin: 20px auto;
+      max-width: 800px;
+    }
+    .menu-button {
+      font-size: 20px;
+      padding: 14px 22px;
+      cursor: pointer;
+      border: none;
+      background-color: #555;
+      color: #fff;
+      transition: background-color 0.2s;
+      width: 48%;
+    }
+    .menu-button:hover {
+      background-color: #333;
+    }
+    /* 這裡不再定義編輯、刪除、下載按鈕的特殊顏色，恢復預設 */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      overflow-y: auto;
+    }
+    .modal-content {
+      background-color: #f9f9f9;
+      margin: 15% auto;
+      padding: 20px;
+      width: 300px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    .close {
+      position: absolute;
+      right: 10px;
+      top: 5px;
+      font-size: 24px;
+      color: #f00;
+      cursor: pointer;
+    }
+    .modal label {
+      font-size: 16px;
+      margin-right: 5px;
+    }
+    .modal input[type="time"],
+    .modal select {
+      font-size: 16px;
+      padding: 4px;
+      margin-bottom: 10px;
+    }
+    .modal button {
+      font-size: 16px;
+      padding: 6px 12px;
+      border: none;
+      background-color: #555;
+      color: #fff;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      margin-top: 10px;
+    }
+    .modal button:hover {
+      background-color: #333;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h2>訂單管理</h2>
+  </header>
+  
+  <div class="order-container" id="orderContainer">
+    <!-- 訂單內容會在此產生 -->
+  </div>
+  
+  <div class="actions">
+    <button class="menu-button" onclick="goBackMenu()">返回 Menu</button>
+    <button class="menu-button" onclick="resetOrderNumber()">重置編號</button>
+  </div>
+  
+  <!-- 編輯訂單 Modal (設定外帶取餐時間與內用座位) -->
+  <div id="editNoteModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeEditNoteModal()">&times;</span>
+      <h3>編輯訂單資訊</h3>
+      <div>
+        <input type="radio" id="editTakeout" name="editOrderType" value="外帶" checked onclick="toggleEditOrderType()">
+        <label for="editTakeout">外帶</label>
+        <input type="radio" id="editDinein" name="editOrderType" value="內用" onclick="toggleEditOrderType()">
+        <label for="editDinein">內用</label>
+      </div>
+      <div id="editTakeoutOption">
+        <label for="editPickupTime">取餐時間：</label>
+        <input type="time" id="editPickupTime">
+      </div>
+      <div id="editDineinOption" style="display:none;">
+        <label for="editTableNumber">座位：</label>
+        <select id="editTableNumber">
+          <option value="R1">R1</option>
+          <option value="R2">R2</option>
+          <option value="M1">M1</option>
+          <option value="M2">M2</option>
+          <option value="M3">M3</option>
+          <option value="L1">L1</option>
+        </select>
+      </div>
+      <button onclick="saveEditedOrder()">儲存修改</button>
+    </div>
+  </div>
+  
+  <script>
+    // 返回主選單
+    function goBackMenu(){
+      window.location.href = "index.html";
+    }
+    // 重置訂單編號
+    function resetOrderNumber(){
+      if(confirm("是否確定重置訂單編號？")){
+        localStorage.setItem("orderNumberCounter", 1);
+        alert("訂單編號已重置。");
+      }
+    }
+    
+    // 載入訂單資料並顯示
+    function loadOrders(){
+      let ordersStr = localStorage.getItem("allOrders");
+      let orderContainer = document.getElementById("orderContainer");
+      orderContainer.innerHTML = "";
+      if(!ordersStr || JSON.parse(ordersStr).length === 0){
+        orderContainer.innerHTML = "<p>目前沒有訂單</p>";
+        return;
+      }
+      let allOrders = JSON.parse(ordersStr);
+      allOrders.forEach((order, orderIndex) => {
+        // 為每筆訂單設定 id 方便下載
+        let orderBlock = document.createElement("div");
+        orderBlock.className = "order-block";
+        orderBlock.id = "orderBlock-" + orderIndex;
+        
+        // 訂單標題區：訂單編號及操作按鈕（編輯、刪除、下載）
+        let headerDiv = document.createElement("div");
+        headerDiv.style.display = "flex";
+        headerDiv.style.justifyContent = "space-between";
+        headerDiv.style.alignItems = "center";
+        headerDiv.innerHTML = `<h3>訂單編號：${order.orderId}</h3>
+          <div style="display: flex; gap: 5px; white-space: nowrap;">
+            <button onclick="editOrder(${orderIndex})">編輯訂單</button>
+            <button onclick="deleteOrder(${orderIndex})">刪除訂單</button>
+            <button onclick="downloadOrder(${orderIndex})">下載訂單</button>
+          </div>`;
+        orderBlock.appendChild(headerDiv);
+        
+        // 訂單內容表格，顯示品項、單價、數量、備註及小計
+        let table = document.createElement("table");
+        table.className = "order-list";
+        table.innerHTML = `<thead>
+          <tr>
+            <th>品項</th>
+            <th>單價</th>
+            <th>數量</th>
+            <th>備註</th>
+            <th>小計</th>
+          </tr>
+        </thead><tbody></tbody>`;
+        let tbody = table.querySelector("tbody");
+        let orderTotal = 0;
+        for(let itemName in order.items){
+          let item = order.items[itemName];
+          let subTotal = (item.subTotal !== undefined)
+                          ? item.subTotal
+                          : item.price * item.quantity + (item.eggCost || 0);
+          orderTotal += subTotal;
+          let row = document.createElement("tr");
+          row.innerHTML = `<td>${itemName}</td>
+                           <td>$${item.price}</td>
+                           <td>${item.quantity}</td>
+                           <td>${item.remark || "-"}</td>
+                           <td>$${subTotal}</td>`;
+          tbody.appendChild(row);
+        }
+        orderBlock.appendChild(table);
+        
+        // 在表格下方顯示外帶／內用資訊（使用不同背景色）
+        if(order.orderType) {
+          let infoDiv = document.createElement("div");
+          if(order.orderType === "外帶") {
+            infoDiv.className = "order-type takeout";
+            infoDiv.innerText = `外帶，取餐時間：${order.pickupTime || "未設定"}`;
+          } else {
+            infoDiv.className = "order-type dinein";
+            infoDiv.innerText = `內用，座位：${order.tableNumber || "未設定"}`;
+          }
+          orderBlock.appendChild(infoDiv);
+        }
+        
+        // 顯示總金額
+        let totalDiv = document.createElement("div");
+        totalDiv.className = "total-price";
+        totalDiv.innerText = "總金額：$" + orderTotal;
+        orderBlock.appendChild(totalDiv);
+        
+        orderContainer.appendChild(orderBlock);
+      });
+    }
+    
+    // 刪除訂單功能
+    function deleteOrder(index){
+      if(confirm("是否確定刪除訂單？")){
+        let allOrders = JSON.parse(localStorage.getItem("allOrders"));
+        allOrders.splice(index, 1);
+        localStorage.setItem("allOrders", JSON.stringify(allOrders));
+        loadOrders();
+      }
+    }
+    
+    // 編輯訂單功能：記錄當前編輯訂單索引，並載入該筆訂單外帶／內用資訊到編輯 Modal
+    let currentEditOrderIndex = null;
+    function editOrder(index){
+      currentEditOrderIndex = index;
+      let allOrders = JSON.parse(localStorage.getItem("allOrders"));
+      let order = allOrders[index];
+      if(order.orderType === "內用"){
+        document.getElementById("editDinein").checked = true;
+        document.getElementById("editTakeout").checked = false;
+        document.getElementById("editDineinOption").style.display = "block";
+        document.getElementById("editTakeoutOption").style.display = "none";
+        document.getElementById("editTableNumber").value = order.tableNumber || "R1";
+      } else {
+        document.getElementById("editTakeout").checked = true;
+        document.getElementById("editDinein").checked = false;
+        document.getElementById("editTakeoutOption").style.display = "block";
+        document.getElementById("editDineinOption").style.display = "none";
+        document.getElementById("editPickupTime").value = order.pickupTime || "";
+      }
+      document.getElementById("editNoteModal").style.display = "block";
+    }
+    
+    function closeEditNoteModal(){
+      document.getElementById("editNoteModal").style.display = "none";
+    }
+    
+    // 切換編輯 Modal 中外帶／內用顯示
+    function toggleEditOrderType(){
+      let isTakeout = document.getElementById("editTakeout").checked;
+      document.getElementById("editTakeoutOption").style.display = isTakeout ? "block" : "none";
+      document.getElementById("editDineinOption").style.display = isTakeout ? "none" : "block";
+    }
+    
+    // 儲存修改後的訂單外帶／內用資訊
+    function saveEditedOrder(){
+      let allOrders = JSON.parse(localStorage.getItem("allOrders"));
+      if(currentEditOrderIndex === null || !allOrders[currentEditOrderIndex]){
+        alert("找不到該訂單資料");
+        return;
+      }
+      let order = allOrders[currentEditOrderIndex];
+      if(document.getElementById("editTakeout").checked){
+        order.orderType = "外帶";
+        order.pickupTime = document.getElementById("editPickupTime").value;
+        order.tableNumber = "";
+      } else {
+        order.orderType = "內用";
+        order.tableNumber = document.getElementById("editTableNumber").value;
+        order.pickupTime = "";
+      }
+      allOrders[currentEditOrderIndex] = order;
+      localStorage.setItem("allOrders", JSON.stringify(allOrders));
+      closeEditNoteModal();
+      loadOrders();
+    }
+    
+    // 下載訂單功能：使用 html2canvas 將指定訂單區塊轉成 JPG 圖片下載
+    function downloadOrder(index) {
+      let orderBlock = document.getElementById("orderBlock-" + index);
+      if (!orderBlock) return;
+      html2canvas(orderBlock).then(canvas => {
+        let dataURL = canvas.toDataURL("image/jpeg");
+        let a = document.createElement("a");
+        a.href = dataURL;
+        a.download = "order_" + index + ".jpg";
+        a.click();
+      });
+    }
+    
+    window.onload = loadOrders;
+  </script>
+</body>
+</html>
