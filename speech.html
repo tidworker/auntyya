@@ -10,7 +10,7 @@
       margin: 10px;
       padding: 0;
     }
-    input, button {
+    input, button, textarea {
       margin: 5px;
       padding: 10px;
       font-size: 16px;
@@ -28,7 +28,7 @@
       background-color: #f0f0f0;
     }
     @media (max-width: 600px) {
-      input, button { font-size: 18px; }
+      input, button, textarea { font-size: 18px; }
     }
     /* Modal 樣式 */
     .modal {
@@ -62,6 +62,29 @@
       color: black;
       text-decoration: none;
     }
+    .form-group {
+      margin-bottom: 10px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    .form-group input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    /* 每筆中文輸入欄位的容器 */
+    .chinese-field {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .chinese-field input {
+      flex: 1;
+    }
+    .chinese-field button {
+      margin-left: 5px;
+    }
   </style>
 </head>
 <body>
@@ -77,7 +100,7 @@
     <p>訂單結果：<span id="orderResult"></span></p>
   </section>
 
-  <!-- 自動讀取轉譯字庫 -->
+  <!-- 轉譯字庫載入狀態 -->
   <section>
     <h2>轉譯字庫載入狀態</h2>
     <p id="dbStatus">尚未載入字庫資料...</p>
@@ -93,40 +116,46 @@
     <div id="menuList"></div>
   </section>
 
-  <!-- 新增/編輯菜單彈出視窗 -->
+  <!-- 新增/編輯菜單彈出視窗：包含【餐點名稱】、【中文輸入】（可新增多筆欄位）與【金額】 -->
   <div id="menuModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeMenuModal()">&times;</span>
       <h3 id="modalTitle">新增菜單項目</h3>
       <div class="form-group">
-        <label for="menuName">菜品名稱 (中文)：</label>
-        <input type="text" id="menuName" placeholder="例如: 蔥油餅">
+        <label for="menuName">餐點名稱：</label>
+        <input type="text" id="menuName" placeholder="例如：蔥油餅">
       </div>
       <div class="form-group">
-        <label for="menuKey">點餐關鍵字 (英文，可手動編輯)：</label>
-        <input type="text" id="menuKey" placeholder="自動轉譯或手動輸入">
+        <label>中文輸入（可多筆）：</label>
+        <div id="menuChineseContainer">
+          <!-- 初始建立一個中文輸入欄位 -->
+          <div class="chinese-field">
+            <input type="text" class="menuChineseInput" placeholder="輸入中文進行轉碼">
+            <button onclick="removeChineseField(this)">刪除</button>
+          </div>
+        </div>
+        <button onclick="addChineseField()">新增欄位</button>
       </div>
       <div class="form-group">
-        <label for="menuPrice">價格：</label>
-        <input type="number" id="menuPrice" placeholder="例如: 20">
+        <label for="menuPrice">金額：</label>
+        <input type="number" id="menuPrice" placeholder="例如：20">
       </div>
-      <button id="saveButton" onclick="saveMenuItem()">儲存</button>
-      <button id="deleteButton" onclick="deleteMenuItem()" style="display:none; background-color:red; color:white;">刪除</button>
+      <button id="saveButton" onclick="saveMenuItem()">確定</button>
       <button onclick="closeMenuModal()">取消</button>
     </div>
   </div>
 
   <script>
-    // 全域資料
+    // 全域資料：字庫與菜單
     let groupMapping = {};
     let charMapping = {};
-    let menu = {
-      "chonyobin": { name: "蔥油餅", price: 20 }
-    };
-    let currentEditingKey = null;
-    let manualEditKey = false;
+    // 菜單資料結構：每個項目含有 keywords 陣列、name 與 price
+    let menu = [
+      { keywords: ["chonyobin"], name: "蔥油餅", price: 20 }
+    ];
+    let currentEditingIndex = null;
 
-    // 讀取轉譯字庫
+    // 讀取轉譯字庫，資料庫編寫方式與原本相同
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -149,82 +178,126 @@
     }
     loadTranslationDatabase();
 
-    // 更新菜單列表
+    // 更新菜單列表，顯示關鍵字、餐點名稱與金額
     function updateMenuDisplay() {
       const menuListDiv = document.getElementById("menuList");
       menuListDiv.innerHTML = "";
       const ul = document.createElement("ul");
-      for (let key in menu) {
-        if (menu.hasOwnProperty(key)) {
-          const li = document.createElement("li");
-          li.textContent = key + " : " + menu[key].name + " - " + menu[key].price + "元";
-          li.onclick = () => openMenuModal(key);
-          ul.appendChild(li);
-        }
-      }
+      menu.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.textContent = `[${item.keywords.join(", ")}] : ${item.name} - ${item.price} 元`;
+        li.onclick = () => openMenuModal(index);
+        ul.appendChild(li);
+      });
       menuListDiv.appendChild(ul);
     }
     updateMenuDisplay();
 
+    // 新增中文輸入欄位
+    function addChineseField() {
+      const container = document.getElementById("menuChineseContainer");
+      const div = document.createElement("div");
+      div.className = "chinese-field";
+      div.innerHTML = '<input type="text" class="menuChineseInput" placeholder="輸入中文進行轉碼">' +
+                      '<button onclick="removeChineseField(this)">刪除</button>';
+      container.appendChild(div);
+    }
+
+    // 刪除指定的中文輸入欄位
+    function removeChineseField(btn) {
+      const fieldDiv = btn.parentNode;
+      fieldDiv.parentNode.removeChild(fieldDiv);
+    }
+
     // 開啟新增/編輯菜單視窗
-    function openMenuModal(key = null) {
-      currentEditingKey = key;
+    function openMenuModal(index = null) {
+      currentEditingIndex = index;
       const modal = document.getElementById("menuModal");
       modal.style.display = "block";
-      manualEditKey = false;
-      if (key) {
+      const container = document.getElementById("menuChineseContainer");
+      container.innerHTML = ""; // 清空現有欄位
+      if (index !== null) {
         document.getElementById("modalTitle").innerText = "編輯菜單項目";
-        document.getElementById("menuName").value = menu[key].name;
-        document.getElementById("menuKey").value = key;
-        document.getElementById("menuPrice").value = menu[key].price;
-        document.getElementById("deleteButton").style.display = "inline-block";
+        const item = menu[index];
+        document.getElementById("menuName").value = item.name;
+        document.getElementById("menuPrice").value = item.price;
+        // 依據現有 keywords 建立多筆中文輸入欄位
+        item.keywords.forEach(keyword => {
+          const div = document.createElement("div");
+          div.className = "chinese-field";
+          div.innerHTML = `<input type="text" class="menuChineseInput" value="${keyword}" placeholder="輸入中文進行轉碼">
+                           <button onclick="removeChineseField(this)">刪除</button>`;
+          container.appendChild(div);
+        });
+        // 若沒有關鍵字，則預設建立一個空欄位
+        if (item.keywords.length === 0) {
+          addChineseField();
+        }
       } else {
         document.getElementById("modalTitle").innerText = "新增菜單項目";
         document.getElementById("menuName").value = "";
-        document.getElementById("menuKey").value = "";
         document.getElementById("menuPrice").value = "";
-        document.getElementById("deleteButton").style.display = "none";
+        addChineseField();
       }
     }
 
     // 關閉菜單視窗
     function closeMenuModal() {
       document.getElementById("menuModal").style.display = "none";
-      currentEditingKey = null;
+      currentEditingIndex = null;
     }
 
-    // 新增或更新菜單項目
+    // 新增或更新菜單項目：依據所有中文輸入欄位利用字庫轉碼生成多組關鍵字
     function saveMenuItem() {
       const name = document.getElementById("menuName").value.trim();
-      let key = document.getElementById("menuKey").value.trim().toLowerCase();
       const price = parseFloat(document.getElementById("menuPrice").value.trim());
-      if (!key || !name || isNaN(price)) {
-        alert("請填寫完整且正確的菜單資料！");
+      if (!name || isNaN(price)) {
+        alert("請填寫完整且正確的資料！");
         return;
       }
-      if (currentEditingKey) {
-        if (key !== currentEditingKey) {
-          delete menu[currentEditingKey];
+      // 取得所有中文輸入欄位的值，分別轉碼後組成關鍵字陣列
+      const inputFields = document.getElementsByClassName("menuChineseInput");
+      let keywords = [];
+      for (let field of inputFields) {
+        const chineseInput = field.value.trim();
+        if (chineseInput) {
+          let converted = "";
+          for (let i = 0; i < chineseInput.length; i++) {
+            const ch = chineseInput.charAt(i);
+            if (charMapping[ch] !== undefined) {
+              converted += charMapping[ch];
+            }
+          }
+          converted = converted.toLowerCase();
+          if (converted) {
+            keywords.push(converted);
+          }
         }
-      } else if (menu[key]) {
-        alert("已有相同關鍵字的菜單項目！");
+      }
+      if (keywords.length === 0) {
+        alert("請至少輸入一筆可轉碼的中文資料！");
         return;
       }
-      menu[key] = { name, price };
+      const newItem = { keywords, name, price };
+      if (currentEditingIndex !== null) {
+        menu[currentEditingIndex] = newItem;
+      } else {
+        // 檢查是否已有重複關鍵字（只檢查每個新關鍵字是否與現有菜單中的任一關鍵字重複）
+        for (let item of menu) {
+          for (let key of item.keywords) {
+            if (keywords.includes(key)) {
+              alert("已有相同關鍵字的菜單項目！");
+              return;
+            }
+          }
+        }
+        menu.push(newItem);
+      }
       updateMenuDisplay();
       closeMenuModal();
     }
 
-    // 刪除菜單項目
-    function deleteMenuItem() {
-      if (currentEditingKey && confirm("確定要刪除該項目嗎？")) {
-        delete menu[currentEditingKey];
-        updateMenuDisplay();
-        closeMenuModal();
-      }
-    }
-
-    // 點餐功能：根據轉譯後輸入進行比對下單
+    // 點餐功能：使用者輸入中文後經字庫轉碼比對菜單中的關鍵字
     function orderFromChinese() {
       const input = document.getElementById("orderInput").value.trim();
       if (!input) {
@@ -238,34 +311,38 @@
           converted += charMapping[ch];
         }
       }
-      if (menu[converted]) {
-        const dish = menu[converted];
+      converted = converted.toLowerCase();
+      // 精確比對各菜單項目中的關鍵字
+      let foundDish = menu.find(item => item.keywords.includes(converted));
+      if (foundDish) {
         document.getElementById("orderResult").innerText =
-          `您點的是 ${dish.name}，價格為 ${dish.price} 元`;
+          `您點的是 ${foundDish.name}，金額為 ${foundDish.price} 元`;
       } else {
+        // 如未精確命中則採用得分推薦
         const bestMatch = findBestMatch(converted);
         if (bestMatch) {
-          const { key, similarity } = bestMatch;
           document.getElementById("orderResult").innerText =
-            `推薦您點：${menu[key].name} （得分：${similarity}），價格為 ${menu[key].price} 元`;
+            `推薦您點：${bestMatch.item.name} （得分：${bestMatch.score}），金額為 ${bestMatch.item.price} 元`;
         } else {
           document.getElementById("orderResult").innerText = "未找到相似菜品！";
         }
       }
     }
 
-    // 積分算法：計算目標字串中每個字母在輸入字串中出現次數累計得分
+    // 積分算法：計算輸入與每個菜單項目各關鍵字匹配的得分
     function findBestMatch(input) {
-      let bestKey = null;
+      let bestItem = null;
       let bestScore = 0;
-      for (let key in menu) {
-        const score = letterMatchScore(input, key);
-        if (score > bestScore) {
-          bestScore = score;
-          bestKey = key;
-        }
-      }
-      return bestKey ? { key: bestKey, similarity: bestScore } : null;
+      menu.forEach(item => {
+        item.keywords.forEach(keyword => {
+          const score = letterMatchScore(input, keyword);
+          if (score > bestScore) {
+            bestScore = score;
+            bestItem = item;
+          }
+        });
+      });
+      return bestItem ? { item: bestItem, score: bestScore } : null;
     }
     function letterMatchScore(input, target) {
       let score = 0;
@@ -276,24 +353,6 @@
       }
       return score;
     }
-
-    // 自動生成英文關鍵字（除非使用者手動編輯）
-    document.getElementById("menuName").addEventListener("input", function () {
-      if (!manualEditKey) {
-        const name = this.value.trim();
-        let key = "";
-        for (let i = 0; i < name.length; i++) {
-          const ch = name.charAt(i);
-          if (charMapping[ch] !== undefined) {
-            key += charMapping[ch];
-          }
-        }
-        document.getElementById("menuKey").value = key;
-      }
-    });
-    document.getElementById("menuKey").addEventListener("input", function () {
-      manualEditKey = true;
-    });
 
     // 下載菜單資料（以 JSON 格式存成 menu.txt）
     function downloadMenuData() {
@@ -318,7 +377,7 @@
       reader.onload = function(e) {
         try {
           const data = JSON.parse(e.target.result);
-          if (typeof data === "object" && data !== null) {
+          if (Array.isArray(data)) {
             menu = data;
             updateMenuDisplay();
             alert("菜單資料上傳成功！");
