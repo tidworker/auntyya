@@ -40,8 +40,9 @@
                                     第二筆 "danbin3" 以 2 份，下單後若 token 附帶數字則更新 defaultQuantity，
                                     接著 "chonyobin" 使用最新 defaultQuantity，
                                     最後 "la" 為免費商品，將附加到上一筆非免費訂單中
+         3danbin/2miansian/       → 第一筆解析為 3 份 danbin，第二筆解析為 2 份 miansian
     -->
-    <input type="text" id="orderInput" placeholder="例如：danbin3/chonyobin 或 2/danbin3/chonyobin/3/la">
+    <input type="text" id="orderInput" placeholder="例如：danbin3/chonyobin 或 3danbin/2miansian/">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
@@ -185,27 +186,37 @@
       let defaultQuantity = null;
       let errorOccurred = false;
       
-      // 解析各 token，當 token 中有附帶數字時以該數字為準
+      // 使用新的正則表達式進行兩兩一組的匹配
+      // 可接受格式：數字在前（如 3danbin）、或數字在後（如 danbin3）
       for (let i = 0; i < tokens.length; i++) {
         let token = tokens[i];
+        // 如果 token 全為數字，則更新預設數量並跳過
         if (/^\d+$/.test(token)) {
           defaultQuantity = parseInt(token);
           continue;
         }
-        let m = token.match(/^([a-zA-Z]+)(\d+)?$/);
+        // 正則：可選的前置數字、必填的字母、可選的後置數字
+        let m = token.match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
         if (!m) {
           errorOccurred = true;
           break;
         }
-        let attachedQuantity = m[2] ? parseInt(m[2]) : null;
-        let quantity;
-        if (attachedQuantity !== null) {
-          quantity = attachedQuantity;
-          defaultQuantity = attachedQuantity;  // 更新預設數量
+        // 若同時出現前置與後置數字，格式錯誤
+        if (m[1] && m[3]) {
+          errorOccurred = true;
+          break;
+        }
+        let quantity = null;
+        if (m[1]) {
+          quantity = parseInt(m[1]);
+          defaultQuantity = quantity;
+        } else if (m[3]) {
+          quantity = parseInt(m[3]);
+          defaultQuantity = quantity;
         } else {
           quantity = (defaultQuantity !== null) ? defaultQuantity : 1;
         }
-        dishOrders.push({ keyword: m[1], quantity: quantity });
+        dishOrders.push({ keyword: m[2], quantity: quantity });
       }
       
       if (errorOccurred || dishOrders.length === 0) {
@@ -222,7 +233,7 @@
         return;
       }
       
-      // 建立最終訂單列表，若有錯誤也只顯示一次提示
+      // 建立最終訂單列表，免費商品附加到上一筆非免費訂單
       let orderList = [];
       for (let i = 0; i < dishOrders.length; i++) {
         let order = dishOrders[i];
