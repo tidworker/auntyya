@@ -31,25 +31,28 @@
     <button id="table6" class="table-button" onclick="handleTableClick(6)">桌 6</button>
   </div>
   <button class="back-button" onclick="window.location.href='index.html'">返回點餐主頁</button>
-
-  <!-- 當前訂單顯示區 -->
+  
   <div id="currentOrder">
     <h3>當前訂單</h3>
     <div id="currentOrderList">目前無訂單</div>
   </div>
-
+  
   <script>
+    // 當桌號按鈕被點選
     function handleTableClick(tableNumber) {
       let orderKey = "inHouseOrder_" + tableNumber;
       let storedOrder = localStorage.getItem(orderKey);
       if (!storedOrder) {
+        // 如果該桌尚未存入訂單，則從 inHouseOrderRecord 讀取
         let recordedOrder = localStorage.getItem("inHouseOrderRecord");
         if (recordedOrder) {
           localStorage.setItem(orderKey, recordedOrder);
           updateButton(tableNumber, JSON.parse(recordedOrder));
+          // 顯示該桌訂單於下方區塊
+          displayCurrentOrder(tableNumber, JSON.parse(recordedOrder));
+          // 清除 inHouseOrderRecord（避免重複存入）
           localStorage.removeItem("inHouseOrderRecord");
           alert("已將訂單記錄存入桌 " + tableNumber);
-          displayCurrentOrder(tableNumber, JSON.parse(recordedOrder));
         } else {
           alert("沒有訂單記錄可供存入！");
         }
@@ -58,7 +61,8 @@
         displayCurrentOrder(tableNumber, order);
       }
     }
-
+    
+    // 更新桌號按鈕的文字顯示
     function updateButton(tableNumber, order) {
       let button = document.getElementById("table" + tableNumber);
       let summary = "桌 " + tableNumber;
@@ -68,7 +72,8 @@
       }
       button.textContent = summary;
     }
-
+    
+    // 將該桌訂單內容顯示在下方區塊
     function displayCurrentOrder(tableNumber, order) {
       let orderDiv = document.getElementById("currentOrderList");
       let details = `<strong>桌 ${tableNumber} 的訂單:</strong><br>`;
@@ -81,6 +86,14 @@
       }
       orderDiv.innerHTML = details;
     }
+    
+    // 頁面載入時也可以嘗試讀取是否已有 inHouseOrderRecord 並顯示（非必要）
+    window.onload = function() {
+      let rec = localStorage.getItem("inHouseOrderRecord");
+      if (rec) {
+        document.getElementById("currentOrderList").innerText = "尚未分配桌號的訂單待存入。";
+      }
+    };
   </script>
 </body>
 </html>
