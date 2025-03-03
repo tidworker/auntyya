@@ -2,51 +2,24 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8" />
-  <title>內用點餐 - 桌號管理</title>
+  <title>內用訂單桌號</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      background-color: #eef;
-      padding: 20px;
-    }
-    h2 {
-      color: #333;
-    }
-    .table-buttons {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 10px;
-      margin-top: 20px;
-    }
-    .table-button {
-      width: 100px;
-      height: 100px;
-      font-size: 24px;
-      cursor: pointer;
-      border: none;
-      background-color: #555;
-      color: #fff;
-      border-radius: 10px;
-      transition: background-color 0.2s;
-    }
-    .table-button:hover {
-      background-color: #333;
-    }
-    .back-button {
-      margin-top: 30px;
-      font-size: 20px;
-      padding: 10px 20px;
-      cursor: pointer;
-    }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; text-align: center; background-color: #f0f0f0; color: #333; }
+    header { background: #ddd; padding: 15px 0; margin-bottom: 20px; }
+    header h2 { margin: 0; font-size: 24px; color: #333; }
+    .table-buttons { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 20px auto; max-width: 600px; }
+    .table-button { width: 100px; height: 100px; font-size: 20px; cursor: pointer; border: none; background-color: #555; color: #fff; border-radius: 10px; transition: background-color 0.2s; white-space: pre-line; }
+    .table-button:hover { background-color: #333; }
+    .back-button { margin-top: 20px; font-size: 20px; padding: 10px 20px; cursor: pointer; border: none; background-color: #555; color: #fff; transition: background-color 0.2s; }
+    .back-button:hover { background-color: #333; }
   </style>
 </head>
 <body>
-  <h2>內用訂單桌號</h2>
+  <header>
+    <h2>內用訂單桌號</h2>
+  </header>
   <div class="table-buttons">
-    <!-- 六個按鈕，ID 分別為 table1 ~ table6 -->
     <button id="table1" class="table-button" onclick="handleTableClick(1)">1</button>
     <button id="table2" class="table-button" onclick="handleTableClick(2)">2</button>
     <button id="table3" class="table-button" onclick="handleTableClick(3)">3</button>
@@ -54,37 +27,49 @@
     <button id="table5" class="table-button" onclick="handleTableClick(5)">5</button>
     <button id="table6" class="table-button" onclick="handleTableClick(6)">6</button>
   </div>
-  
-  <button class="back-button" onclick="window.location.href='index2.html'">返回點餐主頁</button>
-  
+  <button class="back-button" onclick="window.location.href='index.html'">返回點餐主頁</button>
   <script>
+    // 當按下桌號按鈕時
     function handleTableClick(tableNumber) {
       let orderKey = "inHouseOrder_" + tableNumber;
       let storedOrder = localStorage.getItem(orderKey);
       if (!storedOrder) {
-        // 尚未存入訂單，嘗試從主頁 currentOrder 取得
-        let currentOrder = localStorage.getItem("currentOrder");
-        if (currentOrder) {
-          localStorage.setItem(orderKey, currentOrder);
-          document.getElementById("table" + tableNumber).textContent = tableNumber + " (已存訂單)";
-          alert("已將目前訂單存入桌號 " + tableNumber);
+        // 取得 allOrders 陣列中最新一筆訂單
+        let allOrders = JSON.parse(localStorage.getItem("allOrders")) || [];
+        if (allOrders.length > 0) {
+          let latestOrder = allOrders[allOrders.length - 1];
+          localStorage.setItem(orderKey, JSON.stringify(latestOrder));
+          updateButton(tableNumber, latestOrder);
+          alert("已將最新訂單存入桌號 " + tableNumber);
         } else {
-          alert("目前沒有訂單可以存入！");
+          alert("沒有可用的訂單！");
         }
       } else {
-        // 已存入訂單，解析並顯示內容
         let order = JSON.parse(storedOrder);
-        let details = "";
-        for (let item in order) {
-          let it = order[item];
-          details += item + ": 數量 " + it.quantity + ", 單價 $" + it.price;
-          if (it.eggCost) details += ", 蛋費 $" + it.eggCost;
-          if (it.remark) details += ", 備註: " + it.remark;
-          details += "\n";
-        }
-        if (details === "") details = "無訂單內容";
-        alert("桌號 " + tableNumber + " 的訂單:\n" + details);
+        showOrderDetails(tableNumber, order);
       }
+    }
+    // 更新按鈕文字，顯示桌號與訂單摘要
+    function updateButton(tableNumber, order) {
+      let button = document.getElementById("table" + tableNumber);
+      let summary = "桌 " + tableNumber;
+      for (let item in order) {
+        let details = order[item];
+        summary += "\n" + item + " x" + details.quantity;
+      }
+      button.textContent = summary;
+    }
+    // 顯示訂單詳細內容
+    function showOrderDetails(tableNumber, order) {
+      let details = "桌 " + tableNumber + " 的訂單:\n";
+      for (let item in order) {
+        let d = order[item];
+        details += item + ": 數量 " + d.quantity + ", 單價 $" + d.price;
+        if (d.eggCost) details += ", 蛋費 $" + d.eggCost;
+        if (d.remark) details += ", 備註: " + d.remark;
+        details += "\n";
+      }
+      alert(details);
     }
   </script>
 </body>
