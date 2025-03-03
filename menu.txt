@@ -134,16 +134,25 @@
   },
   {
     "keywords": [
-      "la"
+      "(la)"
     ],
     "name": "辣",
     "price": 0
   },
   {
     "keywords": [
-      "ladanbin"
+      "bindoujiang",
+      "bindou"
     ],
-    "name": "蔥油餅加蛋+辣",
-    "price": 30
+    "name": "豆漿-冰",
+    "price": 15
+  },
+  {
+    "keywords": [
+      "wendoujiang",
+      "wendou"
+    ],
+    "name": "豆漿-溫",
+    "price": 15
   }
 ]
