@@ -134,16 +134,23 @@
   },
   {
     "keywords": [
-      "(la)"
+      "/la/"
     ],
     "name": "辣",
     "price": 0
   },
   {
     "keywords": [
-      "(la)"
+      "/wen"
     ],
     "name": "溫",
+    "price": 0
+  },
+  {
+   "keywords": [
+      "/ben"
+    ],
+    "name": "冰",
     "price": 0
   },
   {
@@ -152,6 +159,38 @@
       "bendou"
     ],
     "name": "豆漿-冰",
+    "price": 15
+  },
+  {
+    "keywords": [
+      "wenhongcha",
+      "wenhing"
+    ],
+    "name": "紅茶-溫",
+    "price": 10
+  },
+  {
+    "keywords": [
+      "benhongcha",
+      "benhong"
+    ],
+    "name": "紅茶-冰",
+    "price": 10
+  },
+  {
+    "keywords": [
+      "wennaicha",
+      "wennai"
+    ],
+    "name": "奶茶-溫",
+    "price": 15
+  },
+  {
+    "keywords": [
+      "bennaicha",
+      "bennai"
+    ],
+    "name": "奶茶-冰",
     "price": 15
   },
   {
@@ -165,7 +204,15 @@
   {
     "keywords": [
       "wenmijiang",
-      "wenmi"
+      "wendou"
+    ],
+    "name": "米漿-溫",
+    "price": 15
+  },
+  {
+    "keywords": [
+      "benmijiang",
+      "benmi"
     ],
     "name": "米漿-冰",
     "price": 15
