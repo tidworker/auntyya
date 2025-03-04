@@ -136,9 +136,9 @@
           btn.textContent = tableNames[i] + " - 總金額: $" + total + "元";
           // 檢查是否已出餐
           if (localStorage.getItem("servedTable_" + i) === "true") {
-            btn.style.backgroundColor = "#ccffcc"; // 淺綠色
+            btn.style.backgroundColor = "green"; // 淺綠色
           } else {
-            btn.style.backgroundColor = "#ffcccc"; // 淺紅色
+            btn.style.backgroundColor = "red"; // 淺紅色
           }
         }
       }
