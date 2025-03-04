@@ -17,6 +17,7 @@
     #currentOrder { margin-top: 20px; padding: 15px; background-color: #fff; border: 1px solid #aaa; width: 90%; max-width: 600px; margin-left: auto; margin-right: auto; text-align: left; }
     #currentOrder h3 { margin: 0 0 10px; font-size: 20px; text-align: center; }
     #currentOrderList { font-size: 18px; line-height: 1.6; }
+    /* Modal */
     .modal { display: none; position: fixed; z-index: 9999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
     .modal-content { background-color: #f9f9f9; margin: 15% auto; padding: 20px; width: 80%; max-width: 400px; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.3); text-align: left; }
     .close { position: absolute; right: 15px; top: 10px; font-size: 24px; color: #f00; cursor: pointer; }
@@ -29,6 +30,7 @@
     <h2>內用訂單桌號</h2>
   </header>
   <div class="table-buttons">
+    <!-- 桌 1、3、7 預設鎖定 -->
     <button id="table1" class="table-button locked" disabled>桌 1 (已結帳)</button>
     <button id="table2" class="table-button" onclick="handleTableClick(2)">中3</button>
     <button id="table3" class="table-button locked" disabled>桌 3 (已結帳)</button>
@@ -41,6 +43,12 @@
   </div>
   <button class="back-button" onclick="window.location.href='index2.html'">返回點餐主頁</button>
   
+  <div id="currentOrder">
+    <h3>最新訂單</h3>
+    <div id="currentOrderList">目前無訂單</div>
+  </div>
+  
+  <!-- 模態框：顯示詳細訂單內容及【追加訂單】、【已出餐】、【結帳】按鈕 -->
   <div id="orderModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeModal()">&times;</span>
@@ -50,78 +58,207 @@
   </div>
   
   <script>
-    function setTableColor(tableNumber, color) {
-      let btn = document.getElementById("table" + tableNumber);
-      btn.style.backgroundColor = color;
+    // 桌號對應名稱
+    const tableNames = {
+      1: "桌 1",
+      2: "中3",
+      3: "桌 3",
+      4: "冰箱",
+      5: "中2",
+      6: "右2",
+      7: "桌 7",
+      8: "中1",
+      9: "右1"
+    };
+
+    // normalizeOrder：若訂單原為物件，轉為陣列；若已為陣列則直接回傳
+    function normalizeOrder(order) {
+      if (Array.isArray(order)) return order;
+      else return [{ header: "", items: order }];
     }
 
-    // 頁面載入時：設定按鈕顏色
+    // calculateTotal：依照訂單陣列計算總金額
+    function calculateTotal(order) {
+      let groups = normalizeOrder(order);
+      let total = 0;
+      groups.forEach(group => {
+        for (let item in group.items) {
+          let d = group.items[item];
+          total += d.price * d.quantity;
+          if (d.eggCost) total += d.eggCost;
+        }
+      });
+      return total;
+    }
+
+    // formatOrderLine：格式化單筆訂單項目（不顯示單價）
+    function formatOrderLine(item, details) {
+      let line = item + "×" + details.quantity;
+      if (details.remark) line += " , " + details.remark;
+      return line;
+    }
+
+    // displayLatestOrder：將最新訂單顯示在下方區塊（各組隔行，追加組第一行顯示 "加單:"）
+    function displayLatestOrder(order) {
+      let groups = normalizeOrder(order);
+      let orderDiv = document.getElementById("currentOrderList");
+      let lines = "";
+      groups.forEach((group, index) => {
+        if (index > 0) {
+          lines += "<br>加單:<br>";
+        }
+        for (let item in group.items) {
+          lines += formatOrderLine(item, group.items[item]) + "<br>";
+        }
+      });
+      let total = calculateTotal(order);
+      lines += "<br>總金額：" + total + "元";
+      orderDiv.innerHTML = lines || "目前無訂單";
+    }
+
+    // 頁面載入時：更新最新訂單區及非鎖定桌號按鈕背景（有訂單則顯示淺紅色；若已出餐則顯示淺綠色）
     window.onload = function() {
+      let orderRecord = localStorage.getItem("inHouseOrderRecord") || localStorage.getItem("currentOrder");
+      if (orderRecord) {
+        let order = JSON.parse(orderRecord);
+        displayLatestOrder(order);
+      } else {
+        document.getElementById("currentOrderList").innerText = "目前無訂單";
+      }
       for (let i = 1; i <= 9; i++) {
-        if ([1, 3, 7].includes(i)) continue;
+        if ([1,3,7].includes(i)) continue; // 這些桌號預設鎖定
         let tableKey = "inHouseOrder_" + i;
         let stored = localStorage.getItem(tableKey);
-        let served = localStorage.getItem("servedTable_" + i);
         if (stored) {
-          let total = JSON.parse(stored).reduce((sum, order) => sum + order.items.reduce((s, item) => s + item.price * item.quantity, 0), 0);
+          let order = JSON.parse(stored);
+          let total = calculateTotal(order);
           let btn = document.getElementById("table" + i);
           btn.textContent = tableNames[i] + " - 總金額: $" + total + "元";
-          btn.style.backgroundColor = served ? "#ccffcc" : "#ffcccc"; // 綠色(已出餐) 或 紅色(未出餐)
+          // 檢查是否已出餐
+          if (localStorage.getItem("servedTable_" + i) === "true") {
+            btn.style.backgroundColor = "#ccffcc"; // 淺綠色
+          } else {
+            btn.style.backgroundColor = "#ffcccc"; // 淺紅色
+          }
         }
       }
     };
 
+    // 點選桌號按鈕（僅對未鎖定的桌號）
     function handleTableClick(tableNumber) {
       let tableKey = "inHouseOrder_" + tableNumber;
       let storedOrder = localStorage.getItem(tableKey);
-      if (storedOrder) {
+      if (!storedOrder) {
+        if (confirm("是否將最新訂單存入 " + tableNames[tableNumber] + "?")) {
+          let orderRecord = localStorage.getItem("inHouseOrderRecord") || localStorage.getItem("currentOrder");
+          if (orderRecord) {
+            let normalized = [{ header: "", items: JSON.parse(orderRecord) }];
+            localStorage.setItem(tableKey, JSON.stringify(normalized));
+            let total = calculateTotal(normalized);
+            let btn = document.getElementById("table" + tableNumber);
+            btn.textContent = tableNames[tableNumber] + " - 總金額: $" + total + "元";
+            btn.style.backgroundColor = "#ffcccc";
+            displayLatestOrder(JSON.parse(orderRecord));
+            localStorage.removeItem("inHouseOrderRecord");
+          } else {
+            alert("沒有最新訂單可供存入！");
+          }
+        }
+      } else {
         let order = JSON.parse(storedOrder);
         showOrderModal(tableNumber, order);
       }
     }
 
+    // 模態框：顯示該桌詳細訂單內容及【追加訂單】、【已出餐】、【結帳】按鈕
     function showOrderModal(tableNumber, order) {
+      let groups = normalizeOrder(order);
       let modal = document.getElementById("orderModal");
       let modalDetails = document.getElementById("modalOrderDetails");
       let modalButtons = document.getElementById("modalButtons");
       let lines = "<strong>" + tableNames[tableNumber] + " 的訂單:</strong><br>";
-
-      order.forEach((group, index) => {
+      groups.forEach((group, index) => {
         if (index > 0) lines += "<br>加單:<br>";
         for (let item in group.items) {
-          lines += item + "×" + group.items[item].quantity + "<br>";
+          lines += formatOrderLine(item, group.items[item]) + "<br>";
         }
       });
-
       let total = calculateTotal(order);
       lines += "<br>總金額：" + total + "元";
       modalDetails.innerHTML = lines;
-      
-      modalButtons.innerHTML = `
-        <button onclick="serveOrder(${tableNumber})">已出餐</button>
-        <button onclick="checkoutOrder(${tableNumber})">結帳</button>
-      `;
+      modalButtons.innerHTML = "";
+      let appendBtn = document.createElement("button");
+      appendBtn.textContent = "追加訂單";
+      appendBtn.onclick = function() { appendOrder(tableNumber); };
+      modalButtons.appendChild(appendBtn);
+      let serveBtn = document.createElement("button");
+      serveBtn.textContent = "已出餐";
+      serveBtn.onclick = function() { serveOrder(tableNumber); };
+      modalButtons.appendChild(serveBtn);
+      let checkoutBtn = document.createElement("button");
+      checkoutBtn.textContent = "結帳";
+      checkoutBtn.onclick = function() { checkoutOrder(tableNumber); };
+      modalButtons.appendChild(checkoutBtn);
       modal.style.display = "block";
     }
 
+    // 追加訂單：新增一筆新的訂單組，header 固定為 "加單"，與原訂單隔一行顯示
+    function appendOrder(tableNumber) {
+      if (confirm("是否追加最新訂單到 " + tableNames[tableNumber] + "？")) {
+        let orderRecord = localStorage.getItem("inHouseOrderRecord") || localStorage.getItem("currentOrder");
+        if (orderRecord) {
+          let newOrder = JSON.parse(orderRecord);
+          let tableKey = "inHouseOrder_" + tableNumber;
+          let existingOrder = normalizeOrder(JSON.parse(localStorage.getItem(tableKey)));
+          existingOrder.push({ header: "加單", items: newOrder });
+          localStorage.setItem(tableKey, JSON.stringify(existingOrder));
+          let total = calculateTotal(existingOrder);
+          let btn = document.getElementById("table" + tableNumber);
+          btn.textContent = tableNames[tableNumber] + " - 總金額: $" + total + "元";
+          btn.style.backgroundColor = "#ffcccc";
+          showOrderModal(tableNumber, existingOrder);
+          localStorage.removeItem("inHouseOrderRecord");
+        } else {
+          alert("沒有最新訂單可供追加！");
+        }
+      }
+    }
+
+    // 已出餐：在模態框中點選「已出餐」後，將該桌狀態記錄為已出餐，並更新按鈕背景為淺綠色
     function serveOrder(tableNumber) {
       localStorage.setItem("servedTable_" + tableNumber, "true");
-      setTableColor(tableNumber, "#ccffcc"); // 設為淺綠色
+      let btn = document.getElementById("table" + tableNumber);
+      btn.style.backgroundColor = "#ccffcc"; // 淺綠色
       closeModal();
     }
 
+    // 結帳：詢問是否結帳，確認後清空該桌訂單，並更新按鈕（恢復原始狀態，背景色為預設 #555）
     function checkoutOrder(tableNumber) {
-      localStorage.removeItem("inHouseOrder_" + tableNumber);
-      localStorage.removeItem("servedTable_" + tableNumber);
-      let btn = document.getElementById("table" + tableNumber);
-      btn.textContent = tableNames[tableNumber];
-      btn.style.backgroundColor = "#555";
-      closeModal();
+      let tableKey = "inHouseOrder_" + tableNumber;
+      let storedOrder = localStorage.getItem(tableKey);
+      if (storedOrder) {
+        let total = calculateTotal(JSON.parse(storedOrder));
+        if (confirm("是否結帳？總金額：" + total + "元")) {
+          localStorage.removeItem(tableKey);
+          localStorage.removeItem("servedTable_" + tableNumber);
+          let btn = document.getElementById("table" + tableNumber);
+          btn.textContent = tableNames[tableNumber];
+          btn.style.backgroundColor = "#555";
+          closeModal();
+        }
+      }
     }
 
     function closeModal() {
       document.getElementById("orderModal").style.display = "none";
     }
+
+    window.onclick = function(event) {
+      let modal = document.getElementById("orderModal");
+      if (event.target == modal) {
+        modal.style.display = "none";
+      }
+    };
   </script>
 </body>
 </html>
