@@ -130,7 +130,7 @@
           let total = calculateTotal(order);
           let btn = document.getElementById("table" + i);
           btn.textContent = tableNames[i] + " - 總金額: $" + total + "元";
-          btn.style.backgroundColor = localStorage.getItem("servedTable_" + i) === "true" ? "#cce5ff" : "#ffcccc";
+          btn.style.backgroundColor = localStorage.getItem("servedTable_" + i) === "true" ? "#0066ff" : "#cc0000";
         }
       }
     };
@@ -148,7 +148,7 @@
             let total = calculateTotal(normalized);
             let btn = document.getElementById("table" + tableNumber);
             btn.textContent = tableNames[tableNumber] + " - 總金額: $" + total + "元";
-            btn.style.backgroundColor = "#ffcccc";
+            btn.style.backgroundColor = "#cc0000";
             displayLatestOrder(JSON.parse(orderRecord));
             localStorage.removeItem("inHouseOrderRecord");
           } else {
@@ -206,7 +206,7 @@
           let total = calculateTotal(existingOrder);
           let btn = document.getElementById("table" + tableNumber);
           btn.textContent = tableNames[tableNumber] + " - 總金額: $" + total + "元";
-          btn.style.backgroundColor = "#ffcccc";
+          btn.style.backgroundColor = "#cc0000";
           showOrderModal(tableNumber, existingOrder);
           localStorage.removeItem("inHouseOrderRecord");
         } else {
@@ -215,15 +215,15 @@
       }
     }
 
-    // 已出餐：點選後將該桌狀態記錄為已出餐，並更新按鈕背景為正綠色 (#cce5ff)
+    // 已出餐：點選後將該桌狀態記錄為已出餐，並更新按鈕背景為正綠 (#0066ff)
     function serveOrder(tableNumber) {
       localStorage.setItem("servedTable_" + tableNumber, "true");
       let btn = document.getElementById("table" + tableNumber);
-      btn.style.backgroundColor = "#cce5ff";
+      btn.style.backgroundColor = "#0066ff";
       closeModal();
     }
 
-    // 結帳：詢問是否結帳，確認後清空該桌訂單並更新按鈕文字與背景恢復預設
+    // 結帳：詢問是否結帳，確認後清空該桌訂單並恢復按鈕文字與背景為預設
     function checkoutOrder(tableNumber) {
       let tableKey = "inHouseOrder_" + tableNumber;
       let storedOrder = localStorage.getItem(tableKey);
