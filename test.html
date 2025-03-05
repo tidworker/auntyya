@@ -33,23 +33,14 @@
   
   <!-- 點餐區 -->
   <section>
-    <h2>請輸入訂單內容</h2>
-    <!-- 輸入範例：
-         danbin3/miansian2/         → 解析結果：danbin 3 份、miansian 2 份
-         2/miansian3/danbin          → 解析結果：miansian 2 份、danbin 3 份
-    -->
+    <h2>請輸入訂單內容（或直接使用語音輸入）</h2>
+    <!-- 手動輸入保留，可作除錯或備用 -->
     <input type="text" id="orderInput" placeholder="例如：danbin3/miansian2/ 或 2/miansian3/danbin">
     <button onclick="orderFromChinese()">送出訂單</button>
-    <!-- 修改後語音輸入按鈕：點選後開始連續語音輸入，每次只判斷一個品項 -->
+    <!-- 語音輸入按鈕 -->
     <button onclick="startContinuousVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
-    <!-- 隱藏語音輸入後內容 -->
-    <p id="voiceTranscript" style="display:none;">語音輸入內容：無</p>
-  </section>
-  
-  <!-- 隱藏轉譯後內容 -->
-  <section style="display:none;">
-    <h2>轉譯後文字</h2>
+    <!-- 顯示轉譯與確認用訊息 -->
     <p id="convertedText">尚未轉譯</p>
   </section>
   
@@ -70,7 +61,6 @@
         <!-- 訂單項目將動態加入 -->
       </tbody>
     </table>
-    <!-- 計算總金額 -->
     <button onclick="calculateTotal()">計算總金額</button>
     <p id="totalAmount">總金額：0 元</p>
   </section>
@@ -82,7 +72,7 @@
     <p id="menuStatus">尚未載入菜單資料...</p>
   </section>
   
-  <!-- 模態框：編輯訂單項目 -->
+  <!-- 模態框：編輯訂單項目（保留） -->
   <div id="editModal">
     <div id="editModalContent">
       <h3 id="modalDishName">編輯品項</h3>
@@ -308,11 +298,13 @@
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("convertedText").innerText = "尚未轉譯";
       document.getElementById("orderInput").value = "";
-      document.getElementById("voiceTranscript").innerText = "語音輸入內容：無";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
+      // 若在語音模式中，也可重置狀態
+      currentState = "productInput";
+      currentProduct = null;
     }
     
-    // 模態框相關功能：打開、關閉、儲存及刪除編輯的訂單項目
+    // 模態框相關功能（保留）
     function openModal(row) {
       currentEditRow = row;
       document.getElementById("modalDishName").innerText = row.cells[0].innerText;
@@ -344,44 +336,22 @@
       closeModal();
     }
     
-    /* ===== 語音輸入流程修改 ===== */
-    // 點選「語音輸入」後，開始連續聽取，每次只判斷一個品項
+    /* ===== 語音輸入新流程 ===== */
+    // 全域狀態：目前模式與暫存的餐點資料
+    let currentState = "productInput";  // 可能的值："productInput" 或 "confirmation"
+    let currentProduct = null;
+    
+    // 開始連續語音輸入流程
     function startContinuousVoiceInput() {
-      // 清空手動輸入框（視覺上不干擾語音流程）
+      // 清空手動輸入框與轉譯顯示
       document.getElementById("orderInput").value = "";
+      document.getElementById("convertedText").innerText = "";
+      currentState = "productInput";
+      currentProduct = null;
       voiceInputLoop();
     }
     
-    // 遞迴呼叫單筆語音輸入
-    function voiceInputLoop() {
-      startVoiceInputSingle().then(transcript => {
-         if (transcript === null) {
-            // 若超過 3 秒無輸入則結束語音輸入
-            alert("語音輸入結束");
-            return;
-         }
-         // 將語音轉文字並依據字庫轉譯
-         let order = processSingleVoiceInput(transcript);
-         // 清空輸入框
-         document.getElementById("orderInput").value = "";
-         if (!order) {
-           alert("無法匹配商品或格式錯誤，請重新輸入");
-           // 繼續等待下一筆輸入
-           voiceInputLoop();
-         } else {
-           // 顯示匹配到的品項，並詢問是否正確
-           let confirmMsg = "檢測到: " + order.dish.name + " " + order.quantity + " 份，是否正確？";
-           if (window.confirm(confirmMsg)) {
-             // 正確則記錄該品項
-             addOrderRow(order.dish, order.quantity, "");
-           }
-           // 繼續等待下一筆輸入
-           voiceInputLoop();
-         }
-      });
-    }
-    
-    // 單次語音輸入，若 3 秒內無語音則回傳 null
+    // 語音輸入單次函式，超時設定 3 秒（可依需要調整）
     function startVoiceInputSingle() {
       return new Promise((resolve, reject) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -426,6 +396,64 @@
          return null;
       }
       return { dish: foundDish, quantity: quantity };
+    }
+    
+    // 主流程：依照狀態控制錄音
+    function voiceInputLoop() {
+      if (currentState === "productInput") {
+        startVoiceInputSingle().then(transcript => {
+           if (!transcript) {
+              alert("無輸入，點餐結束");
+              return;
+           }
+           transcript = transcript.trim();
+           if (transcript === "完成") {
+              alert("點餐結束");
+              return;
+           }
+           // 當作餐點輸入進行解析
+           let order = processSingleVoiceInput(transcript);
+           if (!order) {
+              alert("輸入錯誤");
+              // 保持在產品輸入狀態等待下一次輸入
+              voiceInputLoop();
+           } else {
+              // 顯示檢測到的餐點，但不馬上加入訂單
+              document.getElementById("convertedText").innerText = "檢測到: " + order.dish.name + " " + order.quantity + " 份";
+              currentProduct = order;
+              currentState = "confirmation";
+              voiceInputLoop();
+           }
+        });
+      } else if (currentState === "confirmation") {
+        startVoiceInputSingle().then(transcript => {
+           if (!transcript) {
+              alert("無輸入，點餐結束");
+              return;
+           }
+           transcript = transcript.trim();
+           if (transcript === "完成") {
+              alert("點餐結束");
+              return;
+           }
+           if (transcript === "正確") {
+              // 當用戶確認正確時，不額外回應，直接加入該品項並進入下一個品項的輸入狀態
+              addOrderRow(currentProduct.dish, currentProduct.quantity, "");
+              document.getElementById("convertedText").innerText = "";
+           } else if (transcript === "錯誤") {
+              alert("輸入錯誤");
+              document.getElementById("convertedText").innerText = "";
+           } else {
+              alert("請說「正確」或「錯誤」或「完成」");
+              voiceInputLoop();
+              return;
+           }
+           // 完成本次確認後，重設狀態並繼續等待下一筆餐點
+           currentProduct = null;
+           currentState = "productInput";
+           voiceInputLoop();
+        });
+      }
     }
   </script>
 </body>
