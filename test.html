@@ -11,7 +11,7 @@
     table, th, td { border: 1px solid #aaa; }
     th, td { padding: 8px; text-align: center; }
     @media (max-width: 600px) { input, button { font-size: 18px; } }
-    /* 模態框樣式（保留） */
+    /* 模態框樣式：編輯訂單項目 */
     #editModal {
       display: none;
       position: fixed;
@@ -26,17 +26,22 @@
       width: 300px;
       position: relative;
     }
-    /* 小視窗：初始隱藏 */
-    #statusWindow {
-      position: fixed;
-      bottom: 10px;
-      right: 10px;
-      background: #eee;
-      border: 1px solid #aaa;
-      padding: 5px 10px;
-      font-size: 14px;
-      z-index: 1000;
+    /* 彈出式狀態視窗 */
+    #statusModal {
       display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 2000;
+    }
+    #statusModalContent {
+      background: #fff;
+      width: 300px;
+      margin: 20% auto;
+      padding: 20px;
+      text-align: center;
     }
   </style>
 </head>
@@ -46,13 +51,10 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入訂單內容（或直接使用語音輸入）</h2>
-    <!-- 手動輸入保留 -->
     <input type="text" id="orderInput" placeholder="例如：danbin3/miansian2/ 或 2/miansian3/danbin">
     <button onclick="orderFromChinese()">送出訂單</button>
-    <!-- 語音輸入按鈕 -->
     <button onclick="startContinuousVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
-    <!-- 顯示轉譯與提示訊息 -->
     <p id="convertedText">尚未轉譯</p>
   </section>
   
@@ -84,7 +86,7 @@
     <p id="menuStatus">尚未載入菜單資料...</p>
   </section>
   
-  <!-- 模態框：編輯訂單項目（保留） -->
+  <!-- 模態框：編輯訂單項目 -->
   <div id="editModal">
     <div id="editModalContent">
       <h3 id="modalDishName">編輯品項</h3>
@@ -98,14 +100,18 @@
     </div>
   </div>
   
-  <!-- 輸入狀態小視窗（初始隱藏） -->
-  <div id="statusWindow">目前狀態：等待輸入</div>
+  <!-- 彈出式狀態視窗 -->
+  <div id="statusModal">
+    <div id="statusModalContent">
+      <p id="statusText">目前狀態：等待輸入</p>
+    </div>
+  </div>
   
   <script>
-    // 全域變數：字庫與菜單資料
+    // 全域變數：字庫、菜單與編輯用變數
     let charMapping = {};
     let groupMapping = {};
-    let currentEditRow = null; 
+    let currentEditRow = null;
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
       { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
@@ -154,7 +160,7 @@
     }
     loadMenu();
     
-    // 將中文字轉換成對應字母
+    // 依據字庫轉譯中文字
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -166,7 +172,7 @@
       return converted;
     }
     
-    // 手動文字輸入（保留）
+    // 手動輸入處理（保留）
     function orderFromChinese() {
       const inputElem = document.getElementById("orderInput");
       const inputText = inputElem.value.trim();
@@ -176,7 +182,6 @@
       }
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
-      
       let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
       let dishOrders = [];
       let defaultQuantity = null;
@@ -282,17 +287,16 @@
       document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
     }
     
-    // 重置點餐畫面與狀態
+    // 重置點餐與狀態（關閉彈出式視窗）
     function resetOrder() {
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("convertedText").innerText = "尚未轉譯";
       document.getElementById("orderInput").value = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
-      document.getElementById("statusWindow").innerText = "目前狀態：等待輸入";
-      document.getElementById("statusWindow").style.display = "none";
+      document.getElementById("statusModal").style.display = "none";
     }
     
-    // 模態框相關（保留）
+    // 模態框：編輯訂單項目
     function openModal(row) {
       currentEditRow = row;
       document.getElementById("modalDishName").innerText = row.cells[0].innerText;
@@ -322,14 +326,13 @@
     }
     
     /* ===== 語音輸入流程 ===== */
-    // 點下「語音輸入」按鈕後，顯示狀態小視窗並開始語音輸入
+    // 點選語音輸入按鈕後，顯示彈出式狀態視窗並開始語音輸入
     function startContinuousVoiceInput() {
       document.getElementById("orderInput").value = "";
       document.getElementById("convertedText").innerText = "";
-      // 顯示小視窗並更新狀態提示
-      const statusWindow = document.getElementById("statusWindow");
-      statusWindow.style.display = "block";
-      statusWindow.innerText = "目前狀態：等待輸入";
+      const statusModal = document.getElementById("statusModal");
+      statusModal.style.display = "block";
+      document.getElementById("statusText").innerText = "目前狀態：等待輸入";
       voiceInputLoop();
     }
     
@@ -374,12 +377,12 @@
     function voiceInputLoop() {
       startVoiceInputSingle().then(transcript => {
          if (!transcript) {
-            document.getElementById("statusWindow").innerText = "目前狀態：無輸入，點餐結束";
+            document.getElementById("statusText").innerText = "目前狀態：無輸入，點餐結束";
             return;
          }
          transcript = transcript.trim();
          if (transcript === "完成") {
-            document.getElementById("statusWindow").innerText = "目前狀態：結束";
+            document.getElementById("statusText").innerText = "目前狀態：結束";
             return;
          }
          if (transcript === "錯誤") {
@@ -390,18 +393,18 @@
             } else {
                document.getElementById("convertedText").innerText = "無可刪除訂單";
             }
-            document.getElementById("statusWindow").innerText = "目前狀態：等待輸入";
+            document.getElementById("statusText").innerText = "目前狀態：等待輸入";
             voiceInputLoop();
             return;
          }
          let order = processSingleVoiceInput(transcript);
          if (!order) {
-            document.getElementById("statusWindow").innerText = "目前狀態：輸入錯誤，等待輸入";
+            document.getElementById("statusText").innerText = "目前狀態：輸入錯誤，等待輸入";
             voiceInputLoop();
          } else {
             addOrderRow(order.dish, order.quantity, "");
             document.getElementById("convertedText").innerText = "已新增: " + order.dish.name + " " + order.quantity + " 份";
-            document.getElementById("statusWindow").innerText = "目前狀態：等待輸入";
+            document.getElementById("statusText").innerText = "目前狀態：等待輸入";
             voiceInputLoop();
          }
       });
