@@ -5,157 +5,110 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>中文點餐系統</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 10px;
-      padding: 0;
-    }
-    input, button, textarea {
-      margin: 5px;
-      padding: 10px;
-      font-size: 16px;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-    }
-    li {
-      cursor: pointer;
-      padding: 5px;
-      border-bottom: 1px solid #ddd;
-    }
-    li:hover {
-      background-color: #f0f0f0;
-    }
-    @media (max-width: 600px) {
-      input, button, textarea { font-size: 18px; }
-    }
-    /* Modal 樣式 */
-    .modal {
+    body { font-family: Arial, sans-serif; margin: 10px; padding: 0; }
+    input, button { margin: 5px; padding: 10px; font-size: 16px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    table, th, td { border: 1px solid #aaa; }
+    th, td { padding: 8px; text-align: center; }
+    @media (max-width: 600px) { input, button { font-size: 18px; } }
+    /* 模態框樣式 */
+    #editModal {
       display: none;
       position: fixed;
-      z-index: 1;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto;
-      background-color: rgba(0,0,0,0.4);
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
     }
-    .modal-content {
-      background-color: #fefefe;
-      margin: 15% auto;
+    #editModalContent {
+      background: #fff;
+      margin: 10% auto;
       padding: 20px;
-      border: 1px solid #888;
-      width: 90%;
-      max-width: 500px;
-    }
-    .close {
-      color: #aaa;
-      float: right;
-      font-size: 28px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-    .close:hover,
-    .close:focus {
-      color: black;
-      text-decoration: none;
-    }
-    .form-group {
-      margin-bottom: 10px;
-    }
-    .form-group label {
-      display: block;
-      margin-bottom: 5px;
-    }
-    .form-group input {
-      width: 100%;
-      box-sizing: border-box;
-    }
-    /* 每筆中文輸入欄位的容器 */
-    .chinese-field {
-      display: flex;
-      align-items: center;
-      margin-bottom: 5px;
-    }
-    .chinese-field input {
-      flex: 1;
-    }
-    .chinese-field button {
-      margin-left: 5px;
+      width: 300px;
+      position: relative;
     }
   </style>
 </head>
 <body>
   <h1>中文點餐系統</h1>
-
+  
   <!-- 點餐區 -->
   <section>
-    <h2>請輸入中文菜品名稱1.3</h2>
-    <input type="text" id="orderInput" placeholder="例如：蔥油餅">
+    <h2>請輸入訂單內容</h2>
+    <!-- 輸入範例：
+         danbin3/miansian2/         → 解析結果：danbin 3 份、miansian 2 份
+         2/miansian3/danbin          → 解析結果：miansian 2 份、danbin 3 份
+    -->
+    <input type="text" id="orderInput" placeholder="例如：danbin3/miansian2/ 或 2/miansian3/danbin">
     <button onclick="orderFromChinese()">送出訂單</button>
-    <!-- 新增語音輸入按鈕 -->
-    <button onclick="startVoiceInput()">語音輸入</button>
-    <p>訂單結果：<span id="orderResult"></span></p>
+    <!-- 修改後語音輸入按鈕：點選後開始連續語音輸入，每次只判斷一個品項 -->
+    <button onclick="startContinuousVoiceInput()">語音輸入</button>
+    <button onclick="resetOrder()">重置點餐</button>
+    <!-- 隱藏語音輸入後內容 -->
+    <p id="voiceTranscript" style="display:none;">語音輸入內容：無</p>
   </section>
-
-  <!-- 轉譯字庫載入狀態 -->
+  
+  <!-- 隱藏轉譯後內容 -->
+  <section style="display:none;">
+    <h2>轉譯後文字</h2>
+    <p id="convertedText">尚未轉譯</p>
+  </section>
+  
+  <!-- 訂單明細 -->
   <section>
-    <h2>轉譯字庫載入狀態</h2>
+    <h2>訂單明細</h2>
+    <table id="orderTable">
+      <thead>
+        <tr>
+          <th>菜品</th>
+          <th>份數</th>
+          <th>備註</th>
+          <th>單價</th>
+          <th>總價</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 訂單項目將動態加入 -->
+      </tbody>
+    </table>
+    <!-- 計算總金額 -->
+    <button onclick="calculateTotal()">計算總金額</button>
+    <p id="totalAmount">總金額：0 元</p>
+  </section>
+  
+  <!-- 隱藏系統狀態 -->
+  <section style="display:none;">
+    <h2>系統狀態</h2>
     <p id="dbStatus">尚未載入字庫資料...</p>
+    <p id="menuStatus">尚未載入菜單資料...</p>
   </section>
-
-  <!-- 菜單管理區 -->
-  <section>
-    <h2>菜單管理</h2>
-    <button onclick="openMenuModal()">新增菜單</button>
-    <button onclick="downloadMenuData()">下載菜單資料</button>
-    <button onclick="document.getElementById('uploadMenuFile').click()">上傳菜單資料</button>
-    <input type="file" id="uploadMenuFile" accept=".txt" style="display:none;" onchange="uploadMenuData()">
-    <div id="menuList"></div>
-  </section>
-
-  <!-- 新增/編輯菜單彈出視窗：包含【餐點名稱】、【中文輸入】（可新增多筆欄位）與【金額】 -->
-  <div id="menuModal" class="modal">
-    <div class="modal-content">
-      <span class="close" onclick="closeMenuModal()">&times;</span>
-      <h3 id="modalTitle">新增菜單項目</h3>
-      <div class="form-group">
-        <label for="menuName">餐點名稱：</label>
-        <input type="text" id="menuName" placeholder="例如：蔥油餅">
+  
+  <!-- 模態框：編輯訂單項目 -->
+  <div id="editModal">
+    <div id="editModalContent">
+      <h3 id="modalDishName">編輯品項</h3>
+      <label for="modalQuantity">份數:</label>
+      <input type="number" id="modalQuantity" min="1" style="width:100%;">
+      <div style="margin-top:10px;">
+        <button onclick="saveModal()">儲存</button>
+        <button onclick="deleteModal()">刪除</button>
+        <button onclick="closeModal()">取消</button>
       </div>
-      <div class="form-group">
-        <label>中文輸入（可多筆）：</label>
-        <div id="menuChineseContainer">
-          <!-- 初始建立一個中文輸入欄位 -->
-          <div class="chinese-field">
-            <input type="text" class="menuChineseInput" placeholder="輸入中文進行轉碼">
-            <button onclick="removeChineseField(this)">刪除</button>
-          </div>
-        </div>
-        <button onclick="addChineseField()">新增欄位</button>
-      </div>
-      <div class="form-group">
-        <label for="menuPrice">金額：</label>
-        <input type="number" id="menuPrice" placeholder="例如：20">
-      </div>
-      <button id="saveButton" onclick="saveMenuItem()">確定</button>
-      <button onclick="closeMenuModal()">取消</button>
     </div>
   </div>
-
+  
   <script>
-    // 全域資料：字庫與菜單
-    let groupMapping = {};
+    // 全域變數：字庫資料與菜單資料
     let charMapping = {};
-    // 菜單資料結構：每個項目含有 keywords 陣列、name 與 price
+    let groupMapping = {};
+    let currentEditRow = null; // 目前編輯的訂單列
+    // 內建測試用菜單（若能正確讀取 menu.txt 則會覆蓋此資料）
     let menu = [
-      { keywords: ["chonyobin"], name: "蔥油餅", price: 20 }
+      { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
+      { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
+      { "keywords": ["la"], "name": "辣", "price": 0 }
     ];
-    let currentEditingIndex = null;
-
-    // 讀取轉譯字庫，資料庫編寫方式與原本相同
+    
+    // 載入 database.txt（必須包含 charMapping；如有 groupMapping 亦讀入）
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -164,10 +117,14 @@
         })
         .then(text => {
           const db = JSON.parse(text);
-          if (db.groupMapping && db.charMapping) {
-            groupMapping = db.groupMapping;
+          if (db.charMapping) {
             charMapping = db.charMapping;
-            document.getElementById("dbStatus").innerText = "字庫資料載入成功！";
+            if (db.groupMapping) {
+              groupMapping = db.groupMapping;
+              document.getElementById("dbStatus").innerText = "字庫及群組資料載入成功！";
+            } else {
+              document.getElementById("dbStatus").innerText = "字庫資料載入成功！（未包含群組資料）";
+            }
           } else {
             document.getElementById("dbStatus").innerText = "database.txt 格式不正確！";
           }
@@ -177,240 +134,298 @@
         });
     }
     loadTranslationDatabase();
-
-    // 更新菜單列表，顯示關鍵字、餐點名稱與金額
-    function updateMenuDisplay() {
-      const menuListDiv = document.getElementById("menuList");
-      menuListDiv.innerHTML = "";
-      const ul = document.createElement("ul");
-      menu.forEach((item, index) => {
-        const li = document.createElement("li");
-        li.textContent = `[${item.keywords.join(", ")}] : ${item.name} - ${item.price} 元`;
-        li.onclick = () => openMenuModal(index);
-        ul.appendChild(li);
-      });
-      menuListDiv.appendChild(ul);
-    }
-    updateMenuDisplay();
-
-    // 新增中文輸入欄位
-    function addChineseField() {
-      const container = document.getElementById("menuChineseContainer");
-      const div = document.createElement("div");
-      div.className = "chinese-field";
-      div.innerHTML = '<input type="text" class="menuChineseInput" placeholder="輸入中文進行轉碼">' +
-                      '<button onclick="removeChineseField(this)">刪除</button>';
-      container.appendChild(div);
-    }
-
-    // 刪除指定的中文輸入欄位
-    function removeChineseField(btn) {
-      const fieldDiv = btn.parentNode;
-      fieldDiv.parentNode.removeChild(fieldDiv);
-    }
-
-    // 開啟新增/編輯菜單視窗
-    function openMenuModal(index = null) {
-      currentEditingIndex = index;
-      const modal = document.getElementById("menuModal");
-      modal.style.display = "block";
-      const container = document.getElementById("menuChineseContainer");
-      container.innerHTML = ""; // 清空現有欄位
-      if (index !== null) {
-        document.getElementById("modalTitle").innerText = "編輯菜單項目";
-        const item = menu[index];
-        document.getElementById("menuName").value = item.name;
-        document.getElementById("menuPrice").value = item.price;
-        // 依據現有 keywords 建立多筆中文輸入欄位
-        item.keywords.forEach(keyword => {
-          const div = document.createElement("div");
-          div.className = "chinese-field";
-          div.innerHTML = `<input type="text" class="menuChineseInput" value="${keyword}" placeholder="輸入中文進行轉碼">
-                           <button onclick="removeChineseField(this)">刪除</button>`;
-          container.appendChild(div);
+    
+    // 載入菜單資料（menu.txt），格式為 JSON 陣列
+    function loadMenu() {
+      fetch("menu.txt")
+        .then(response => {
+          if (!response.ok) throw new Error("無法讀取 menu.txt");
+          return response.text();
+        })
+        .then(text => {
+          menu = JSON.parse(text);
+          document.getElementById("menuStatus").innerText = "菜單資料載入成功！";
+        })
+        .catch(err => {
+          document.getElementById("menuStatus").innerText = "載入菜單資料失敗：" + err.message;
         });
-        // 若沒有關鍵字，則預設建立一個空欄位
-        if (item.keywords.length === 0) {
-          addChineseField();
-        }
-      } else {
-        document.getElementById("modalTitle").innerText = "新增菜單項目";
-        document.getElementById("menuName").value = "";
-        document.getElementById("menuPrice").value = "";
-        addChineseField();
-      }
     }
-
-    // 關閉菜單視窗
-    function closeMenuModal() {
-      document.getElementById("menuModal").style.display = "none";
-      currentEditingIndex = null;
-    }
-
-    // 新增或更新菜單項目：依據所有中文輸入欄位利用字庫轉碼生成多組關鍵字
-    function saveMenuItem() {
-      const name = document.getElementById("menuName").value.trim();
-      const price = parseFloat(document.getElementById("menuPrice").value.trim());
-      if (!name || isNaN(price)) {
-        alert("請填寫完整且正確的資料！");
-        return;
-      }
-      // 取得所有中文輸入欄位的值，分別轉碼後組成關鍵字陣列
-      const inputFields = document.getElementsByClassName("menuChineseInput");
-      let keywords = [];
-      for (let field of inputFields) {
-        const chineseInput = field.value.trim();
-        if (chineseInput) {
-          let converted = "";
-          for (let i = 0; i < chineseInput.length; i++) {
-            const ch = chineseInput.charAt(i);
-            if (charMapping[ch] !== undefined) {
-              converted += charMapping[ch];
-            }
-          }
-          converted = converted.toLowerCase();
-          if (converted) {
-            keywords.push(converted);
-          }
-        }
-      }
-      if (keywords.length === 0) {
-        alert("請至少輸入一筆可轉碼的中文資料！");
-        return;
-      }
-      const newItem = { keywords, name, price };
-      if (currentEditingIndex !== null) {
-        menu[currentEditingIndex] = newItem;
-      } else {
-        // 檢查是否已有重複關鍵字（只檢查每個新關鍵字是否與現有菜單中的任一關鍵字重複）
-        for (let item of menu) {
-          for (let key of item.keywords) {
-            if (keywords.includes(key)) {
-              alert("已有相同關鍵字的菜單項目！");
-              return;
-            }
-          }
-        }
-        menu.push(newItem);
-      }
-      updateMenuDisplay();
-      closeMenuModal();
-    }
-
-    // 點餐功能：使用者輸入中文後經字庫轉碼比對菜單中的關鍵字
-    function orderFromChinese() {
-      const input = document.getElementById("orderInput").value.trim();
-      if (!input) {
-        alert("請輸入中文菜品名稱！");
-        return;
-      }
+    loadMenu();
+    
+    // 轉譯函式：依據字庫 (charMapping) 將中文字轉換成對應字母，
+    // 若字元不在字庫中則略過（不加入轉譯結果）
+    function translateDishName(dishChinese) {
       let converted = "";
-      for (let i = 0; i < input.length; i++) {
-        const ch = input.charAt(i);
+      for (let i = 0; i < dishChinese.length; i++) {
+        const ch = dishChinese.charAt(i);
         if (charMapping[ch] !== undefined) {
           converted += charMapping[ch];
         }
       }
-      converted = converted.toLowerCase();
-      // 精確比對各菜單項目中的關鍵字
-      let foundDish = menu.find(item => item.keywords.includes(converted));
-      if (foundDish) {
-        document.getElementById("orderResult").innerText =
-          `您點的是 ${foundDish.name}，金額為 ${foundDish.price} 元`;
-      } else {
-        // 如未精確命中則採用得分推薦
-        const bestMatch = findBestMatch(converted);
-        if (bestMatch) {
-          document.getElementById("orderResult").innerText =
-            `推薦您點：${bestMatch.item.name} （得分：${bestMatch.score}），金額為 ${bestMatch.item.price} 元`;
-        } else {
-          document.getElementById("orderResult").innerText = "未找到相似菜品！";
-        }
-      }
+      return converted;
     }
-
-    // 積分算法：計算輸入與每個菜單項目各關鍵字匹配的得分
-    function findBestMatch(input) {
-      let bestItem = null;
-      let bestScore = 0;
-      menu.forEach(item => {
-        item.keywords.forEach(keyword => {
-          const score = letterMatchScore(input, keyword);
-          if (score > bestScore) {
-            bestScore = score;
-            bestItem = item;
-          }
-        });
-      });
-      return bestItem ? { item: bestItem, score: bestScore } : null;
-    }
-    function letterMatchScore(input, target) {
-      let score = 0;
-      for (let char of target) {
-        if (input.indexOf(char) >= 0) {
-          score++;
-        }
-      }
-      return score;
-    }
-
-    // 下載菜單資料（以 JSON 格式存成 menu.txt）
-    function downloadMenuData() {
-      const dataStr = JSON.stringify(menu, null, 2);
-      const blob = new Blob([dataStr], { type: "text/plain" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "menu.txt";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
-    // 上傳菜單資料
-    function uploadMenuData() {
-      const fileInput = document.getElementById("uploadMenuFile");
-      if (fileInput.files.length === 0) return;
-      const file = fileInput.files[0];
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const data = JSON.parse(e.target.result);
-          if (Array.isArray(data)) {
-            menu = data;
-            updateMenuDisplay();
-            alert("菜單資料上傳成功！");
-          } else {
-            alert("上傳的菜單資料格式不正確！");
-          }
-        } catch (err) {
-          alert("上傳失敗：" + err.message);
-        }
-      };
-      reader.readAsText(file);
-    }
-
-    // 語音輸入功能（使用 Web Speech API）
-    function startVoiceInput() {
-      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        alert("您的瀏覽器不支援語音輸入功能。");
+    
+    // 原本的文字輸入處理函式保留（可正常用於手動輸入）
+    function orderFromChinese() {
+      const inputElem = document.getElementById("orderInput");
+      const inputText = inputElem.value.trim();
+      if (!inputText) {
+        alert("請輸入訂單內容！");
         return;
       }
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'zh-TW';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-      recognition.start();
-      recognition.onresult = function(event) {
-        const transcript = event.results[0][0].transcript;
-        document.getElementById("orderInput").value = transcript;
-        orderFromChinese();
+      
+      const translatedText = translateDishName(inputText);
+      document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
+      
+      let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
+      
+      let dishOrders = [];
+      let defaultQuantity = null;
+      let defaultMode = false; // 是否遇到純數字 token
+      let errorOccurred = false;
+      
+      // 逐一處理 token
+      for (let i = 0; i < tokens.length; i++) {
+        let token = tokens[i];
+        // 純數字 token：更新預設數量並啟動預設模式
+        if (/^\d+$/.test(token)) {
+          defaultQuantity = parseInt(token);
+          defaultMode = true;
+          continue;
+        }
+        // 使用正則：可接受數字在前或數字在後，但不得同時出現
+        let m = token.match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
+        if (!m) {
+          errorOccurred = true;
+          break;
+        }
+        // 若同時出現前置與後置數字，視為格式錯誤
+        if (m[1] && m[3]) {
+          errorOccurred = true;
+          break;
+        }
+        let quantity = 0;
+        if (defaultMode) {
+          // 在預設模式下，無論 token 是否附帶數字，皆採用目前 defaultQuantity 作為訂單份數
+          quantity = defaultQuantity;
+          // 若 token 有附帶數字（前置或後置），則更新 defaultQuantity
+          if (m[1] || m[3]) {
+            defaultQuantity = parseInt(m[1] ? m[1] : m[3]);
+          }
+        } else {
+          // 尚未進入預設模式時，直接使用 token 中附帶的數字；若無附帶則預設為 1
+          if (m[1] || m[3]) {
+            quantity = parseInt(m[1] ? m[1] : m[3]);
+          } else {
+            quantity = 1;
+          }
+        }
+        dishOrders.push({ keyword: m[2], quantity: quantity });
+      }
+      
+      if (errorOccurred || dishOrders.length === 0) {
+        alert("請重新輸入");
+        inputElem.value = "";
+        return;
+      }
+      
+      // 檢查第一筆商品不能為 0 元
+      let firstDish = menu.find(item => item.keywords.includes(dishOrders[0].keyword));
+      if (firstDish && firstDish.price === 0) {
+        alert("請重新輸入");
+        inputElem.value = "";
+        return;
+      }
+      
+      // 建立最終訂單列表，免費商品附加到上一筆非免費訂單
+      let orderList = [];
+      for (let i = 0; i < dishOrders.length; i++) {
+        let order = dishOrders[i];
+        let foundDish = menu.find(item => item.keywords.includes(order.keyword));
+        if (!foundDish) {
+          alert("請重新輸入");
+          inputElem.value = "";
+          return;
+        }
+        if (foundDish.price === 0) {
+          // 免費商品：附加到上一筆非免費訂單
+          let attached = false;
+          for (let j = orderList.length - 1; j >= 0; j--) {
+            if (orderList[j].dish.price !== 0) {
+              if (orderList[j].remark) {
+                orderList[j].remark += ", " + foundDish.name + "×" + order.quantity;
+              } else {
+                orderList[j].remark = foundDish.name + "×" + order.quantity;
+              }
+              attached = true;
+              break;
+            }
+          }
+          if (!attached) {
+            alert("請重新輸入");
+            inputElem.value = "";
+            return;
+          }
+        } else {
+          orderList.push({ dish: foundDish, quantity: order.quantity, remark: "" });
+        }
+      }
+      
+      if (orderList.length === 0) {
+        alert("請重新輸入");
+        inputElem.value = "";
+        return;
+      }
+      
+      // 直接輸出訂單（不再確認）
+      orderList.forEach(order => {
+        addOrderRow(order.dish, order.quantity, order.remark);
+      });
+      inputElem.value = "";
+    }
+    
+    // 將訂單項目加入訂單明細表格，並為菜品名稱加上點擊事件以編輯該筆資料
+    function addOrderRow(dish, quantity, remark) {
+      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      const row = tbody.insertRow();
+      
+      // 菜品名稱欄（點擊後可編輯）
+      const nameCell = row.insertCell();
+      nameCell.innerText = dish.name;
+      nameCell.style.cursor = 'pointer';
+      nameCell.onclick = function() {
+        openModal(row);
       };
-      recognition.onerror = function(event) {
-        alert("語音輸入發生錯誤：" + event.error);
-      };
+      
+      row.insertCell().innerText = quantity;
+      row.insertCell().innerText = remark;
+      row.insertCell().innerText = dish.price;
+      row.insertCell().innerText = dish.price * quantity;
+    }
+    
+    // 重置點餐畫面
+    function resetOrder() {
+      document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
+      document.getElementById("convertedText").innerText = "尚未轉譯";
+      document.getElementById("orderInput").value = "";
+      document.getElementById("voiceTranscript").innerText = "語音輸入內容：無";
+      document.getElementById("totalAmount").innerText = "總金額：0 元";
+    }
+    
+    // 模態框相關功能：打開、關閉、儲存及刪除編輯的訂單項目
+    function openModal(row) {
+      currentEditRow = row;
+      document.getElementById("modalDishName").innerText = row.cells[0].innerText;
+      document.getElementById("modalQuantity").value = row.cells[1].innerText;
+      document.getElementById("editModal").style.display = "block";
+    }
+    
+    function closeModal() {
+      document.getElementById("editModal").style.display = "none";
+      currentEditRow = null;
+    }
+    
+    function saveModal() {
+      if (!currentEditRow) return;
+      let newQuantity = parseInt(document.getElementById("modalQuantity").value);
+      if (isNaN(newQuantity) || newQuantity < 1) {
+        alert("份數必須大於或等於1");
+        return;
+      }
+      currentEditRow.cells[1].innerText = newQuantity;
+      let price = parseFloat(currentEditRow.cells[3].innerText);
+      currentEditRow.cells[4].innerText = price * newQuantity;
+      closeModal();
+    }
+    
+    function deleteModal() {
+      if (!currentEditRow) return;
+      currentEditRow.parentNode.removeChild(currentEditRow);
+      closeModal();
+    }
+    
+    /* ===== 語音輸入流程修改 ===== */
+    // 點選「語音輸入」後，開始連續聽取，每次只判斷一個品項
+    function startContinuousVoiceInput() {
+      // 清空手動輸入框（視覺上不干擾語音流程）
+      document.getElementById("orderInput").value = "";
+      voiceInputLoop();
+    }
+    
+    // 遞迴呼叫單筆語音輸入
+    function voiceInputLoop() {
+      startVoiceInputSingle().then(transcript => {
+         if (transcript === null) {
+            // 若超過 3 秒無輸入則結束語音輸入
+            alert("語音輸入結束");
+            return;
+         }
+         // 將語音轉文字並依據字庫轉譯
+         let order = processSingleVoiceInput(transcript);
+         // 清空輸入框
+         document.getElementById("orderInput").value = "";
+         if (!order) {
+           alert("無法匹配商品或格式錯誤，請重新輸入");
+           // 繼續等待下一筆輸入
+           voiceInputLoop();
+         } else {
+           // 顯示匹配到的品項，並詢問是否正確
+           let confirmMsg = "檢測到: " + order.dish.name + " " + order.quantity + " 份，是否正確？";
+           if (window.confirm(confirmMsg)) {
+             // 正確則記錄該品項
+             addOrderRow(order.dish, order.quantity, "");
+           }
+           // 繼續等待下一筆輸入
+           voiceInputLoop();
+         }
+      });
+    }
+    
+    // 單次語音輸入，若 3 秒內無語音則回傳 null
+    function startVoiceInputSingle() {
+      return new Promise((resolve, reject) => {
+         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+           alert("您的瀏覽器不支援語音輸入功能。");
+           resolve(null);
+           return;
+         }
+         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+         const recognition = new SpeechRecognition();
+         recognition.lang = 'zh-TW';
+         recognition.interimResults = false;
+         recognition.maxAlternatives = 1;
+         // 設置 3 秒無輸入即結束
+         let timeoutId = setTimeout(() => {
+            recognition.abort();
+            resolve(null);
+         }, 3000);
+         recognition.onresult = function(event) {
+            clearTimeout(timeoutId);
+            let transcript = event.results[0][0].transcript;
+            resolve(transcript);
+         };
+         recognition.onerror = function(event) {
+            clearTimeout(timeoutId);
+            resolve(null);
+         };
+         recognition.start();
+      });
+    }
+    
+    // 將單筆語音輸入轉換為品項（先轉譯再以正則比對）
+    function processSingleVoiceInput(inputText) {
+      let converted = translateDishName(inputText);
+      converted = converted.replace(/\//g, "").trim();
+      let m = converted.match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
+      if (!m) {
+         return null;
+      }
+      let quantity = (m[1] || m[3]) ? parseInt(m[1] ? m[1] : m[3]) : 1;
+      let foundDish = menu.find(item => item.keywords.includes(m[2]));
+      if (!foundDish) {
+         return null;
+      }
+      return { dish: foundDish, quantity: quantity };
     }
   </script>
 </body>
