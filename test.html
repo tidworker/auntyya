@@ -86,7 +86,7 @@
     <p id="menuStatus">尚未載入菜單資料...</p>
   </section>
   
-  <!-- 模態框：編輯訂單項目 -->
+  <!-- 模態框：編輯訂單項目（保留） -->
   <div id="editModal">
     <div id="editModalContent">
       <h3 id="modalDishName">編輯品項</h3>
@@ -103,7 +103,7 @@
   <!-- 彈出式狀態視窗 -->
   <div id="statusModal">
     <div id="statusModalContent">
-      <p id="statusText">目前狀態：等待輸入</p>
+      <p id="statusText">目前狀態：等待輸入<br>結束點餐請說：完成</p>
     </div>
   </div>
   
@@ -333,8 +333,22 @@
       document.getElementById("convertedText").innerText = "";
       const statusModal = document.getElementById("statusModal");
       statusModal.style.display = "block";
-      document.getElementById("statusText").innerText = "目前狀態：等待輸入";
+      // 初始顯示提示文字（尚未有最新餐點）
+      document.getElementById("statusText").innerHTML = "目前狀態：等待輸入<br>結束點餐請說：完成";
       voiceInputLoop();
+    }
+    
+    // 輔助函式：更新狀態視窗顯示最新的一筆餐點
+    function updateStatusText() {
+      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      let latest = "";
+      if (tbody.rows.length > 0) {
+        let lastRow = tbody.rows[tbody.rows.length - 1];
+        let dishName = lastRow.cells[0].innerText;
+        let quantity = lastRow.cells[1].innerText;
+        latest = "（" + dishName + " " + quantity + " 份）";
+      }
+      document.getElementById("statusText").innerHTML = "目前狀態：等待輸入<br>" + latest + "<br>結束點餐請說：完成";
     }
     
     // 單次語音輸入（超時 5 秒）
@@ -379,7 +393,6 @@
       startVoiceInputSingle().then(transcript => {
          if (!transcript) {
             document.getElementById("statusText").innerText = "目前狀態：無輸入，點餐結束";
-            // 自動關閉彈出式視窗（延遲 1 秒）
             setTimeout(() => {
               document.getElementById("statusModal").style.display = "none";
             }, 1000);
@@ -401,18 +414,18 @@
             } else {
                document.getElementById("convertedText").innerText = "無可刪除訂單";
             }
-            document.getElementById("statusText").innerText = "目前狀態：等待輸入";
+            updateStatusText();
             voiceInputLoop();
             return;
          }
          let order = processSingleVoiceInput(transcript);
          if (!order) {
-            document.getElementById("statusText").innerText = "目前狀態：輸入錯誤，等待輸入";
+            document.getElementById("statusText").innerHTML = "目前狀態：輸入錯誤，等待輸入<br>結束點餐請說：完成";
             voiceInputLoop();
          } else {
             addOrderRow(order.dish, order.quantity, "");
             document.getElementById("convertedText").innerText = "已新增: " + order.dish.name + " " + order.quantity + " 份";
-            document.getElementById("statusText").innerText = "目前狀態：等待輸入";
+            updateStatusText();
             voiceInputLoop();
          }
       });
