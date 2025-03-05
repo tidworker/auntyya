@@ -26,7 +26,7 @@
       width: 300px;
       position: relative;
     }
-    /* 小視窗顯示輸入狀態 */
+    /* 小視窗：初始隱藏 */
     #statusWindow {
       position: fixed;
       bottom: 10px;
@@ -36,6 +36,7 @@
       padding: 5px 10px;
       font-size: 14px;
       z-index: 1000;
+      display: none;
     }
   </style>
 </head>
@@ -45,7 +46,7 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入訂單內容（或直接使用語音輸入）</h2>
-    <!-- 手動輸入保留，可作除錯或備用 -->
+    <!-- 手動輸入保留 -->
     <input type="text" id="orderInput" placeholder="例如：danbin3/miansian2/ 或 2/miansian3/danbin">
     <button onclick="orderFromChinese()">送出訂單</button>
     <!-- 語音輸入按鈕 -->
@@ -97,22 +98,20 @@
     </div>
   </div>
   
-  <!-- 輸入狀態小視窗 -->
+  <!-- 輸入狀態小視窗（初始隱藏） -->
   <div id="statusWindow">目前狀態：等待輸入</div>
   
   <script>
-    // 全域變數：字庫資料與菜單資料
+    // 全域變數：字庫與菜單資料
     let charMapping = {};
     let groupMapping = {};
-    let currentEditRow = null; // 目前編輯的訂單列
-    // 內建測試用菜單（若能正確讀取 menu.txt 則會覆蓋此資料）
+    let currentEditRow = null; 
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
       { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
       { "keywords": ["la"], "name": "辣", "price": 0 }
     ];
     
-    // 載入 database.txt（必須包含 charMapping；若有 groupMapping 亦載入）
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -139,7 +138,6 @@
     }
     loadTranslationDatabase();
     
-    // 載入菜單資料（menu.txt），格式為 JSON 陣列
     function loadMenu() {
       fetch("menu.txt")
         .then(response => {
@@ -156,7 +154,7 @@
     }
     loadMenu();
     
-    // 依據字庫 (charMapping) 將中文字轉換成對應字母（若不存在則略過）
+    // 將中文字轉換成對應字母
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -176,7 +174,6 @@
         alert("請輸入訂單內容！");
         return;
       }
-      
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
       
@@ -292,6 +289,7 @@
       document.getElementById("orderInput").value = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
       document.getElementById("statusWindow").innerText = "目前狀態：等待輸入";
+      document.getElementById("statusWindow").style.display = "none";
     }
     
     // 模態框相關（保留）
@@ -324,15 +322,18 @@
     }
     
     /* ===== 語音輸入流程 ===== */
-    // 使用者透過語音輸入，若說「錯誤」則刪除最後一筆，「完成」則直接結束流程（不再彈出確認）
+    // 點下「語音輸入」按鈕後，顯示狀態小視窗並開始語音輸入
     function startContinuousVoiceInput() {
       document.getElementById("orderInput").value = "";
       document.getElementById("convertedText").innerText = "";
-      document.getElementById("statusWindow").innerText = "目前狀態：等待輸入";
+      // 顯示小視窗並更新狀態提示
+      const statusWindow = document.getElementById("statusWindow");
+      statusWindow.style.display = "block";
+      statusWindow.innerText = "目前狀態：等待輸入";
       voiceInputLoop();
     }
     
-    // 單次語音輸入（超時延長到 5 秒）
+    // 單次語音輸入（超時 5 秒）
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -377,12 +378,10 @@
             return;
          }
          transcript = transcript.trim();
-         // 當使用者說「完成」時，直接結束流程（不彈出確認）
          if (transcript === "完成") {
             document.getElementById("statusWindow").innerText = "目前狀態：結束";
             return;
          }
-         // 當使用者說「錯誤」時，刪除最後一筆
          if (transcript === "錯誤") {
             let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
             if (tbody.rows.length > 0) {
@@ -395,13 +394,11 @@
             voiceInputLoop();
             return;
          }
-         // 嘗試解析為餐點資料
          let order = processSingleVoiceInput(transcript);
          if (!order) {
             document.getElementById("statusWindow").innerText = "目前狀態：輸入錯誤，等待輸入";
             voiceInputLoop();
          } else {
-            // 自動將解析到的餐點加入表格
             addOrderRow(order.dish, order.quantity, "");
             document.getElementById("convertedText").innerText = "已新增: " + order.dish.name + " " + order.quantity + " 份";
             document.getElementById("statusWindow").innerText = "目前狀態：等待輸入";
