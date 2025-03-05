@@ -11,7 +11,7 @@
     table, th, td { border: 1px solid #aaa; }
     th, td { padding: 8px; text-align: center; }
     @media (max-width: 600px) { input, button { font-size: 18px; } }
-    /* 模態框樣式：編輯訂單項目 */
+    /* 模態框：編輯訂單項目 */
     #editModal {
       display: none;
       position: fixed;
@@ -327,7 +327,7 @@
     }
     
     /* ===== 語音輸入流程 ===== */
-    // 點選「語音輸入」按鈕後，顯示彈出式狀態視窗並開始語音輸入
+    // 點選「語音輸入」後，顯示彈出式狀態視窗並開始語音輸入
     function startContinuousVoiceInput() {
       document.getElementById("orderInput").value = "";
       document.getElementById("convertedText").innerText = "";
@@ -379,12 +379,15 @@
       startVoiceInputSingle().then(transcript => {
          if (!transcript) {
             document.getElementById("statusText").innerText = "目前狀態：無輸入，點餐結束";
+            // 自動關閉彈出式視窗（延遲 1 秒）
+            setTimeout(() => {
+              document.getElementById("statusModal").style.display = "none";
+            }, 1000);
             return;
          }
          transcript = transcript.trim();
          if (transcript === "完成") {
             document.getElementById("statusText").innerText = "目前狀態：結束";
-            // 自動關閉彈出式視窗（延遲 1 秒）
             setTimeout(() => {
               document.getElementById("statusModal").style.display = "none";
             }, 1000);
