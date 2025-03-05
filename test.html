@@ -112,6 +112,7 @@
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
+    // 測試用菜單；若能讀取 menu.txt 則會覆蓋此資料
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
       { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
@@ -172,7 +173,7 @@
       return converted;
     }
     
-    // 手動輸入處理（保留），若遇免費商品則強制份數為1
+    // 手動輸入處理（保留）；若遇免費商品，強制份數為1，且免費商品附加到上一筆非免費商品備註中
     function orderFromChinese() {
       const inputElem = document.getElementById("orderInput");
       const inputText = inputElem.value.trim();
@@ -214,6 +215,7 @@
         return;
       }
       
+      // 第一筆商品必須為非免費
       let firstDish = menu.find(item => item.keywords.includes(dishOrders[0].keyword));
       if (firstDish && firstDish.price === 0) {
         alert("第一筆商品不能為免費商品，請重新輸入");
@@ -264,7 +266,7 @@
       updateStatusText();
     }
     
-    // 將訂單項目加入表格；若商品為免費則附加到上一筆非免費商品備註中
+    // 將訂單項目加入表格；若商品為免費則附加到上一筆非免費商品的備註中
     function addOrderRow(dish, quantity, remark) {
       if (dish.price === 0) {
         const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
@@ -272,7 +274,6 @@
           alert("無法加入0元商品，因為沒有上一筆訂單");
           return;
         }
-        // 從最後一筆非免費商品中附加
         let found = false;
         for (let i = tbody.rows.length - 1; i >= 0; i--) {
           let row = tbody.rows[i];
@@ -290,7 +291,6 @@
         }
         return;
       }
-      // 非免費商品則新增一行
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
       const nameCell = row.insertCell();
@@ -323,7 +323,7 @@
       document.getElementById("statusModal").style.display = "none";
     }
     
-    // 模態框：編輯訂單項目（保留）
+    // 模態框：編輯訂單項目
     function openModal(row) {
       currentEditRow = row;
       document.getElementById("modalDishName").innerText = row.cells[0].innerText;
@@ -355,20 +355,18 @@
     }
     
     /* ===== 語音輸入流程 ===== */
-    // 此函式支援一次辨識一筆或兩筆訂單；若辨識到兩筆，則要求第二筆必須為免費商品（0元），且默認份數為1
+    // 支援一次辨識一筆或兩筆訂單：若辨識到兩筆，則第二筆必須為免費商品（0元，份數固定1）
     function processSingleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
-      // 將斜線替換成空格，並以空白拆分
       converted = converted.replace(/\//g, " ").trim();
       let tokens = converted.split(/\s+/);
       if(tokens.length === 1) {
-        // 只有一筆訂單
         let m = tokens[0].match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
         if (!m) return null;
         let quantity = (m[1] || m[3]) ? parseInt(m[1] || m[3]) : 1;
         let foundDish = menu.find(item => item.keywords.includes(m[2]));
         if(!foundDish) return null;
-        // 第一筆訂單不允許為免費商品（依照原有邏輯）
+        // 第一筆不能為免費商品
         if(foundDish.price === 0) return null;
         return { orders: [{ dish: foundDish, quantity: quantity }] };
       } else if(tokens.length >= 2) {
@@ -380,13 +378,10 @@
         let quantity1 = (m1[1] || m1[3]) ? parseInt(m1[1] || m1[3]) : 1;
         let foundDish1 = menu.find(item => item.keywords.includes(m1[2]));
         if(!foundDish1) return null;
-        // 第一筆訂單若為免費商品，則不允許（依原邏輯）
-        if(foundDish1.price === 0) return null;
-        
-        // 第二筆必須為免費商品，且份數固定為1
+        if(foundDish1.price === 0) return null; // 第一筆不能為免費商品
         let foundDish2 = menu.find(item => item.keywords.includes(m2[2]));
         if(!foundDish2) return null;
-        if(foundDish2.price !== 0) return null;  // 限定第二筆必須為0元
+        if(foundDish2.price !== 0) return null; // 第二筆必須為免費商品
         return { orders: [
             { dish: foundDish1, quantity: quantity1 },
             { dish: foundDish2, quantity: 1 }
@@ -430,7 +425,6 @@
             document.getElementById("statusText").innerHTML = "目前狀態：輸入錯誤，等待輸入<br>結束點餐請說：完成";
             voiceInputLoop();
          } else {
-            // 對於 orders 陣列中的每一筆訂單呼叫 addOrderRow()
             orderData.orders.forEach(order => {
               addOrderRow(order.dish, order.quantity, "");
             });
