@@ -182,6 +182,7 @@
       }
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
+      
       let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
       let dishOrders = [];
       let defaultQuantity = null;
@@ -287,7 +288,7 @@
       document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
     }
     
-    // 重置點餐與狀態（關閉彈出式視窗）
+    // 重置點餐與狀態（同時關閉彈出式視窗）
     function resetOrder() {
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("convertedText").innerText = "尚未轉譯";
@@ -326,7 +327,7 @@
     }
     
     /* ===== 語音輸入流程 ===== */
-    // 點選語音輸入按鈕後，顯示彈出式狀態視窗並開始語音輸入
+    // 點選「語音輸入」按鈕後，顯示彈出式狀態視窗並開始語音輸入
     function startContinuousVoiceInput() {
       document.getElementById("orderInput").value = "";
       document.getElementById("convertedText").innerText = "";
@@ -383,6 +384,10 @@
          transcript = transcript.trim();
          if (transcript === "完成") {
             document.getElementById("statusText").innerText = "目前狀態：結束";
+            // 自動關閉彈出式視窗（延遲 1 秒）
+            setTimeout(() => {
+              document.getElementById("statusModal").style.display = "none";
+            }, 1000);
             return;
          }
          if (transcript === "錯誤") {
