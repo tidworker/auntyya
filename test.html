@@ -34,14 +34,15 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入訂單內容（或直接使用語音輸入）</h2>
-    <!-- 手動輸入保留，可作除錯或備用 -->
+    <!-- 手動輸入保留 -->
     <input type="text" id="orderInput" placeholder="例如：danbin3/miansian2/ 或 2/miansian3/danbin">
     <button onclick="orderFromChinese()">送出訂單</button>
     <!-- 語音輸入按鈕 -->
     <button onclick="startContinuousVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
-    <!-- 顯示轉譯與提示訊息 -->
+    <!-- 顯示轉譯、狀態提示 -->
     <p id="convertedText">尚未轉譯</p>
+    <p id="inputStatus">目前狀態：等待輸入</p>
   </section>
   
   <!-- 訂單明細 -->
@@ -65,7 +66,7 @@
     <p id="totalAmount">總金額：0 元</p>
   </section>
   
-  <!-- 隱藏系統狀態（可作除錯用） -->
+  <!-- 隱藏系統狀態（除錯用） -->
   <section style="display:none;">
     <h2>系統狀態</h2>
     <p id="dbStatus">尚未載入字庫資料...</p>
@@ -98,7 +99,7 @@
       { "keywords": ["la"], "name": "辣", "price": 0 }
     ];
     
-    // 載入 database.txt（必須包含 charMapping；如有 groupMapping 亦讀入）
+    // 載入 database.txt（必須包含 charMapping；若有 groupMapping 亦載入）
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -142,8 +143,7 @@
     }
     loadMenu();
     
-    // 轉譯函式：依據字庫 (charMapping) 將中文字轉換成對應字母，
-    // 若字元不在字庫中則略過（不加入轉譯結果）
+    // 依據字庫 (charMapping) 將中文字轉換成對應字母，若不存在則略過
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -155,7 +155,7 @@
       return converted;
     }
     
-    // 手動文字輸入函式（保留）
+    // 手動文字輸入（保留）
     function orderFromChinese() {
       const inputElem = document.getElementById("orderInput");
       const inputText = inputElem.value.trim();
@@ -168,7 +168,6 @@
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
       
       let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
-      
       let dishOrders = [];
       let defaultQuantity = null;
       let defaultMode = false;
@@ -273,15 +272,16 @@
       document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
     }
     
-    // 重置點餐畫面與語音狀態
+    // 重置點餐畫面與狀態
     function resetOrder() {
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("convertedText").innerText = "尚未轉譯";
       document.getElementById("orderInput").value = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
+      document.getElementById("inputStatus").innerText = "目前狀態：等待輸入";
     }
     
-    // 模態框相關功能（保留）
+    // 模態框相關（保留）
     function openModal(row) {
       currentEditRow = row;
       document.getElementById("modalDishName").innerText = row.cells[0].innerText;
@@ -311,14 +311,15 @@
     }
     
     /* ===== 語音輸入流程 ===== */
-    // 使用者直接透過語音輸入，若輸入「錯誤」則會刪除最後一筆；輸入「完成」則結束流程
+    // 使用者透過語音輸入，若說「錯誤」則刪除最後一筆，「完成」則結束流程
     function startContinuousVoiceInput() {
       document.getElementById("orderInput").value = "";
       document.getElementById("convertedText").innerText = "";
+      document.getElementById("inputStatus").innerText = "目前狀態：等待輸入";
       voiceInputLoop();
     }
     
-    // 單次語音輸入（超時設定 3 秒，可根據需求調整）
+    // 單次語音輸入：超時延長到 5 秒
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -331,7 +332,7 @@
          recognition.lang = 'zh-TW';
          recognition.interimResults = false;
          recognition.maxAlternatives = 1;
-         let timeoutId = setTimeout(() => { recognition.abort(); resolve(null); }, 3000);
+         let timeoutId = setTimeout(() => { recognition.abort(); resolve(null); }, 5000);
          recognition.onresult = function(event) {
             clearTimeout(timeoutId);
             resolve(event.results[0][0].transcript);
@@ -344,7 +345,7 @@
       });
     }
     
-    // 將語音輸入轉換為餐點資料
+    // 將語音輸入轉為餐點資料
     function processSingleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       converted = converted.replace(/\//g, "").trim();
@@ -355,20 +356,22 @@
       return foundDish ? { dish: foundDish, quantity: quantity } : null;
     }
     
-    // 主流程：持續進行語音輸入
+    // 主流程：持續語音輸入
     function voiceInputLoop() {
       startVoiceInputSingle().then(transcript => {
          if (!transcript) {
             alert("無輸入，點餐結束");
+            document.getElementById("inputStatus").innerText = "目前狀態：結束";
             return;
          }
          transcript = transcript.trim();
-         // 當使用者說「完成」時，結束點餐流程
+         // 若使用者說「完成」則結束
          if (transcript === "完成") {
             alert("點餐結束");
+            document.getElementById("inputStatus").innerText = "目前狀態：結束";
             return;
          }
-         // 當使用者說「錯誤」時，刪除最後一筆已加入的餐點
+         // 若使用者說「錯誤」則刪除最後一筆
          if (transcript === "錯誤") {
             let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
             if (tbody.rows.length > 0) {
@@ -377,18 +380,21 @@
             } else {
                document.getElementById("convertedText").innerText = "無可刪除訂單";
             }
+            document.getElementById("inputStatus").innerText = "目前狀態：等待輸入";
             voiceInputLoop();
             return;
          }
-         // 嘗試解析餐點資料
+         // 嘗試解析為餐點資料
          let order = processSingleVoiceInput(transcript);
          if (!order) {
             alert("輸入錯誤");
+            document.getElementById("inputStatus").innerText = "目前狀態：等待輸入";
             voiceInputLoop();
          } else {
-            // 解析成功後自動加入訂單表格
+            // 自動將解析到的餐點加入表格
             addOrderRow(order.dish, order.quantity, "");
             document.getElementById("convertedText").innerText = "已新增: " + order.dish.name + " " + order.quantity + " 份";
+            document.getElementById("inputStatus").innerText = "目前狀態：等待輸入";
             voiceInputLoop();
          }
       });
