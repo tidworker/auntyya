@@ -112,13 +112,14 @@
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
-    // 測試用菜單；若能讀取 menu.txt 則會覆蓋此資料
+    // 若能讀取 menu.txt 則會覆蓋此測試資料
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
       { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
       { "keywords": ["la"], "name": "辣", "price": 0 }
     ];
     
+    // 載入字庫 database.txt（必須包含 charMapping；如有 groupMapping 亦讀入）
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -145,6 +146,7 @@
     }
     loadTranslationDatabase();
     
+    // 載入菜單 menu.txt，若讀取成功則覆蓋預設 menu
     function loadMenu() {
       fetch("menu.txt")
         .then(response => {
@@ -161,7 +163,7 @@
     }
     loadMenu();
     
-    // 依據字庫轉譯中文字
+    // 依據字庫 (charMapping) 將中文字轉換成對應字母
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -173,7 +175,8 @@
       return converted;
     }
     
-    // 手動輸入處理（保留）；若遇免費商品，強制份數為1，且免費商品附加到上一筆非免費商品備註中
+    // (1) 手動輸入處理
+    // 第一筆不能為免費商品；若遇到免費商品則固定為 1 份，附加到上一筆商品的備註中
     function orderFromChinese() {
       const inputElem = document.getElementById("orderInput");
       const inputText = inputElem.value.trim();
@@ -190,9 +193,11 @@
       let defaultMode = false;
       let errorOccurred = false;
       
+      // 逐一處理 token
       for (let i = 0; i < tokens.length; i++) {
         let token = tokens[i];
         if (/^\d+$/.test(token)) {
+          // 純數字 → 設定 defaultQuantity
           defaultQuantity = parseInt(token);
           defaultMode = true;
           continue;
@@ -215,40 +220,45 @@
         return;
       }
       
-      // 第一筆商品必須為非免費
+      // 不允許第一筆是免費商品
       let firstDish = menu.find(item => item.keywords.includes(dishOrders[0].keyword));
       if (firstDish && firstDish.price === 0) {
-        alert("第一筆商品不能為免費商品，請重新輸入");
+        alert("第一筆商品不得為免費商品");
         inputElem.value = "";
         return;
       }
       
+      // 組合訂單
       let orderList = [];
       for (let i = 0; i < dishOrders.length; i++) {
         let order = dishOrders[i];
         let foundDish = menu.find(item => item.keywords.includes(order.keyword));
         if (!foundDish) {
-          alert("請重新輸入");
+          alert("查無此商品，請重新輸入");
           inputElem.value = "";
           return;
         }
+        
         if (foundDish.price === 0) {
-          // 免費商品：固定為1份，附加至上一筆非免費商品備註中
+          // 免費商品：強制 1 份，附加到上一筆非免費商品
           let attached = false;
           for (let j = orderList.length - 1; j >= 0; j--) {
             if (orderList[j].dish.price > 0) {
               let addition = foundDish.name + "×1";
-              orderList[j].remark = orderList[j].remark ? orderList[j].remark + ", " + addition : addition;
+              orderList[j].remark = orderList[j].remark 
+                ? (orderList[j].remark + ", " + addition)
+                : addition;
               attached = true;
               break;
             }
           }
           if (!attached) {
-            alert("請重新輸入");
+            alert("找不到上一筆商品，無法附加免費商品");
             inputElem.value = "";
             return;
           }
         } else {
+          // 一般商品
           orderList.push({ dish: foundDish, quantity: order.quantity, remark: "" });
         }
       }
@@ -259,6 +269,7 @@
         return;
       }
       
+      // 新增至表格
       orderList.forEach(order => {
         addOrderRow(order.dish, order.quantity, order.remark);
       });
@@ -266,44 +277,48 @@
       updateStatusText();
     }
     
-    // 將訂單項目加入表格；若商品為免費則附加到上一筆非免費商品的備註中
+    // (2) 新增商品至表格
+    // 若為免費商品（price=0），則將其備註附加到最後一筆非免費商品
     function addOrderRow(dish, quantity, remark) {
+      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      
+      // 免費商品不直接新增列
       if (dish.price === 0) {
-        const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
         if (tbody.rows.length === 0) {
-          alert("無法加入0元商品，因為沒有上一筆訂單");
+          alert("無法加入免費商品，因為沒有上一筆訂單");
           return;
         }
-        let found = false;
+        // 從表格尾端往上找第一筆非免費商品
         for (let i = tbody.rows.length - 1; i >= 0; i--) {
           let row = tbody.rows[i];
           let price = parseFloat(row.cells[3].innerText);
           if (price > 0) {
             let currentRemark = row.cells[2].innerText;
             let addition = dish.name + "×1";
-            row.cells[2].innerText = currentRemark.trim() ? currentRemark + ", " + addition : addition;
-            found = true;
-            break;
+            row.cells[2].innerText = currentRemark.trim() 
+              ? (currentRemark + ", " + addition)
+              : addition;
+            return;
           }
-        }
-        if (!found) {
-          alert("無法加入0元商品，因為沒有上一筆非免費訂單");
         }
         return;
       }
-      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-      const row = tbody.insertRow();
-      const nameCell = row.insertCell();
+      
+      // 一般商品：正常新增一行
+      let row = tbody.insertRow();
+      let nameCell = row.insertCell();
       nameCell.innerText = dish.name;
       nameCell.style.cursor = 'pointer';
-      nameCell.onclick = function() { openModal(row); };
+      nameCell.onclick = function() {
+        openModal(row);
+      };
       row.insertCell().innerText = quantity;
       row.insertCell().innerText = remark;
       row.insertCell().innerText = dish.price;
       row.insertCell().innerText = dish.price * quantity;
     }
     
-    // 計算總金額
+    // (3) 計算總金額
     function calculateTotal() {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       let total = 0;
@@ -314,16 +329,18 @@
       document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
     }
     
-    // 重置點餐與狀態（同時關閉彈出式視窗）
+    // (4) 重置表格與狀態
     function resetOrder() {
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("convertedText").innerText = "尚未轉譯";
       document.getElementById("orderInput").value = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
+      // 關閉彈出式狀態視窗（若開啟中）
       document.getElementById("statusModal").style.display = "none";
     }
     
-    // 模態框：編輯訂單項目
+    // (5) 編輯訂單模態框
+    let currentEditRow = null;
     function openModal(row) {
       currentEditRow = row;
       document.getElementById("modalDishName").innerText = row.cells[0].innerText;
@@ -354,114 +371,146 @@
       updateStatusText();
     }
     
-    /* ===== 語音輸入流程 ===== */
-    // 支援一次辨識一筆或兩筆訂單：若辨識到兩筆，則第二筆必須為免費商品（0元，份數固定1）
+    // (6) 語音輸入：點擊後打開狀態視窗並進入連續錄音
+    function startContinuousVoiceInput() {
+      document.getElementById("orderInput").value = "";
+      document.getElementById("convertedText").innerText = "";
+      
+      const statusModal = document.getElementById("statusModal");
+      statusModal.style.display = "block";
+      document.getElementById("statusText").innerHTML = 
+        "目前狀態：等待輸入<br>結束點餐請說：完成";
+      
+      voiceInputLoop();
+    }
+    
+    // (6-1) 單次語音輸入（5秒無輸入則超時）
+    function startVoiceInputSingle() {
+      return new Promise((resolve) => {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+          alert("您的瀏覽器不支援語音輸入功能");
+          resolve(null);
+          return;
+        }
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'zh-TW';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        
+        let timeoutId = setTimeout(() => {
+          recognition.abort();
+          resolve(null);
+        }, 5000);
+        
+        recognition.onresult = function(event) {
+          clearTimeout(timeoutId);
+          resolve(event.results[0][0].transcript);
+        };
+        recognition.onerror = function() {
+          clearTimeout(timeoutId);
+          resolve(null);
+        };
+        recognition.start();
+      });
+    }
+    
+    // (6-2) 一次支援 1~2 個訂單。若第二筆為免費商品，強制 1 份
     function processSingleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       converted = converted.replace(/\//g, " ").trim();
       let tokens = converted.split(/\s+/);
-      if(tokens.length === 1) {
+      
+      // 情況1：只輸入一筆
+      if (tokens.length === 1) {
         let m = tokens[0].match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
         if (!m) return null;
-        let quantity = (m[1] || m[3]) ? parseInt(m[1] || m[3]) : 1;
-        let foundDish = menu.find(item => item.keywords.includes(m[2]));
-        if(!foundDish) return null;
-        // 第一筆不能為免費商品
-        if(foundDish.price === 0) return null;
-        return { orders: [{ dish: foundDish, quantity: quantity }] };
-      } else if(tokens.length >= 2) {
-        // 解析第一筆
+        let q = (m[1] || m[3]) ? parseInt(m[1] || m[3]) : 1;
+        let dish = menu.find(item => item.keywords.includes(m[2]));
+        // 第一筆不得為免費商品
+        if (!dish || dish.price === 0) return null;
+        return { orders: [{ dish, quantity: q }] };
+      }
+      // 情況2：辨識到兩筆
+      else if (tokens.length >= 2) {
+        // 第一筆
         let m1 = tokens[0].match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
-        // 解析第二筆
+        // 第二筆
         let m2 = tokens[1].match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
-        if(!m1 || !m2) return null;
-        let quantity1 = (m1[1] || m1[3]) ? parseInt(m1[1] || m1[3]) : 1;
-        let foundDish1 = menu.find(item => item.keywords.includes(m1[2]));
-        if(!foundDish1) return null;
-        if(foundDish1.price === 0) return null; // 第一筆不能為免費商品
-        let foundDish2 = menu.find(item => item.keywords.includes(m2[2]));
-        if(!foundDish2) return null;
-        if(foundDish2.price !== 0) return null; // 第二筆必須為免費商品
+        if (!m1 || !m2) return null;
+        
+        let q1 = (m1[1] || m1[3]) ? parseInt(m1[1] || m1[3]) : 1;
+        let dish1 = menu.find(item => item.keywords.includes(m1[2]));
+        if (!dish1 || dish1.price === 0) return null; // 第一筆不得為免費商品
+        
+        let dish2 = menu.find(item => item.keywords.includes(m2[2]));
+        if (!dish2 || dish2.price !== 0) return null; // 第二筆必須為免費商品，且強制1份
+        
         return { orders: [
-            { dish: foundDish1, quantity: quantity1 },
-            { dish: foundDish2, quantity: 1 }
+          { dish: dish1, quantity: q1 },
+          { dish: dish2, quantity: 1 }
         ] };
       }
       return null;
     }
     
-    // 主流程：持續語音輸入
+    // (6-3) 不斷進行語音輸入
     function voiceInputLoop() {
       startVoiceInputSingle().then(transcript => {
-         if (!transcript) {
-            document.getElementById("statusText").innerText = "目前狀態：無輸入，點餐結束";
-            setTimeout(() => {
-              document.getElementById("statusModal").style.display = "none";
-            }, 1000);
-            return;
-         }
-         transcript = transcript.trim();
-         if (transcript === "完成") {
-            document.getElementById("statusText").innerText = "目前狀態：結束";
-            setTimeout(() => {
-              document.getElementById("statusModal").style.display = "none";
-            }, 1000);
-            return;
-         }
-         if (transcript === "錯誤") {
-            let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-            if (tbody.rows.length > 0) {
-               tbody.deleteRow(tbody.rows.length - 1);
-               document.getElementById("convertedText").innerText = "已刪除最後一筆訂單";
-            } else {
-               document.getElementById("convertedText").innerText = "無可刪除訂單";
-            }
-            updateStatusText();
-            voiceInputLoop();
-            return;
-         }
-         let orderData = processSingleVoiceInput(transcript);
-         if (!orderData) {
-            document.getElementById("statusText").innerHTML = "目前狀態：輸入錯誤，等待輸入<br>結束點餐請說：完成";
-            voiceInputLoop();
-         } else {
-            orderData.orders.forEach(order => {
-              addOrderRow(order.dish, order.quantity, "");
-            });
-            document.getElementById("convertedText").innerText = "已新增: " + orderData.orders.map(o => o.dish.name + "×" + o.quantity).join(", ");
-            updateStatusText();
-            voiceInputLoop();
-         }
+        // 沒有任何輸入
+        if (!transcript) {
+          document.getElementById("statusText").innerText = 
+            "目前狀態：無輸入，點餐結束";
+          setTimeout(() => {
+            document.getElementById("statusModal").style.display = "none";
+          }, 1000);
+          return;
+        }
+        transcript = transcript.trim();
+        
+        // 使用者說「完成」→ 結束錄音
+        if (transcript === "完成") {
+          document.getElementById("statusText").innerText = "目前狀態：結束";
+          setTimeout(() => {
+            document.getElementById("statusModal").style.display = "none";
+          }, 1000);
+          return;
+        }
+        
+        // 使用者說「錯誤」→ 刪除最後一筆
+        if (transcript === "錯誤") {
+          let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+          if (tbody.rows.length > 0) {
+            tbody.deleteRow(tbody.rows.length - 1);
+            document.getElementById("convertedText").innerText = "已刪除最後一筆訂單";
+          } else {
+            document.getElementById("convertedText").innerText = "無可刪除訂單";
+          }
+          updateStatusText();
+          voiceInputLoop();
+          return;
+        }
+        
+        // 一般情況：嘗試解析 1~2 筆訂單
+        let orderData = processSingleVoiceInput(transcript);
+        if (!orderData) {
+          document.getElementById("statusText").innerHTML = 
+            "目前狀態：輸入錯誤，等待輸入<br>結束點餐請說：完成";
+          voiceInputLoop();
+        } else {
+          // 逐筆加入表格
+          orderData.orders.forEach(order => {
+            addOrderRow(order.dish, order.quantity, "");
+          });
+          document.getElementById("convertedText").innerText =
+            "已新增: " + orderData.orders.map(o => (o.dish.name + "×" + o.quantity)).join(", ");
+          updateStatusText();
+          voiceInputLoop();
+        }
       });
     }
     
-    // 單次語音輸入（超時 5 秒）
-    function startVoiceInputSingle() {
-      return new Promise((resolve) => {
-         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-           alert("您的瀏覽器不支援語音輸入功能。");
-           resolve(null);
-           return;
-         }
-         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-         const recognition = new SpeechRecognition();
-         recognition.lang = 'zh-TW';
-         recognition.interimResults = false;
-         recognition.maxAlternatives = 1;
-         let timeoutId = setTimeout(() => { recognition.abort(); resolve(null); }, 5000);
-         recognition.onresult = function(event) {
-            clearTimeout(timeoutId);
-            resolve(event.results[0][0].transcript);
-         };
-         recognition.onerror = function(event) {
-            clearTimeout(timeoutId);
-            resolve(null);
-         };
-         recognition.start();
-      });
-    }
-    
-    // 更新彈出式狀態視窗，顯示目前所有輸入的商品（非免費商品依序編號，免費商品直接附加於前一筆後面）
+    // (7) 更新彈出式視窗：顯示已輸入的所有商品（免費商品附加於上一筆備註）
     function updateStatusText() {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       let summary = "";
@@ -471,6 +520,8 @@
         let dishName = row.cells[0].innerText;
         let quantity = row.cells[1].innerText;
         let price = parseFloat(row.cells[3].innerText);
+        
+        // 非免費商品才編號
         if (price > 0) {
           summary += counter + ". " + dishName + "×" + quantity + "<br>";
           counter++;
@@ -480,9 +531,11 @@
           }
         }
       }
-      let statusHTML = "目前狀態：等待輸入<br>" +
-                       summary +
-                       "結束點餐請說：完成";
+      
+      let statusHTML = 
+        "目前狀態：等待輸入<br>" +
+        summary +
+        "結束點餐請說：完成";
       document.getElementById("statusText").innerHTML = statusHTML;
     }
   </script>
