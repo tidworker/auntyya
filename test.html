@@ -11,7 +11,7 @@
     table, th, td { border: 1px solid #aaa; }
     th, td { padding: 8px; text-align: center; }
     @media (max-width: 600px) { input, button { font-size: 18px; } }
-    /* 模態框樣式 */
+    /* 模態框樣式（保留） */
     #editModal {
       display: none;
       position: fixed;
@@ -40,7 +40,7 @@
     <!-- 語音輸入按鈕 -->
     <button onclick="startContinuousVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
-    <!-- 顯示轉譯與確認用訊息 -->
+    <!-- 顯示轉譯與提示訊息 -->
     <p id="convertedText">尚未轉譯</p>
   </section>
   
@@ -65,7 +65,7 @@
     <p id="totalAmount">總金額：0 元</p>
   </section>
   
-  <!-- 隱藏系統狀態 -->
+  <!-- 隱藏系統狀態（可作除錯用） -->
   <section style="display:none;">
     <h2>系統狀態</h2>
     <p id="dbStatus">尚未載入字庫資料...</p>
@@ -155,7 +155,7 @@
       return converted;
     }
     
-    // 原本的文字輸入處理函式保留（可正常用於手動輸入）
+    // 手動文字輸入函式（保留）
     function orderFromChinese() {
       const inputElem = document.getElementById("orderInput");
       const inputText = inputElem.value.trim();
@@ -171,44 +171,24 @@
       
       let dishOrders = [];
       let defaultQuantity = null;
-      let defaultMode = false; // 是否遇到純數字 token
+      let defaultMode = false;
       let errorOccurred = false;
       
-      // 逐一處理 token
       for (let i = 0; i < tokens.length; i++) {
         let token = tokens[i];
-        // 純數字 token：更新預設數量並啟動預設模式
         if (/^\d+$/.test(token)) {
           defaultQuantity = parseInt(token);
           defaultMode = true;
           continue;
         }
-        // 使用正則：可接受數字在前或數字在後，但不得同時出現
         let m = token.match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
-        if (!m) {
+        if (!m || (m[1] && m[3])) {
           errorOccurred = true;
           break;
         }
-        // 若同時出現前置與後置數字，視為格式錯誤
-        if (m[1] && m[3]) {
-          errorOccurred = true;
-          break;
-        }
-        let quantity = 0;
-        if (defaultMode) {
-          // 在預設模式下，無論 token 是否附帶數字，皆採用目前 defaultQuantity 作為訂單份數
-          quantity = defaultQuantity;
-          // 若 token 有附帶數字（前置或後置），則更新 defaultQuantity
-          if (m[1] || m[3]) {
-            defaultQuantity = parseInt(m[1] ? m[1] : m[3]);
-          }
-        } else {
-          // 尚未進入預設模式時，直接使用 token 中附帶的數字；若無附帶則預設為 1
-          if (m[1] || m[3]) {
-            quantity = parseInt(m[1] ? m[1] : m[3]);
-          } else {
-            quantity = 1;
-          }
+        let quantity = defaultMode ? defaultQuantity : (m[1] || m[3] ? parseInt(m[1] || m[3]) : 1);
+        if (defaultMode && (m[1] || m[3])) {
+          defaultQuantity = parseInt(m[1] || m[3]);
         }
         dishOrders.push({ keyword: m[2], quantity: quantity });
       }
@@ -219,7 +199,6 @@
         return;
       }
       
-      // 檢查第一筆商品不能為 0 元
       let firstDish = menu.find(item => item.keywords.includes(dishOrders[0].keyword));
       if (firstDish && firstDish.price === 0) {
         alert("請重新輸入");
@@ -227,7 +206,6 @@
         return;
       }
       
-      // 建立最終訂單列表，免費商品附加到上一筆非免費訂單
       let orderList = [];
       for (let i = 0; i < dishOrders.length; i++) {
         let order = dishOrders[i];
@@ -238,15 +216,12 @@
           return;
         }
         if (foundDish.price === 0) {
-          // 免費商品：附加到上一筆非免費訂單
           let attached = false;
           for (let j = orderList.length - 1; j >= 0; j--) {
             if (orderList[j].dish.price !== 0) {
-              if (orderList[j].remark) {
-                orderList[j].remark += ", " + foundDish.name + "×" + order.quantity;
-              } else {
-                orderList[j].remark = foundDish.name + "×" + order.quantity;
-              }
+              orderList[j].remark = orderList[j].remark 
+                ? orderList[j].remark + ", " + foundDish.name + "×" + order.quantity
+                : foundDish.name + "×" + order.quantity;
               attached = true;
               break;
             }
@@ -267,41 +242,43 @@
         return;
       }
       
-      // 直接輸出訂單（不再確認）
       orderList.forEach(order => {
         addOrderRow(order.dish, order.quantity, order.remark);
       });
       inputElem.value = "";
     }
     
-    // 將訂單項目加入訂單明細表格，並為菜品名稱加上點擊事件以編輯該筆資料
+    // 將訂單項目加入表格
     function addOrderRow(dish, quantity, remark) {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
-      
-      // 菜品名稱欄（點擊後可編輯）
       const nameCell = row.insertCell();
       nameCell.innerText = dish.name;
       nameCell.style.cursor = 'pointer';
-      nameCell.onclick = function() {
-        openModal(row);
-      };
-      
+      nameCell.onclick = function() { openModal(row); };
       row.insertCell().innerText = quantity;
       row.insertCell().innerText = remark;
       row.insertCell().innerText = dish.price;
       row.insertCell().innerText = dish.price * quantity;
     }
     
-    // 重置點餐畫面
+    // 計算總金額
+    function calculateTotal() {
+      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      let total = 0;
+      for (let i = 0; i < tbody.rows.length; i++) {
+        let cellValue = parseFloat(tbody.rows[i].cells[4].innerText);
+        if (!isNaN(cellValue)) total += cellValue;
+      }
+      document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
+    }
+    
+    // 重置點餐畫面與語音狀態
     function resetOrder() {
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("convertedText").innerText = "尚未轉譯";
       document.getElementById("orderInput").value = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
-      // 若在語音模式中，也可重置狀態
-      currentState = "productInput";
-      currentProduct = null;
     }
     
     // 模態框相關功能（保留）
@@ -311,12 +288,10 @@
       document.getElementById("modalQuantity").value = row.cells[1].innerText;
       document.getElementById("editModal").style.display = "block";
     }
-    
     function closeModal() {
       document.getElementById("editModal").style.display = "none";
       currentEditRow = null;
     }
-    
     function saveModal() {
       if (!currentEditRow) return;
       let newQuantity = parseInt(document.getElementById("modalQuantity").value);
@@ -329,31 +304,23 @@
       currentEditRow.cells[4].innerText = price * newQuantity;
       closeModal();
     }
-    
     function deleteModal() {
       if (!currentEditRow) return;
       currentEditRow.parentNode.removeChild(currentEditRow);
       closeModal();
     }
     
-    /* ===== 語音輸入新流程 ===== */
-    // 全域狀態：目前模式與暫存的餐點資料
-    let currentState = "productInput";  // 可能的值："productInput" 或 "confirmation"
-    let currentProduct = null;
-    
-    // 開始連續語音輸入流程
+    /* ===== 語音輸入流程 ===== */
+    // 使用者直接透過語音輸入，若輸入「錯誤」則會刪除最後一筆；輸入「完成」則結束流程
     function startContinuousVoiceInput() {
-      // 清空手動輸入框與轉譯顯示
       document.getElementById("orderInput").value = "";
       document.getElementById("convertedText").innerText = "";
-      currentState = "productInput";
-      currentProduct = null;
       voiceInputLoop();
     }
     
-    // 語音輸入單次函式，超時設定 3 秒（可依需要調整）
+    // 單次語音輸入（超時設定 3 秒，可根據需求調整）
     function startVoiceInputSingle() {
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
            alert("您的瀏覽器不支援語音輸入功能。");
            resolve(null);
@@ -364,15 +331,10 @@
          recognition.lang = 'zh-TW';
          recognition.interimResults = false;
          recognition.maxAlternatives = 1;
-         // 設置 3 秒無輸入即結束
-         let timeoutId = setTimeout(() => {
-            recognition.abort();
-            resolve(null);
-         }, 3000);
+         let timeoutId = setTimeout(() => { recognition.abort(); resolve(null); }, 3000);
          recognition.onresult = function(event) {
             clearTimeout(timeoutId);
-            let transcript = event.results[0][0].transcript;
-            resolve(transcript);
+            resolve(event.results[0][0].transcript);
          };
          recognition.onerror = function(event) {
             clearTimeout(timeoutId);
@@ -382,78 +344,54 @@
       });
     }
     
-    // 將單筆語音輸入轉換為品項（先轉譯再以正則比對）
+    // 將語音輸入轉換為餐點資料
     function processSingleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       converted = converted.replace(/\//g, "").trim();
       let m = converted.match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
-      if (!m) {
-         return null;
-      }
-      let quantity = (m[1] || m[3]) ? parseInt(m[1] ? m[1] : m[3]) : 1;
+      if (!m) return null;
+      let quantity = (m[1] || m[3]) ? parseInt(m[1] || m[3]) : 1;
       let foundDish = menu.find(item => item.keywords.includes(m[2]));
-      if (!foundDish) {
-         return null;
-      }
-      return { dish: foundDish, quantity: quantity };
+      return foundDish ? { dish: foundDish, quantity: quantity } : null;
     }
     
-    // 主流程：依照狀態控制錄音
+    // 主流程：持續進行語音輸入
     function voiceInputLoop() {
-      if (currentState === "productInput") {
-        startVoiceInputSingle().then(transcript => {
-           if (!transcript) {
-              alert("無輸入，點餐結束");
-              return;
-           }
-           transcript = transcript.trim();
-           if (transcript === "完成") {
-              alert("點餐結束");
-              return;
-           }
-           // 當作餐點輸入進行解析
-           let order = processSingleVoiceInput(transcript);
-           if (!order) {
-              alert("輸入錯誤");
-              // 保持在產品輸入狀態等待下一次輸入
-              voiceInputLoop();
-           } else {
-              // 顯示檢測到的餐點，但不馬上加入訂單
-              document.getElementById("convertedText").innerText = "檢測到: " + order.dish.name + " " + order.quantity + " 份";
-              currentProduct = order;
-              currentState = "confirmation";
-              voiceInputLoop();
-           }
-        });
-      } else if (currentState === "confirmation") {
-        startVoiceInputSingle().then(transcript => {
-           if (!transcript) {
-              alert("無輸入，點餐結束");
-              return;
-           }
-           transcript = transcript.trim();
-           if (transcript === "完成") {
-              alert("點餐結束");
-              return;
-           }
-           if (transcript === "正確") {
-              // 當用戶確認正確時，不額外回應，直接加入該品項並進入下一個品項的輸入狀態
-              addOrderRow(currentProduct.dish, currentProduct.quantity, "");
-              document.getElementById("convertedText").innerText = "";
-           } else if (transcript === "錯誤") {
-              alert("輸入錯誤");
-              document.getElementById("convertedText").innerText = "";
-           } else {
-              alert("請說「正確」或「錯誤」或「完成」");
-              voiceInputLoop();
-              return;
-           }
-           // 完成本次確認後，重設狀態並繼續等待下一筆餐點
-           currentProduct = null;
-           currentState = "productInput";
-           voiceInputLoop();
-        });
-      }
+      startVoiceInputSingle().then(transcript => {
+         if (!transcript) {
+            alert("無輸入，點餐結束");
+            return;
+         }
+         transcript = transcript.trim();
+         // 當使用者說「完成」時，結束點餐流程
+         if (transcript === "完成") {
+            alert("點餐結束");
+            return;
+         }
+         // 當使用者說「錯誤」時，刪除最後一筆已加入的餐點
+         if (transcript === "錯誤") {
+            let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+            if (tbody.rows.length > 0) {
+               tbody.deleteRow(tbody.rows.length - 1);
+               document.getElementById("convertedText").innerText = "已刪除最後一筆訂單";
+            } else {
+               document.getElementById("convertedText").innerText = "無可刪除訂單";
+            }
+            voiceInputLoop();
+            return;
+         }
+         // 嘗試解析餐點資料
+         let order = processSingleVoiceInput(transcript);
+         if (!order) {
+            alert("輸入錯誤");
+            voiceInputLoop();
+         } else {
+            // 解析成功後自動加入訂單表格
+            addOrderRow(order.dish, order.quantity, "");
+            document.getElementById("convertedText").innerText = "已新增: " + order.dish.name + " " + order.quantity + " 份";
+            voiceInputLoop();
+         }
+      });
     }
   </script>
 </body>
