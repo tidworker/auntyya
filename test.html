@@ -26,6 +26,17 @@
       width: 300px;
       position: relative;
     }
+    /* 小視窗顯示輸入狀態 */
+    #statusWindow {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background: #eee;
+      border: 1px solid #aaa;
+      padding: 5px 10px;
+      font-size: 14px;
+      z-index: 1000;
+    }
   </style>
 </head>
 <body>
@@ -34,15 +45,14 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入訂單內容（或直接使用語音輸入）</h2>
-    <!-- 手動輸入保留 -->
+    <!-- 手動輸入保留，可作除錯或備用 -->
     <input type="text" id="orderInput" placeholder="例如：danbin3/miansian2/ 或 2/miansian3/danbin">
     <button onclick="orderFromChinese()">送出訂單</button>
     <!-- 語音輸入按鈕 -->
     <button onclick="startContinuousVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
-    <!-- 顯示轉譯、狀態提示 -->
+    <!-- 顯示轉譯與提示訊息 -->
     <p id="convertedText">尚未轉譯</p>
-    <p id="inputStatus">目前狀態：等待輸入</p>
   </section>
   
   <!-- 訂單明細 -->
@@ -86,6 +96,9 @@
       </div>
     </div>
   </div>
+  
+  <!-- 輸入狀態小視窗 -->
+  <div id="statusWindow">目前狀態：等待輸入</div>
   
   <script>
     // 全域變數：字庫資料與菜單資料
@@ -143,7 +156,7 @@
     }
     loadMenu();
     
-    // 依據字庫 (charMapping) 將中文字轉換成對應字母，若不存在則略過
+    // 依據字庫 (charMapping) 將中文字轉換成對應字母（若不存在則略過）
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -278,7 +291,7 @@
       document.getElementById("convertedText").innerText = "尚未轉譯";
       document.getElementById("orderInput").value = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
-      document.getElementById("inputStatus").innerText = "目前狀態：等待輸入";
+      document.getElementById("statusWindow").innerText = "目前狀態：等待輸入";
     }
     
     // 模態框相關（保留）
@@ -311,15 +324,15 @@
     }
     
     /* ===== 語音輸入流程 ===== */
-    // 使用者透過語音輸入，若說「錯誤」則刪除最後一筆，「完成」則結束流程
+    // 使用者透過語音輸入，若說「錯誤」則刪除最後一筆，「完成」則直接結束流程（不再彈出確認）
     function startContinuousVoiceInput() {
       document.getElementById("orderInput").value = "";
       document.getElementById("convertedText").innerText = "";
-      document.getElementById("inputStatus").innerText = "目前狀態：等待輸入";
+      document.getElementById("statusWindow").innerText = "目前狀態：等待輸入";
       voiceInputLoop();
     }
     
-    // 單次語音輸入：超時延長到 5 秒
+    // 單次語音輸入（超時延長到 5 秒）
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -360,18 +373,16 @@
     function voiceInputLoop() {
       startVoiceInputSingle().then(transcript => {
          if (!transcript) {
-            alert("無輸入，點餐結束");
-            document.getElementById("inputStatus").innerText = "目前狀態：結束";
+            document.getElementById("statusWindow").innerText = "目前狀態：無輸入，點餐結束";
             return;
          }
          transcript = transcript.trim();
-         // 若使用者說「完成」則結束
+         // 當使用者說「完成」時，直接結束流程（不彈出確認）
          if (transcript === "完成") {
-            alert("點餐結束");
-            document.getElementById("inputStatus").innerText = "目前狀態：結束";
+            document.getElementById("statusWindow").innerText = "目前狀態：結束";
             return;
          }
-         // 若使用者說「錯誤」則刪除最後一筆
+         // 當使用者說「錯誤」時，刪除最後一筆
          if (transcript === "錯誤") {
             let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
             if (tbody.rows.length > 0) {
@@ -380,21 +391,20 @@
             } else {
                document.getElementById("convertedText").innerText = "無可刪除訂單";
             }
-            document.getElementById("inputStatus").innerText = "目前狀態：等待輸入";
+            document.getElementById("statusWindow").innerText = "目前狀態：等待輸入";
             voiceInputLoop();
             return;
          }
          // 嘗試解析為餐點資料
          let order = processSingleVoiceInput(transcript);
          if (!order) {
-            alert("輸入錯誤");
-            document.getElementById("inputStatus").innerText = "目前狀態：等待輸入";
+            document.getElementById("statusWindow").innerText = "目前狀態：輸入錯誤，等待輸入";
             voiceInputLoop();
          } else {
             // 自動將解析到的餐點加入表格
             addOrderRow(order.dish, order.quantity, "");
             document.getElementById("convertedText").innerText = "已新增: " + order.dish.name + " " + order.quantity + " 份";
-            document.getElementById("inputStatus").innerText = "目前狀態：等待輸入";
+            document.getElementById("statusWindow").innerText = "目前狀態：等待輸入";
             voiceInputLoop();
          }
       });
