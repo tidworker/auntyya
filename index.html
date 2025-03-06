@@ -724,15 +724,28 @@
       return orderNumber;
     }
 
+    // 完成訂單時更新隱藏銷售計數器，並儲存訂單資料（內用與外帶皆計入）
     function completeOrder() {
+      // 先更新隱藏銷售計數器
+      let salesCounter = JSON.parse(localStorage.getItem("salesCounter")) || {};
+      for (let item in orders) {
+        let quantity = orders[item].quantity || 0;
+        salesCounter[item] = (salesCounter[item] || 0) + quantity;
+      }
+      localStorage.setItem("salesCounter", JSON.stringify(salesCounter));
+
+      // 建立訂單物件，同時記錄當日日期
       let orderNumber = getNextOrderNumber();
       let newOrder = {
         orderId: orderNumber,
+        date: new Date().toLocaleDateString(),
         items: orders
       };
       let allOrders = JSON.parse(localStorage.getItem("allOrders")) || [];
       allOrders.push(newOrder);
       localStorage.setItem("allOrders", JSON.stringify(allOrders));
+
+      // 清空目前訂單並更新畫面
       orders = {};
       updateOrderList();
       window.location.href = "order.html";
