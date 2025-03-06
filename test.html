@@ -10,7 +10,7 @@
     table { border-collapse: collapse; width: 100%; margin-top: 10px; }
     table, th, td { border: 1px solid #aaa; }
     th, td { padding: 8px; text-align: center; }
-    @media (max-width: 280px) { input, button { font-size: 18px; } }
+    @media (max-width: 300px) { input, button { font-size: 18px; } }
     /* 模態框：編輯訂單項目 */
     #editModal {
       display: none;
@@ -92,7 +92,7 @@
     <div id="editModalContent">
       <h3 id="modalDishName">編輯品項</h3>
       <label for="modalQuantity">份數:</label>
-      <input type="number" id="modalQuantity" min="1" style="width:100%;">
+      <input type="number" id="modalQuantity" min="1" style="width:80%;">
       <div style="margin-top:10px;">
         <button onclick="saveModal()">儲存</button>
         <button onclick="deleteModal()">刪除</button>
