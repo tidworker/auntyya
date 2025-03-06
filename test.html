@@ -466,7 +466,7 @@
     }
     
     function voiceInputLoop() {
-      if (orderingComplete) return; // 若已手動完成，則不再呼叫循環
+      if (orderingComplete) return;
       startVoiceInputSingle().then(transcript => {
          if (!transcript) {
             document.getElementById("statusText").innerText = "目前狀態：無輸入，點餐結束";
