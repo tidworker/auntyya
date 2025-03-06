@@ -396,7 +396,7 @@
       }
     }
     
-    // --- 更新隱藏銷售計數器 --- 
+    // --- 更新隱藏銷售計數器 ---
     // 將傳入訂單物件中各品項的數量累計至 localStorage 的 "salesCounter"
     function updateSalesCounterFromOrder(order) {
       let salesCounter = JSON.parse(localStorage.getItem("salesCounter")) || {};
@@ -409,7 +409,7 @@
     
     // --- 完成訂單 (外帶) ---
     function completeOrder() {
-      // 先更新銷售計數器，累計目前訂單品項數量
+      // 更新銷售計數器
       updateSalesCounterFromOrder(orders);
       let orderNumber = getNextOrderNumber();
       let newOrder = { orderId: orderNumber, items: orders };
@@ -422,7 +422,6 @@
     }
     
     // --- 內用訂單 ---
-    // 將目前訂單記錄為內用，並同樣更新銷售計數器
     function recordInHouseOrder() {
       if(Object.keys(orders).length === 0) {
          alert("目前沒有訂單可以記錄！");
@@ -430,7 +429,6 @@
       }
       // 更新銷售計數器
       updateSalesCounterFromOrder(orders);
-      // 儲存內用訂單記錄（此處僅範例：將訂單存至 "inHouseOrderRecord"，實際上可根據需求調整）
       let orderNumber = getNextOrderNumber();
       let newOrder = { orderId: orderNumber, items: orders };
       localStorage.setItem("inHouseOrderRecord", JSON.stringify(newOrder));
