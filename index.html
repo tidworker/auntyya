@@ -5,6 +5,7 @@
   <title>葉阿姨點餐系統</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* （原本樣式保持不變） */
     body { font-family: Arial, sans-serif; margin: 0; padding: 0; text-align: center; background-color: #f0f0f0; color: #333; }
     header { background: #ddd; padding: 15px 0; margin-bottom: 20px; }
     header h2 { margin: 0; font-size: 24px; }
@@ -194,7 +195,7 @@
   </div>
   
   <script>
-    // --- 資料與流程設定 ---
+    // --- 原始資料與流程設定 ---
     const subTypes = {
       "蔥油餅": { "加蛋": 30, "不加蛋": 20 },
       "麵線": { "大腸麵線": 50, "肉羹麵線": 50, "綜合麵線": 50, "清麵線": 40 },
@@ -396,8 +397,7 @@
       }
     }
     
-    // --- 更新隱藏銷售計數器 ---
-    // 將傳入訂單物件中各品項的數量累計至 localStorage 的 "salesCounter"
+    // === 新增：更新銷售計數器 (僅加入此段，不改動原有點餐流程) ===
     function updateSalesCounterFromOrder(order) {
       let salesCounter = JSON.parse(localStorage.getItem("salesCounter")) || {};
       for (let item in order) {
@@ -409,8 +409,7 @@
     
     // --- 完成訂單 (外帶) ---
     function completeOrder() {
-      // 更新銷售計數器
-      updateSalesCounterFromOrder(orders);
+      updateSalesCounterFromOrder(orders);  // 新增計數器更新
       let orderNumber = getNextOrderNumber();
       let newOrder = { orderId: orderNumber, items: orders };
       let allOrders = JSON.parse(localStorage.getItem("allOrders")) || [];
@@ -427,8 +426,7 @@
          alert("目前沒有訂單可以記錄！");
          return;
       }
-      // 更新銷售計數器
-      updateSalesCounterFromOrder(orders);
+      updateSalesCounterFromOrder(orders);  // 新增計數器更新
       let orderNumber = getNextOrderNumber();
       let newOrder = { orderId: orderNumber, items: orders };
       localStorage.setItem("inHouseOrderRecord", JSON.stringify(newOrder));
