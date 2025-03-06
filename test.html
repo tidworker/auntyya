@@ -101,10 +101,12 @@
     </div>
   </div>
   
-  <!-- 彈出式狀態視窗 -->
+  <!-- 彈出式狀態視窗（語音輸入） -->
   <div id="statusModal">
     <div id="statusModalContent">
       <p id="statusText">目前狀態：等待輸入<br>結束點餐請說：完成</p>
+      <!-- 新增「完成點餐」按鈕 -->
+      <button onclick="completeOrder()">完成點餐</button>
     </div>
   </div>
   
@@ -113,6 +115,8 @@
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
+    // 設定點餐是否完成的旗標，初始為 false
+    let orderingComplete = false;
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
       { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
@@ -189,33 +193,22 @@
       // 以斜線分割 token（忽略空字串）
       let tokens = translatedText.split('/').filter(token => token.trim() !== "");
       
-      // 分別抽取數字與餐點（順序均依 token 出現順序）
+      // 分別抽取數字與餐點（依 token 出現順序）
       let numbers = [];
       let dishes = [];
       tokens.forEach(token => {
-        // 利用正規表達式檢查格式：可有前綴數字或後綴數字
         let m = token.match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
         if (m) {
-          if (m[1]) {
-            numbers.push(parseInt(m[1]));
-          }
-          // 將字母部分視為餐點名稱
+          if (m[1]) { numbers.push(parseInt(m[1])); }
           dishes.push(m[2]);
-          if (m[3]) {
-            numbers.push(parseInt(m[3]));
-          }
+          if (m[3]) { numbers.push(parseInt(m[3])); }
         } else {
-          // 若 token 為純數字或純字母
-          if (/^\d+$/.test(token)) {
-            numbers.push(parseInt(token));
-          } else if (/^[a-zA-Z]+$/.test(token)) {
-            dishes.push(token);
-          }
+          if (/^\d+$/.test(token)) { numbers.push(parseInt(token)); }
+          else if (/^[a-zA-Z]+$/.test(token)) { dishes.push(token); }
         }
       });
       
-      // 配對：若有多個數字則依序「第一個數字配第一個餐點、第二個配第二個……」
-      // 若只有一個數字，則所有餐點都取該數字；若無數字，預設為 1
+      // 配對數字與餐點
       let orders = [];
       if (dishes.length === 0) {
         alert("請重新輸入");
@@ -230,9 +223,8 @@
         orders = dishes.map((d, i) => ({ keyword: d, quantity: i < numbers.length ? numbers[i] : 1 }));
       }
       
-      // 建立訂單項目（維持原有判定及免費品項處理邏輯）
+      // 建立訂單項目（保持原有判定及免費品項處理邏輯）
       let orderList = [];
-      // 檢查：若第一筆商品為 0 元，不允許作為第一筆訂單
       let firstDish = menu.find(item => item.keywords.includes(orders[0].keyword));
       if (firstDish && firstDish.price === 0) {
         alert("請重新輸入");
@@ -282,8 +274,8 @@
       updateStatusText();
     }
     
-    /* ---------- 語音輸入處理（processMultipleVoiceInput） ---------- */
-    // 語音輸入的解析邏輯與手動輸入基本相同，均採用上面獨立抽取數字與餐點的方式
+    /* ---------- 語音輸入處理 ---------- */
+    // 語音輸入解析與手動輸入基本相同，均採用獨立抽取數字與餐點的方式
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       converted = converted.replace(/\//g, " ").trim();
@@ -294,19 +286,12 @@
       tokens.forEach(token => {
         let m = token.match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
         if (m) {
-          if (m[1]) {
-            numbers.push(parseInt(m[1]));
-          }
+          if (m[1]) { numbers.push(parseInt(m[1])); }
           dishes.push(m[2]);
-          if (m[3]) {
-            numbers.push(parseInt(m[3]));
-          }
+          if (m[3]) { numbers.push(parseInt(m[3])); }
         } else {
-          if (/^\d+$/.test(token)) {
-            numbers.push(parseInt(token));
-          } else if (/^[a-zA-Z]+$/.test(token)) {
-            dishes.push(token);
-          }
+          if (/^\d+$/.test(token)) { numbers.push(parseInt(token)); }
+          else if (/^[a-zA-Z]+$/.test(token)) { dishes.push(token); }
         }
       });
       
@@ -324,7 +309,6 @@
     
     /* ---------- 新增訂單項目與計算總金額 ---------- */
     function addOrderRow(dish, quantity, remark) {
-      // 若商品為免費（0元），則附加到上一筆非免費訂單的備註中；否則新增一行
       if (dish.price === 0) {
         const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
         if (tbody.rows.length === 0) {
@@ -389,6 +373,7 @@
       document.getElementById("orderInput").value = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
       document.getElementById("statusModal").style.display = "none";
+      orderingComplete = false;
     }
     
     /* ---------- 模態框：編輯訂單項目 ---------- */
@@ -426,6 +411,7 @@
     function startContinuousVoiceInput() {
       document.getElementById("orderInput").value = "";
       document.getElementById("convertedText").innerText = "";
+      orderingComplete = false;
       const statusModal = document.getElementById("statusModal");
       statusModal.style.display = "block";
       document.getElementById("statusText").innerHTML = "目前狀態：等待輸入<br>結束點餐請說：完成";
@@ -480,6 +466,7 @@
     }
     
     function voiceInputLoop() {
+      if (orderingComplete) return; // 若已手動完成，則不再呼叫循環
       startVoiceInputSingle().then(transcript => {
          if (!transcript) {
             document.getElementById("statusText").innerText = "目前狀態：無輸入，點餐結束";
@@ -517,6 +504,12 @@
             voiceInputLoop();
          }
       });
+    }
+    
+    // 新增完成點餐函式：按下後設定 orderingComplete 為 true 並隱藏狀態視窗
+    function completeOrder() {
+      orderingComplete = true;
+      document.getElementById("statusModal").style.display = "none";
     }
   </script>
 </body>
