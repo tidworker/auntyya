@@ -419,15 +419,27 @@
       });
     }
     
-    // 將語音輸入轉為餐點資料
-    function processSingleVoiceInput(inputText) {
+    // 新增一個函式來處理同時多個餐點的語音輸入
+    function processMultipleVoiceInput(inputText) {
+      // 先轉譯
       let converted = translateDishName(inputText);
-      converted = converted.replace(/\//g, "").trim();
-      let m = converted.match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
-      if (!m) return null;
-      let quantity = (m[1] || m[3]) ? parseInt(m[1] || m[3]) : 1;
-      let foundDish = menu.find(item => item.keywords.includes(m[2]));
-      return foundDish ? { dish: foundDish, quantity: quantity } : null;
+      // 使用斜線或空白作為分隔符
+      converted = converted.replace(/\//g, " ").trim();
+      // 拆分成多個 token
+      let tokens = converted.split(/\s+/);
+      let orders = [];
+      tokens.forEach(token => {
+        // 匹配格式：可能有前置數字或後置數字，關鍵字必須符合菜單中的一個關鍵字
+        let m = token.match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
+        if (m) {
+          let quantity = (m[1] || m[3]) ? parseInt(m[1] || m[3]) : 1;
+          let foundDish = menu.find(item => item.keywords.includes(m[2]));
+          if (foundDish) {
+            orders.push({ dish: foundDish, quantity: quantity });
+          }
+        }
+      });
+      return orders;
     }
     
     // 主流程：持續語音輸入
@@ -460,13 +472,16 @@
             voiceInputLoop();
             return;
          }
-         let order = processSingleVoiceInput(transcript);
-         if (!order) {
+         // 使用新的函式解析可能包含多個餐點的語音輸入
+         let orders = processMultipleVoiceInput(transcript);
+         if (orders.length === 0) {
             document.getElementById("statusText").innerHTML = "目前狀態：輸入錯誤，等待輸入<br>結束點餐請說：完成";
             voiceInputLoop();
          } else {
-            addOrderRow(order.dish, order.quantity, "");
-            document.getElementById("convertedText").innerText = "已新增: " + order.dish.name + " " + order.quantity + " 份";
+            orders.forEach(order => {
+              addOrderRow(order.dish, order.quantity, "");
+              document.getElementById("convertedText").innerText = "已新增: " + order.dish.name + " " + order.quantity + " 份";
+            });
             updateStatusText();
             voiceInputLoop();
          }
