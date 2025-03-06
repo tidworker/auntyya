@@ -51,6 +51,7 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入訂單內容（或直接使用語音輸入）</h2>
+    <!-- 例如：三份蛋餅兩份辣 或 蛋餅/辣 -->
     <input type="text" id="orderInput" placeholder="例如：三份蛋餅兩份辣 或 蛋餅/辣">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startContinuousVoiceInput()">語音輸入</button>
@@ -112,6 +113,7 @@
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
+    // 這邊的菜單資料僅作示範，實際可從 menu.txt 載入
     let menu = [
       { "keywords": ["danbin", "蛋餅"], "name": "蛋餅", "price": 30 },
       { "keywords": ["la", "辣"], "name": "辣", "price": 0 }
@@ -159,7 +161,7 @@
     }
     loadMenu();
     
-    // 依據字庫轉譯中文字（若有需要，可透過 database.txt 定義映射）
+    // 依據字庫轉譯中文字（保留原有邏輯）
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -184,113 +186,56 @@
       const translatedText = translateDishName(inputText);
       document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
       
-      // 將輸入文字以斜線或空白拆分
+      // 以斜線或空白拆分
       let tokens = translatedText.replace(/\//g, " ").split(/\s+/).filter(t => t !== "");
-      let parsedTokens = [];
+      let dishOrders = [];
       let explicitCount = 0;
-      let errorOccurred = false;
-      
-      // 嘗試用正規表示式匹配：先判斷是否有數字（可有「份」字）在前面
+      // 不改變原有的辨識方法，僅解析格式如「3份蛋餅」或「蛋餅」
       tokens.forEach(token => {
-        // 範例：三份蛋餅、兩份辣
         let m = token.match(/^(\d+)(?:份)?([a-zA-Z]+)$/);
         if (m) {
-          parsedTokens.push({ quantity: parseInt(m[1]), keyword: m[2] });
+          dishOrders.push({ keyword: m[2], quantity: parseInt(m[1]) });
           explicitCount++;
         } else {
-          // 若沒有數字，試著只匹配純文字
           m = token.match(/^([a-zA-Z]+)$/);
           if (m) {
-            parsedTokens.push({ quantity: null, keyword: m[1] });
-          } else {
-            errorOccurred = true;
+            dishOrders.push({ keyword: m[1], quantity: null });
           }
         }
       });
       
-      if (errorOccurred || parsedTokens.length === 0) {
+      if (dishOrders.length === 0) {
         alert("請重新輸入");
         inputElem.value = "";
         return;
       }
       
-      // 若整個輸入只有一個明確的數字，則套用至所有沒有明確數字的項目
-      if(explicitCount === 1) {
-        let explicitValue = parsedTokens.find(t => t.quantity !== null).quantity;
-        parsedTokens.forEach(t => {
-          if(t.quantity === null) {
+      // 若只有一個明確的數字，則未指定數量的項目皆以該數字為準；若有多個，則未指定數量的預設為 1
+      if (explicitCount === 1) {
+        let explicitValue = dishOrders.find(t => t.quantity !== null).quantity;
+        dishOrders.forEach(t => {
+          if (t.quantity === null) {
             t.quantity = explicitValue;
           }
         });
       } else {
-        // 若有多個數字，對於未明確指定數量的項目，預設為 1
-        parsedTokens.forEach(t => {
-          if(t.quantity === null) {
+        dishOrders.forEach(t => {
+          if (t.quantity === null) {
             t.quantity = 1;
           }
         });
       }
       
-      // 建立訂單項目（依據菜單進行比對）
-      let dishOrders = [];
-      parsedTokens.forEach(t => {
-        let foundDish = menu.find(item => item.keywords.includes(t.keyword));
-        if (!foundDish) {
-          errorOccurred = true;
-        } else {
-          dishOrders.push({ keyword: t.keyword, quantity: t.quantity });
-        }
-      });
-      
-      if (errorOccurred || dishOrders.length === 0) {
-        alert("請重新輸入");
-        inputElem.value = "";
-        return;
-      }
-      
-      // 若第一筆商品為 0 元（免費商品）則不允許作為第一筆
-      let firstDish = menu.find(item => item.keywords.includes(dishOrders[0].keyword));
-      if (firstDish && firstDish.price === 0) {
-        alert("請重新輸入");
-        inputElem.value = "";
-        return;
-      }
-      
-      // 處理免費商品：0 元商品將附加至前一筆非免費商品的備註中
       let orderList = [];
+      // 建立訂單項目：不分免費與否，皆依序匹配各自的數字
       dishOrders.forEach(order => {
         let foundDish = menu.find(item => item.keywords.includes(order.keyword));
-        if (foundDish.price === 0) {
-          let attached = false;
-          for (let j = orderList.length - 1; j >= 0; j--) {
-            if (orderList[j].dish.price > 0) {
-              if (orderList[j].remark) {
-                let remarksArr = orderList[j].remark.split(',').map(s => s.trim());
-                let index = remarksArr.findIndex(entry => entry.startsWith(foundDish.name + "×"));
-                if (index >= 0) {
-                  let parts = remarksArr[index].split('×');
-                  let currentQty = parseInt(parts[1]) || 0;
-                  let newQty = currentQty + order.quantity;
-                  remarksArr[index] = foundDish.name + "×" + newQty;
-                } else {
-                  remarksArr.push(foundDish.name + "×" + order.quantity);
-                }
-                orderList[j].remark = remarksArr.join(", ");
-              } else {
-                orderList[j].remark = foundDish.name + "×" + order.quantity;
-              }
-              attached = true;
-              break;
-            }
-          }
-          if (!attached) {
-            alert("請重新輸入");
-            inputElem.value = "";
-            return;
-          }
-        } else {
-          orderList.push({ dish: foundDish, quantity: order.quantity, remark: "" });
+        if (!foundDish) {
+          alert("請重新輸入");
+          inputElem.value = "";
+          return;
         }
+        orderList.push({ dish: foundDish, quantity: order.quantity, remark: "" });
       });
       
       if (orderList.length === 0) {
@@ -306,44 +251,9 @@
       updateStatusText();
     }
     
-    /* ---------- 加入訂單明細與計算總金額 ---------- */
+    /* ---------- 新增訂單項目 ---------- */
+    // 修改重點：不論價格是否為 0，都新增一行，並直接顯示各自的數量
     function addOrderRow(dish, quantity, remark) {
-      if (dish.price === 0) {
-        const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-        if (tbody.rows.length === 0) {
-          alert("無法加入0元商品，因為沒有上一筆訂單");
-          return;
-        }
-        let found = false;
-        for (let i = tbody.rows.length - 1; i >= 0; i--) {
-          let row = tbody.rows[i];
-          let price = parseFloat(row.cells[3].innerText);
-          if (price > 0) {
-            let currentRemark = row.cells[2].innerText;
-            if (currentRemark && currentRemark.trim() !== "") {
-              let remarksArr = currentRemark.split(',').map(s => s.trim());
-              let index = remarksArr.findIndex(entry => entry.startsWith(dish.name + "×"));
-              if (index >= 0) {
-                let parts = remarksArr[index].split('×');
-                let currentQty = parseInt(parts[1]) || 0;
-                let newQty = currentQty + quantity;
-                remarksArr[index] = dish.name + "×" + newQty;
-              } else {
-                remarksArr.push(dish.name + "×" + quantity);
-              }
-              row.cells[2].innerText = remarksArr.join(", ");
-            } else {
-              row.cells[2].innerText = dish.name + "×" + quantity;
-            }
-            found = true;
-            break;
-          }
-        }
-        if (!found) {
-          alert("無法加入0元商品，因為沒有上一筆非免費訂單");
-        }
-        return;
-      }
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
       const nameCell = row.insertCell();
@@ -424,7 +334,7 @@
         let dishName = row.cells[0].innerText;
         let quantity = row.cells[1].innerText;
         let price = parseFloat(row.cells[3].innerText);
-        if (price > 0) {
+        if (price >= 0) {
           summary += counter + ". " + dishName + "×" + quantity + "<br>";
           counter++;
           let remark = row.cells[2].innerText;
@@ -462,41 +372,42 @@
       });
     }
     
-    // 處理語音輸入，邏輯同手動輸入：若只有一個數字則套用至所有項目，否則依序匹配
+    // 語音輸入處理邏輯保持與手動輸入相同
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       converted = converted.replace(/\//g, " ").trim();
       let tokens = converted.split(/\s+/);
-      let parsedTokens = [];
+      let dishOrders = [];
       let explicitCount = 0;
       tokens.forEach(token => {
         let m = token.match(/^(\d+)(?:份)?([a-zA-Z]+)$/);
         if (m) {
-          parsedTokens.push({ quantity: parseInt(m[1]), keyword: m[2] });
+          dishOrders.push({ keyword: m[2], quantity: parseInt(m[1]) });
           explicitCount++;
         } else {
           m = token.match(/^([a-zA-Z]+)$/);
           if (m) {
-            parsedTokens.push({ quantity: null, keyword: m[1] });
+            dishOrders.push({ keyword: m[1], quantity: null });
           }
         }
       });
-      if(explicitCount === 1) {
-        let explicitValue = parsedTokens.find(t => t.quantity !== null).quantity;
-        parsedTokens.forEach(t => {
-          if(t.quantity === null) {
+      if (dishOrders.length === 0) return [];
+      if (explicitCount === 1) {
+        let explicitValue = dishOrders.find(t => t.quantity !== null).quantity;
+        dishOrders.forEach(t => {
+          if (t.quantity === null) {
             t.quantity = explicitValue;
           }
         });
       } else {
-        parsedTokens.forEach(t => {
-          if(t.quantity === null) {
+        dishOrders.forEach(t => {
+          if (t.quantity === null) {
             t.quantity = 1;
           }
         });
       }
       let orders = [];
-      parsedTokens.forEach(t => {
+      dishOrders.forEach(t => {
         let foundDish = menu.find(item => item.keywords.includes(t.keyword));
         if (foundDish) {
           orders.push({ dish: foundDish, quantity: t.quantity });
