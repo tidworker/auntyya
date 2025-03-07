@@ -165,9 +165,9 @@
     }
     loadMenu();
     
-    // 修正後的轉譯函式：
-    // 若輸入為純英文字（例如 jieshu、gengjeng），直接回傳
-    // 否則僅累加字庫中有對應的字，其他字忽略
+    // 修改後的轉譯函式：
+    // 如果輸入全為英文字，則直接回傳
+    // 否則僅轉換字庫中有對應的中文字，其他忽略
     function translateDishName(dishChinese) {
       if (/^[a-zA-Z]+$/.test(dishChinese)) {
         return dishChinese;
@@ -476,9 +476,9 @@
             return;
          }
          transcript = transcript.trim();
-         // 使用轉譯函式處理語音輸入
+         // 使用轉譯函式處理語音輸入，將中文轉為英文以便執行命令與點餐
          let translatedTranscript = translateDishName(transcript);
-         // 檢查語音命令：必須完整轉譯
+         // 檢查語音命令：若轉譯結果為 "jieshu" 或 "gengjeng"
          if (translatedTranscript === "jieshu") {
             document.getElementById("statusText").innerText = "目前狀態：結束";
             setTimeout(() => { document.getElementById("statusModal").style.display = "none"; }, 1000);
