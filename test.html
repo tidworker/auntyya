@@ -10,7 +10,7 @@
     table { border-collapse: collapse; width: 100%; margin-top: 10px; }
     table, th, td { border: 1px solid #aaa; }
     th, td { padding: 8px; text-align: center; }
-    @media (max-width: 300px) { input, button { font-size: 18px; } }
+    @media (max-width: 600px) { input, button { font-size: 18px; } }
     /* 模態框：編輯訂單項目 */
     #editModal {
       display: none;
@@ -51,7 +51,7 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入訂單內容（或直接使用語音輸入）</h2>
-    <!-- 例如：a3/2/b, 3/a2/b, a3/b2/, 3/a/b2 -->
+    <!-- 範例形式：a3/2/b、3/a2/b、a3/b2/、3/a/b2 -->
     <input type="text" id="orderInput" placeholder="例如：a3/2/b 或 3/a2/b">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startContinuousVoiceInput()">語音輸入</button>
@@ -92,7 +92,7 @@
     <div id="editModalContent">
       <h3 id="modalDishName">編輯品項</h3>
       <label for="modalQuantity">份數:</label>
-      <input type="number" id="modalQuantity" min="1" style="width:80%;">
+      <input type="number" id="modalQuantity" min="1" style="width:100%;">
       <div style="margin-top:10px;">
         <button onclick="saveModal()">儲存</button>
         <button onclick="deleteModal()">刪除</button>
@@ -165,7 +165,7 @@
     }
     loadMenu();
     
-    // 保持原有轉譯邏輯（依 charMapping 轉換）
+    // 原有轉譯邏輯：依據 charMapping 轉換中文字
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -208,7 +208,7 @@
         }
       });
       
-      // 配對數字與餐點
+      // 配對：若只有一個數字，則所有餐點均取該數字；若無數字則預設 1；若有多個則依序配對
       let orders = [];
       if (dishes.length === 0) {
         alert("請重新輸入");
@@ -275,11 +275,11 @@
     }
     
     /* ---------- 語音輸入處理 ---------- */
-    // 語音輸入解析與手動輸入基本相同，均採用獨立抽取數字與餐點的方式
+    // 語音輸入解析邏輯與手動輸入相同，均以斜線作為分隔符
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
-      converted = converted.replace(/\//g, " ").trim();
-      let tokens = converted.split(/\s+/).filter(t => t.trim() !== "");
+      // 與手動輸入保持一致，使用斜線分割
+      let tokens = converted.split('/').filter(token => token.trim() !== "");
       
       let numbers = [];
       let dishes = [];
