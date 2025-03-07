@@ -51,7 +51,7 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入訂單內容（或直接使用語音輸入）</h2>
-    <!-- 範例形式：a3/2/b、3/a2/b、a3/b2/、3/a/b2 -->
+    <!-- 範例形式：a3/2/b, 3/a2/b, a3/b2/, 3/a/b2 -->
     <input type="text" id="orderInput" placeholder="例如：a3/2/b 或 3/a2/b">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startContinuousVoiceInput()">語音輸入</button>
@@ -104,7 +104,7 @@
   <!-- 彈出式狀態視窗（語音輸入） -->
   <div id="statusModal">
     <div id="statusModalContent">
-      <p id="statusText">目前狀態：等待輸入<br>結束點餐請說：完成</p>
+      <p id="statusText">目前狀態：等待輸入<br>結束點餐請說：jieshu</p>
       <!-- 新增「完成點餐」按鈕 -->
       <button onclick="completeOrder()">完成點餐</button>
     </div>
@@ -165,15 +165,13 @@
     }
     loadMenu();
     
-    // 原有轉譯邏輯：依據 charMapping 轉換中文字
+    // 修改後的轉譯函式：只轉換有在字庫中的字，其他直接忽略
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
         const ch = dishChinese.charAt(i);
         if (charMapping[ch] !== undefined) {
           converted += charMapping[ch];
-        } else {
-          converted += ch;
         }
       }
       return converted;
@@ -278,7 +276,6 @@
     // 語音輸入解析邏輯與手動輸入相同，均以斜線作為分隔符
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
-      // 與手動輸入保持一致，使用斜線分割
       let tokens = converted.split('/').filter(token => token.trim() !== "");
       
       let numbers = [];
@@ -414,7 +411,7 @@
       orderingComplete = false;
       const statusModal = document.getElementById("statusModal");
       statusModal.style.display = "block";
-      document.getElementById("statusText").innerHTML = "目前狀態：等待輸入<br>結束點餐請說：完成";
+      document.getElementById("statusText").innerHTML = "目前狀態：等待輸入<br>結束點餐請說：jieshu";
       voiceInputLoop();
     }
     
@@ -436,7 +433,7 @@
           }
         }
       }
-      let statusHTML = "目前狀態：等待輸入<br>" + summary + "結束點餐請說：完成";
+      let statusHTML = "目前狀態：等待輸入<br>" + summary + "結束點餐請說：jieshu";
       document.getElementById("statusText").innerHTML = statusHTML;
     }
     
@@ -474,12 +471,15 @@
             return;
          }
          transcript = transcript.trim();
-         if (transcript === "jieshu") {
+         // 將語音輸入轉譯（只取字庫中對應的字）
+         let translatedTranscript = translateDishName(transcript);
+         // 檢查語音命令（指令詞必須完整轉譯）
+         if (translatedTranscript === "jieshu") {
             document.getElementById("statusText").innerText = "目前狀態：結束";
             setTimeout(() => { document.getElementById("statusModal").style.display = "none"; }, 1000);
             return;
          }
-         if (transcript === "gengjeng") {
+         if (translatedTranscript === "gengjeng") {
             let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
             if (tbody.rows.length > 0) {
                tbody.deleteRow(tbody.rows.length - 1);
@@ -491,9 +491,9 @@
             voiceInputLoop();
             return;
          }
-         let orders = processMultipleVoiceInput(transcript);
+         let orders = processMultipleVoiceInput(translatedTranscript);
          if (orders.length === 0) {
-            document.getElementById("statusText").innerHTML = "目前狀態：輸入錯誤，等待輸入<br>結束點餐請說：完成";
+            document.getElementById("statusText").innerHTML = "目前狀態：輸入錯誤，等待輸入<br>結束點餐請說：jieshu";
             voiceInputLoop();
          } else {
             orders.forEach(order => {
@@ -506,7 +506,7 @@
       });
     }
     
-    // 新增完成點餐函式：按下後設定 orderingComplete 為 true 並隱藏狀態視窗
+    // 完成點餐函式：按下後設定 orderingComplete 為 true 並隱藏狀態視窗
     function completeOrder() {
       orderingComplete = true;
       document.getElementById("statusModal").style.display = "none";
