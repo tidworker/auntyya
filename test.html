@@ -51,7 +51,7 @@
   <!-- 點餐區 -->
   <section>
     <h2>請輸入訂單內容（或直接使用語音輸入）</h2>
-    <!-- 範例形式：a3/2/b, 3/a2/b, a3/b2/, 3/a/b2 -->
+    <!-- 輸入範例：a3/2/b, 3/a2/b, a3/b2/, 3/a/b2 -->
     <input type="text" id="orderInput" placeholder="例如：a3/2/b 或 3/a2/b">
     <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startContinuousVoiceInput()">語音輸入</button>
@@ -111,11 +111,10 @@
   </div>
   
   <script>
-    // 全域變數：字庫、菜單與編輯用變數（原有載入方式不變）
+    // 全域變數：字庫、菜單與編輯用變數（保持原有載入方式）
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
-    // 設定點餐是否完成的旗標，初始為 false
     let orderingComplete = false;
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
@@ -165,10 +164,9 @@
     }
     loadMenu();
     
-    // 修改後的轉譯函式：
-    // 如果輸入全為英文字，則直接回傳
-    // 否則僅轉換字庫中有對應的中文字，其他忽略
+    // 轉譯函式：對於中文輸入，僅轉換字庫中有對應的字，其他直接忽略（不保留原中文）
     function translateDishName(dishChinese) {
+      // 若全為英文字，直接回傳
       if (/^[a-zA-Z]+$/.test(dishChinese)) {
         return dishChinese;
       }
@@ -476,9 +474,9 @@
             return;
          }
          transcript = transcript.trim();
-         // 使用轉譯函式處理語音輸入，將中文轉為英文以便執行命令與點餐
+         // 將語音輸入透過轉譯字庫轉換（不保留未轉譯的中文字）
          let translatedTranscript = translateDishName(transcript);
-         // 檢查語音命令：若轉譯結果為 "jieshu" 或 "gengjeng"
+         // 檢查語音命令：轉譯結果必須完整，否則輸入無效
          if (translatedTranscript === "jieshu") {
             document.getElementById("statusText").innerText = "目前狀態：結束";
             setTimeout(() => { document.getElementById("statusModal").style.display = "none"; }, 1000);
