@@ -5,7 +5,7 @@
   <title>葉阿姨點餐系統</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* （原本樣式保持不變） */
+    /* ↓↓↓ 原本的 CSS 保持不動 ↓↓↓ */
     body { font-family: Arial, sans-serif; margin: 0; padding: 0; text-align: center; background-color: #f0f0f0; color: #333; }
     header { background: #ddd; padding: 15px 0; margin-bottom: 20px; }
     header h2 { margin: 0; font-size: 24px; }
@@ -36,12 +36,16 @@
     .key-btn { width: 70px; height: 50px; margin: 5px; font-size: 20px; cursor: pointer; border: none; background-color: #ccc; color: #333; transition: background-color 0.2s; }
     .key-btn:hover { background-color: #aaa; }
     #remarkArea { width: 90%; margin: 12px auto 0; font-size: 20px; text-align: center; height: 40px; line-height: 40px; border: 1px solid #999; padding: 0 10px; background-color: #fff; }
+    /* ↑↑↑ 原本的 CSS 保持不動 ↑↑↑ */
   </style>
 </head>
+
 <body>
   <header>
     <h2>葉阿姨點餐系統</h2>
   </header>
+
+  <!-- 主選單按鈕區 -->
   <div class="menu-container">
     <button class="menu-button" onclick="openModal('蔥油餅')">蔥油餅</button>
     <button class="menu-button" onclick="openModal('麵線')">麵線</button>
@@ -49,6 +53,8 @@
     <button class="menu-button" onclick="openModal('飲料')">飲料</button>
     <button class="menu-button" onclick="openModal('熱湯')">熱湯</button>
   </div>
+
+  <!-- 訂單列表 -->
   <h3>訂單列表</h3>
   <table class="order-list">
     <thead>
@@ -61,13 +67,15 @@
     <tbody id="orderTable"></tbody>
   </table>
   <div id="totalAmount">總金額: $0</div>
+
+  <!-- 底部動作按鈕區 -->
   <div class="actions">
     <button class="menu-button-action" onclick="goToOrderPage()">目前訂單</button>
     <button class="menu-button-action" onclick="completeOrder()">完成訂單</button>
     <button class="menu-button-action" onclick="recordInHouseOrder()">內用</button>
   </div>
-  
-  <!-- 多步驟點餐 Modal -->
+
+  <!-- 多步驟點餐 Modal：原程式不動 -->
   <div id="mainModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeModal()">&times;</span>
@@ -142,8 +150,8 @@
       </div>
     </div>
   </div>
-  
-  <!-- 客製(備註) Modal -->
+
+  <!-- 客製(備註) Modal：原程式不動 -->
   <div id="customModal" class="modal-cust">
     <div class="modal-content-cust">
       <span class="close-cust" onclick="closeCustomModal()">&times;</span>
@@ -193,9 +201,11 @@
       </div>
     </div>
   </div>
-  
+
   <script>
-    // --- 原始資料與流程設定 ---
+    /* ====== 原本的資料設定、流程與函式，均保持不動 ====== */
+
+    // 1) 資料設定
     const subTypes = {
       "蔥油餅": { "加蛋": 30, "不加蛋": 20 },
       "麵線": { "大腸麵線": 50, "肉羹麵線": 50, "綜合麵線": 50, "清麵線": 40 },
@@ -210,8 +220,9 @@
       "飲料": ["SUB_TYPE", "DRINK_TOTAL", "DRINK_ICE"],
       "熱湯": ["SUB_TYPE", "SOUP_QTY"]
     };
-    // orders 用來儲存目前點餐資料
     let orders = {};
+
+    // 多步驟流程用的暫存變數
     let currentCategory = "";
     let currentFlowSteps = [];
     let currentStepIndex = 0;
@@ -223,8 +234,8 @@
     let drinkTotal = 1;
     let drinkIce = 0;
     let soupQty = 1;
-    
-    // --- 開啟點餐 Modal ---
+
+    // 2) Modal 相關開關與步驟
     function openModal(category) {
       currentCategory = category;
       currentFlowSteps = flows[category];
@@ -234,11 +245,10 @@
       document.getElementById("stepSubType").style.display = "block";
       document.getElementById("stepSecond").classList.add("hidden");
       document.getElementById("stepThird").classList.add("hidden");
-      var confirmContainer = document.getElementById("confirmContainer");
-      if (confirmContainer) { confirmContainer.remove(); }
+      const confirmContainer = document.getElementById("confirmContainer");
+      if (confirmContainer) confirmContainer.remove();
       loadSubTypeButtons(category);
     }
-    
     function resetInputs() {
       selectedSubType = "";
       selectedPrice = 0;
@@ -265,9 +275,9 @@
       let sQ = document.getElementById("soupQuantityInput");
       if(sQ) sQ.value = 1;
     }
-    
     function closeModal() { document.getElementById("mainModal").style.display = "none"; }
-    
+
+    // 載入子選項按鈕
     function loadSubTypeButtons(category) {
       let title = document.getElementById("stepSubTypeTitle");
       let container = document.getElementById("subTypeButtons");
@@ -279,15 +289,25 @@
         let btn = document.createElement("button");
         btn.className = "menu-button-sm";
         btn.innerText = `${name} ($${price})`;
-        btn.onclick = function() { selectedSubType = name; selectedPrice = price; gotoNextStep(); };
+        btn.onclick = function() {
+          selectedSubType = name;
+          selectedPrice = price;
+          gotoNextStep();
+        };
         container.appendChild(btn);
       }
     }
-    
+
     function gotoNextStep() { currentStepIndex++; renderStep(); }
     function nextStep() { gotoNextStep(); }
-    function gotoPreviousStep() { if(currentStepIndex > 0) { currentStepIndex--; renderStep(); } }
-    
+    function gotoPreviousStep() {
+      if(currentStepIndex > 0) {
+        currentStepIndex--;
+        renderStep();
+      }
+    }
+
+    // 依據當前 stepKey，顯示對應的區塊
     function renderStep() {
       if(currentStepIndex === 0) {
         document.getElementById("stepSubType").style.display = "block";
@@ -295,6 +315,7 @@
         document.getElementById("stepThird").classList.add("hidden");
         return;
       }
+      // 先全部隱藏
       document.getElementById("stepSubType").style.display = "none";
       document.getElementById("stepSecond").classList.add("hidden");
       document.getElementById("stepThird").classList.add("hidden");
@@ -304,8 +325,10 @@
       document.getElementById("drinkIceBlock").classList.add("hidden");
       document.getElementById("soupQuantityBlock").classList.add("hidden");
       document.getElementById("eggBlock").classList.add("hidden");
-      var confirmContainer = document.getElementById("confirmContainer");
-      if (confirmContainer) { confirmContainer.remove(); }
+
+      const confirmContainer = document.getElementById("confirmContainer");
+      if (confirmContainer) confirmContainer.remove();
+
       let stepKey = currentFlowSteps[currentStepIndex];
       switch(stepKey) {
         case "QUANTITY":
@@ -315,8 +338,9 @@
         case "SPICY":
           document.getElementById("stepThird").classList.remove("hidden");
           document.getElementById("spicyBlock").classList.remove("hidden");
-          if(["蔥油餅", "麵線", "炒麵"].includes(currentCategory)) { 
-            document.getElementById("eggBlock").classList.remove("hidden"); 
+          // 蔥油餅、麵線、炒麵 三種才顯示荷包蛋
+          if(["蔥油餅", "麵線", "炒麵"].includes(currentCategory)) {
+            document.getElementById("eggBlock").classList.remove("hidden");
           }
           appendConfirmButton();
           break;
@@ -336,15 +360,20 @@
           break;
       }
     }
-    
+
     function appendConfirmButton() {
       if(document.getElementById("confirmContainer")) return;
-      var confirmContainer = document.createElement("div");
+      let confirmContainer = document.createElement("div");
       confirmContainer.id = "confirmContainer";
-      confirmContainer.innerHTML = "<br><button class='menu-button-sm' onclick='gotoPreviousStep()'>上一頁</button> <button class='menu-button-sm' onclick='confirmOrder()'>確認點餐</button>";
+      confirmContainer.innerHTML = `
+        <br>
+        <button class='menu-button-sm' onclick='gotoPreviousStep()'>上一頁</button>
+        <button class='menu-button-sm' onclick='confirmOrder()'>確認點餐</button>
+      `;
       document.getElementById("stepThird").appendChild(confirmContainer);
     }
-    
+
+    // 點擊 + / - ，動態改變數量
     function changeValue(inputId, amount, extraCheck="") {
       let input = document.getElementById(inputId);
       if(!input) return;
@@ -353,88 +382,140 @@
       let newVal = val + amount;
       if(newVal < minVal) newVal = minVal;
       input.value = newVal;
+
+      // 若勾選「全部辣」或「全數冰」時，需要同步更新對應數量
       if(extraCheck === "allSpicy") {
         let allSp = document.getElementById("allSpicy");
-        if(allSp && allSp.checked) { 
-          let qty = parseInt(document.getElementById("generalQuantityInput").value) || 1; 
-          document.getElementById("spicyInput").value = qty; 
+        if(allSp && allSp.checked) {
+          let qty = parseInt(document.getElementById("generalQuantityInput").value) || 1;
+          document.getElementById("spicyInput").value = qty;
         }
       }
       if(extraCheck === "allIce") {
         let allIc = document.getElementById("allIce");
-        if(allIc && allIc.checked) { 
-          let total = parseInt(document.getElementById("drinkTotalInput").value) || 1; 
-          document.getElementById("drinkIceInput").value = total; 
+        if(allIc && allIc.checked) {
+          let total = parseInt(document.getElementById("drinkTotalInput").value) || 1;
+          document.getElementById("drinkIceInput").value = total;
         }
       }
     }
-    
+
+    // 全部辣
     function toggleAllSpicy() {
       let allSp = document.getElementById("allSpicy").checked;
       let spI = document.getElementById("spicyInput");
       if(spI) {
-        if(allSp) { 
-          let qty = parseInt(document.getElementById("generalQuantityInput").value) || 1; 
-          spI.value = qty; 
-          spI.disabled = true; 
-        } else { 
-          spI.disabled = false; 
+        if(allSp) {
+          let qty = parseInt(document.getElementById("generalQuantityInput").value) || 1;
+          spI.value = qty;
+          spI.disabled = true;
+        } else {
+          spI.disabled = false;
         }
       }
     }
-    
+
+    // 全數冰
     function toggleAllIce() {
       let allIc = document.getElementById("allIce").checked;
       let dI = document.getElementById("drinkIceInput");
       if(dI) {
-        if(allIc) { 
-          let total = parseInt(document.getElementById("drinkTotalInput").value) || 1; 
-          dI.value = total; 
-          dI.disabled = true; 
-        } else { 
-          dI.disabled = false; 
+        if(allIc) {
+          let total = parseInt(document.getElementById("drinkTotalInput").value) || 1;
+          dI.value = total;
+          dI.disabled = true;
+        } else {
+          dI.disabled = false;
         }
       }
     }
-    
-    // === 新增：更新銷售計數器 (僅加入此段，不改動原有點餐流程) ===
-    function updateSalesCounterFromOrder(order) {
-      let salesCounter = JSON.parse(localStorage.getItem("salesCounter")) || {};
-      for (let item in order) {
-        let quantity = order[item].quantity || 0;
-        salesCounter[item] = (salesCounter[item] || 0) + quantity;
+
+    // --- 核心：confirmOrder() 將資料加到 orders 裡 ---
+    function confirmOrder() {
+      let gQ = document.getElementById("generalQuantityInput");
+      if(gQ) generalQuantity = parseInt(gQ.value) || 1;
+      let spI = document.getElementById("spicyInput");
+      if(spI) spicyQty = parseInt(spI.value) || 0;
+      let eI = document.getElementById("eggInput");
+      if(eI) eggQty = parseInt(eI.value) || 0;
+      let dT = document.getElementById("drinkTotalInput");
+      if(dT) drinkTotal = parseInt(dT.value) || 1;
+      let dI = document.getElementById("drinkIceInput");
+      if(dI) drinkIce = parseInt(dI.value) || 0;
+      let sQ = document.getElementById("soupQuantityInput");
+      if(sQ) soupQty = parseInt(sQ.value) || 1;
+
+      let finalItemName = "";
+      let finalQuantity = 1;
+      let remark = "";
+      let eggCost = 0;
+
+      switch(currentCategory) {
+        case "蔥油餅":
+          finalItemName = (selectedSubType === "加蛋") ? "蔥油餅加蛋" : "蔥油餅";
+          finalQuantity = generalQuantity;
+          if(spicyQty > 0) remark += `加辣x${spicyQty} `;
+          if(eggQty > 0) remark += `荷包蛋x${eggQty}`;
+          eggCost = eggQty > 0 ? eggQty * 15 : 0;
+          addToOrder(finalItemName, selectedPrice, finalQuantity, eggCost, remark.trim());
+          break;
+
+        case "麵線":
+          finalItemName = selectedSubType;
+          finalQuantity = generalQuantity;
+          if(spicyQty > 0) remark += `加辣x${spicyQty} `;
+          if(eggQty > 0) remark += `荷包蛋x${eggQty}`;
+          eggCost = eggQty > 0 ? eggQty * 15 : 0;
+          addToOrder(finalItemName, selectedPrice, finalQuantity, eggCost, remark.trim());
+          break;
+
+        case "炒麵":
+          finalItemName = selectedSubType;
+          finalQuantity = generalQuantity;
+          if(spicyQty > 0) remark += `加辣x${spicyQty} `;
+          if(eggQty > 0) remark += `荷包蛋x${eggQty}`;
+          eggCost = eggQty > 0 ? eggQty * 15 : 0;
+          addToOrder(finalItemName, selectedPrice, finalQuantity, eggCost, remark.trim());
+          break;
+
+        case "飲料":
+          finalItemName = selectedSubType;
+          finalQuantity = drinkTotal;
+          let warmCount = drinkTotal - drinkIce;
+          if(warmCount > 0) remark += `溫×${warmCount} `;
+          if(drinkIce > 0) remark += `冰×${drinkIce}`;
+          addToOrder(finalItemName, selectedPrice, finalQuantity, 0, remark.trim());
+          break;
+
+        case "熱湯":
+          finalItemName = selectedSubType;
+          finalQuantity = soupQty;
+          addToOrder(finalItemName, selectedPrice, finalQuantity, 0, "");
+          break;
       }
-      localStorage.setItem("salesCounter", JSON.stringify(salesCounter));
+      closeModal();
     }
-    
-    // --- 完成訂單 (外帶) ---
-    function completeOrder() {
-      updateSalesCounterFromOrder(orders);  // 新增計數器更新
-      let orderNumber = getNextOrderNumber();
-      let newOrder = { orderId: orderNumber, items: orders };
-      let allOrders = JSON.parse(localStorage.getItem("allOrders")) || [];
-      allOrders.push(newOrder);
-      localStorage.setItem("allOrders", JSON.stringify(allOrders));
-      orders = {};
-      updateOrderList();
-      window.location.href = "out.html";
-    }
-    
-    // --- 內用訂單 ---
-    function recordInHouseOrder() {
-      if(Object.keys(orders).length === 0) {
-         alert("目前沒有訂單可以記錄！");
-         return;
+
+    // 實際將項目加入 orders
+    function addToOrder(itemName, unitPrice, quantity, eggCost = 0, remark = "") {
+      if(!itemName || !unitPrice) return;
+      if(orders[itemName]) {
+        orders[itemName].quantity += quantity;
+        if(eggCost > 0 && !orders[itemName].eggCost) {
+          orders[itemName].eggCost = eggCost;
+        }
+        if(remark) {
+          orders[itemName].remark = orders[itemName].remark
+            ? orders[itemName].remark + " " + remark
+            : remark;
+        }
+      } else {
+        orders[itemName] = { price: unitPrice, quantity: quantity, eggCost: eggCost, remark: remark };
       }
-      updateSalesCounterFromOrder(orders);  // 新增計數器更新
-      let orderNumber = getNextOrderNumber();
-      let newOrder = { orderId: orderNumber, items: orders };
-      localStorage.setItem("inHouseOrderRecord", JSON.stringify(newOrder));
-      orders = {};
       updateOrderList();
-      window.location.href = "in.html";
     }
-    
+
+    // 更新訂單列表畫面
     function updateOrderList() {
       let orderTable = document.getElementById("orderTable");
       orderTable.innerHTML = "";
@@ -443,25 +524,89 @@
         let { price, quantity, eggCost, remark } = orders[item];
         total += price * quantity;
         if(eggCost) total += eggCost;
-        let row = `<tr><td onclick="openCustomModal('${item}')" style="cursor: pointer;">${item}</td><td>${quantity}</td><td>${remark || ""}</td></tr>`;
+        let row = `
+          <tr>
+            <td onclick="openCustomModal('${item}')" style="cursor: pointer;">${item}</td>
+            <td>${quantity}</td>
+            <td>${remark || ""}</td>
+          </tr>
+        `;
         orderTable.innerHTML += row;
       }
       document.getElementById("totalAmount").innerText = "總金額: $" + total;
       localStorage.setItem("currentOrder", JSON.stringify(orders));
     }
-    
+
+    // 訂單編號遞增
     function getNextOrderNumber() {
       let counter = localStorage.getItem("orderNumberCounter");
-      if(!counter) { counter = 1; } else { counter = parseInt(counter); }
+      if(!counter) {
+        counter = 1;
+      } else {
+        counter = parseInt(counter);
+      }
       let orderNumber = String(counter).padStart(3, "0");
       counter++;
       localStorage.setItem("orderNumberCounter", counter);
       return orderNumber;
     }
-    
-    function goToOrderPage() { window.location.href = "out.html"; }
-    
-    // --- 客製 (備註) Modal 相關 ---
+
+    // --- 以下為「完成訂單」與「內用」的動作 ---
+
+    // (A) 新增：更新銷售計數器
+    // 只要呼叫這個函式，就能把當前 orders 的每個品項數量累加到 localStorage["salesCounter"] 之中
+    function updateSalesCounterFromOrder(order) {
+      let salesCounter = JSON.parse(localStorage.getItem("salesCounter")) || {};
+      for (let item in order) {
+        let quantity = order[item].quantity || 0;
+        salesCounter[item] = (salesCounter[item] || 0) + quantity;
+      }
+      localStorage.setItem("salesCounter", JSON.stringify(salesCounter));
+    }
+
+    // (B) 完成訂單 (外帶)
+    function completeOrder() {
+      // **在原本流程最前方插入這行：更新銷售計數器**
+      updateSalesCounterFromOrder(orders);
+
+      let orderNumber = getNextOrderNumber();
+      let newOrder = {
+        orderId: orderNumber,
+        items: orders
+      };
+      let allOrders = JSON.parse(localStorage.getItem("allOrders")) || [];
+      allOrders.push(newOrder);
+      localStorage.setItem("allOrders", JSON.stringify(allOrders));
+
+      orders = {};
+      updateOrderList();
+      window.location.href = "out.html";
+    }
+
+    // (C) 內用
+    function recordInHouseOrder() {
+      if(Object.keys(orders).length === 0) {
+         alert("目前沒有訂單可以記錄！");
+         return;
+      }
+      // **在原本流程最前方插入這行：更新銷售計數器**
+      updateSalesCounterFromOrder(orders);
+
+      let orderNumber = getNextOrderNumber();
+      let newOrder = { orderId: orderNumber, items: orders };
+      localStorage.setItem("inHouseOrderRecord", JSON.stringify(newOrder));
+
+      orders = {};
+      updateOrderList();
+      window.location.href = "in.html";
+    }
+
+    // (D) 其他功能：查看目前訂單
+    function goToOrderPage() {
+      window.location.href = "out.html";
+    }
+
+    // --- 客製 (備註) Modal ---
     let currentItemForCust = null;
     function openCustomModal(item) {
       currentItemForCust = item;
@@ -469,27 +614,36 @@
       document.getElementById("remarkArea").textContent = remark;
       document.getElementById("customModal").style.display = "block";
     }
-    function closeCustomModal() { document.getElementById("customModal").style.display = "none"; }
-    function appendRemark(str) { let remarkDiv = document.getElementById("remarkArea"); remarkDiv.textContent += str; }
-    function clearRemark() { document.getElementById("remarkArea").textContent = ""; }
+    function closeCustomModal() {
+      document.getElementById("customModal").style.display = "none";
+    }
+    function appendRemark(str) {
+      let remarkDiv = document.getElementById("remarkArea");
+      remarkDiv.textContent += str;
+    }
+    function clearRemark() {
+      document.getElementById("remarkArea").textContent = "";
+    }
     function backspaceRemark() {
       let remarkDiv = document.getElementById("remarkArea");
       let currText = remarkDiv.textContent;
-      if(currText.length > 0) { remarkDiv.textContent = currText.slice(0, -1); }
+      if(currText.length > 0) {
+        remarkDiv.textContent = currText.slice(0, -1);
+      }
     }
     function confirmRemark() {
       let remarkDiv = document.getElementById("remarkArea");
       let newText = remarkDiv.textContent;
-      if(currentItemForCust && orders[currentItemForCust]) { 
-        orders[currentItemForCust].remark = newText; 
-        updateOrderList(); 
+      if(currentItemForCust && orders[currentItemForCust]) {
+        orders[currentItemForCust].remark = newText;
+        updateOrderList();
       }
       closeCustomModal();
     }
     function deleteItemInCustom() {
-      if(currentItemForCust && orders[currentItemForCust]) { 
-        delete orders[currentItemForCust]; 
-        updateOrderList(); 
+      if(currentItemForCust && orders[currentItemForCust]) {
+        delete orders[currentItemForCust];
+        updateOrderList();
       }
       closeCustomModal();
     }
