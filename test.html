@@ -474,12 +474,12 @@
             return;
          }
          transcript = transcript.trim();
-         if (transcript === "完成") {
+         if (transcript === "jieshu") {
             document.getElementById("statusText").innerText = "目前狀態：結束";
             setTimeout(() => { document.getElementById("statusModal").style.display = "none"; }, 1000);
             return;
          }
-         if (transcript === "錯誤") {
+         if (transcript === "gengjeng") {
             let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
             if (tbody.rows.length > 0) {
                tbody.deleteRow(tbody.rows.length - 1);
