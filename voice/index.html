@@ -16,7 +16,10 @@
       margin: 5px; 
       padding: 10px; 
       font-size: 16px; 
-      color: orange;
+      color: black;
+      background-color: orange; 
+      border: 2px solid white; 
+      border-radius: 5px
     }
     table { 
       border-collapse: collapse; 
@@ -26,6 +29,7 @@
     }
     table, th, td { 
       border: 1px solid #aaa; 
+      
     }
     th, td { 
       padding: 8px; 
@@ -78,10 +82,6 @@
   <img src="menu.png">  
   <!-- 點餐區 -->
   <section>
-    <h2>請輸入訂單內容（或直接使用語音輸入）</h2>
-    <!-- 範例形式：a3/2/b、3/a2/b、a3/b2/、3/a/b2 -->
-    <input type="text" id="orderInput" placeholder="例：蔥油餅兩份">
-    <button onclick="orderFromChinese()">送出訂單</button>
     <button onclick="startContinuousVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
   </section>
