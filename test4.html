@@ -11,14 +11,14 @@
     table, th, td { border: 1px solid #aaa; }
     th, td { padding: 8px; text-align: center; }
     @media (max-width: 600px) { button { font-size: 18px; } }
-    /* 彈出式模態框：菜單選擇 */
+    /* 彈出式模態框：菜單選擇（僅顯示非 0 元品項） */
     #editModal {
       display: none;
       position: fixed;
       left: 0; top: 0;
       width: 100%; height: 100%;
       background: rgba(0,0,0,0.5);
-      z-index: 2000;
+      z-index: 3000;
     }
     #editModalContent {
       background: #fff;
@@ -35,7 +35,7 @@
       width: 100%;
       height: 100%;
       background: rgba(0, 0, 0, 0.5);
-      z-index: 3000;
+      z-index: 2000;
     }
     #statusModalContent {
       background: #fff;
@@ -174,7 +174,7 @@
     }
     
     /* ---------- 語音輸入處理 ---------- */
-    // 語音輸入解析邏輯與原先類似，採用斜線分隔
+    // 語音輸入解析邏輯採用斜線分隔
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       let tokens = converted.split('/').filter(token => token.trim() !== "");
@@ -205,13 +205,13 @@
     
     /* ---------- 新增訂單項目與計算總金額 ---------- */
     function addOrderRow(dish, quantity, remark) {
-      // 新增訂單項目時，不處理 0 元品項
+      // 若該品項價格為 0 則不處理
       if (dish.price === 0) return;
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
       const nameCell = row.insertCell();
       nameCell.innerText = dish.name;
-      // 點擊訂單列可重新開啟菜單選擇模態框（此處不傳入當前餐點）
+      // 點擊訂單列可重新開啟菜單選擇模態框
       nameCell.style.cursor = 'pointer';
       nameCell.onclick = function() { openModal(); };
       row.insertCell().innerText = quantity;
@@ -258,7 +258,7 @@
           dishDiv.innerText = dish.name;
           dishDiv.style.cursor = "pointer";
           dishDiv.style.padding = "5px";
-          // 點選時執行 selectDish，並傳入該菜品及當前元素（用來變紅）
+          // 點選時執行 selectDish，並傳入該菜品與當前元素（用來變紅）
           dishDiv.onclick = function() {
             selectDish(dish, dishDiv);
           };
@@ -297,6 +297,8 @@
     /* ---------- 語音輸入流程 ---------- */
     function startContinuousVoiceInput() {
       orderingComplete = false;
+      // 點下語音輸入按鈕後，立即顯示菜單內容
+      openModal();
       const statusModal = document.getElementById("statusModal");
       statusModal.style.display = "block";
       document.getElementById("statusText").innerHTML = "目前狀態：等待輸入<br>結束點餐請說：完成";
@@ -387,7 +389,7 @@
             voiceInputLoop();
          } else {
             orders.forEach(order => {
-              // 透過語音輸入，若該品項已存在則會重複加入（或可另外處理避免重複）
+              // 透過語音輸入，直接加入訂單
               addOrderRow(order.dish, order.quantity, "");
             });
             updateStatusText();
