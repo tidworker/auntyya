@@ -53,8 +53,6 @@
     <h2>請使用語音輸入訂單內容</h2>
     <button onclick="startContinuousVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
-    <!-- 轉譯結果以紅色呈現 -->
-    <p id="convertedText" style="color: red;">尚未轉譯</p>
   </section>
   
   <!-- 訂單明細 -->
@@ -179,7 +177,7 @@
     }
     
     /* ---------- 語音輸入處理 ---------- */
-    // 語音輸入解析邏輯與手動輸入相同，採用斜線分隔
+    // 語音輸入解析邏輯採用斜線分隔
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       // 使用斜線分割 token（忽略空字串）
@@ -273,7 +271,6 @@
     
     function resetOrder() {
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
-      document.getElementById("convertedText").innerText = "尚未轉譯";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
       document.getElementById("statusModal").style.display = "none";
       orderingComplete = false;
@@ -312,8 +309,7 @@
     
     /* ---------- 語音輸入流程 ---------- */
     function startContinuousVoiceInput() {
-      // 只保留語音輸入功能，移除 manual 輸入相關操作
-      document.getElementById("convertedText").innerText = "";
+      // 移除轉譯內容相關操作
       orderingComplete = false;
       const statusModal = document.getElementById("statusModal");
       statusModal.style.display = "block";
@@ -394,9 +390,6 @@
             let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
             if (tbody.rows.length > 0) {
                tbody.deleteRow(tbody.rows.length - 1);
-               document.getElementById("convertedText").innerText = "已刪除最後一筆訂單";
-            } else {
-               document.getElementById("convertedText").innerText = "無可刪除訂單";
             }
             updateStatusText();
             voiceInputLoop();
@@ -409,7 +402,6 @@
          } else {
             orders.forEach(order => {
               addOrderRow(order.dish, order.quantity, "");
-              document.getElementById("convertedText").innerText = "已新增: " + order.dish.name + " " + order.quantity + " 份";
             });
             updateStatusText();
             voiceInputLoop();
