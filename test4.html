@@ -75,11 +75,11 @@
   <!-- 模態框：菜單選擇 -->
   <div id="menuModal">
     <div id="menuModalContent">
-      <!-- 上方完成點餐按鈕 -->
+      <!-- 模態框上方的完成點餐按鈕 -->
       <button onclick="closeMenuModal()" style="float: right;">完成點餐</button>
       <h3>請選擇菜品</h3>
       <div id="menuItems">
-        <!-- 菜單項目由 JavaScript 動態產生 -->
+        <!-- 菜單項目將由 JavaScript 動態產生 -->
       </div>
     </div>
   </div>
@@ -90,14 +90,14 @@
     let groupMapping = {};
     let orderingComplete = false; // 點餐完成旗標
     let currentRecognition = null; // 語音辨識物件
-    // 範例菜單（可從外部檔案載入）
+    // 範例菜單（可透過外部檔案載入）
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
       { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
       { "keywords": ["la"], "name": "辣", "price": 0 }
     ];
     
-    // 載入字庫與菜單（可用 fetch 載入外部檔案）
+    // 載入字庫與菜單（若有外部檔案，可使用 fetch 載入）
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -294,6 +294,13 @@
         currentRecognition = null;
       }
       closeMenuModal();
+      // 將訂單表格中所有文字顏色設為黑色
+      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      for (let i = 0; i < tbody.rows.length; i++) {
+        for (let j = 0; j < tbody.rows[i].cells.length; j++) {
+          tbody.rows[i].cells[j].style.color = "black";
+        }
+      }
     }
     
     /* ---------- 模態框：菜單選擇相關 ---------- */
@@ -362,7 +369,7 @@
         newQty = 1;
         addOrderRow(dish, 1, "");
       }
-      // 更新模態框中該項目的文字為「品項×數字」
+      // 更新模態框中該項目的文字為「品項×數字」且變紅
       element.innerText = dish.name + "×" + newQty;
       element.style.color = "red";
       calculateTotal();
