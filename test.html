@@ -117,6 +117,9 @@
     let currentEditRow = null;
     // 設定點餐是否完成的旗標，初始為 false
     let orderingComplete = false;
+    // 新增全域變數，用以儲存當前的語音辨識物件
+    let currentRecognition = null;
+    
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
       { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
@@ -439,6 +442,7 @@
       document.getElementById("statusText").innerHTML = statusHTML;
     }
     
+    // 修改後的 startVoiceInputSingle：儲存 recognition 實例至全域變數 currentRecognition
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -448,16 +452,23 @@
          }
          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
          const recognition = new SpeechRecognition();
+         currentRecognition = recognition;
          recognition.lang = 'zh-TW';
          recognition.interimResults = false;
          recognition.maxAlternatives = 1;
-         let timeoutId = setTimeout(() => { recognition.abort(); resolve(null); }, 5000);
+         let timeoutId = setTimeout(() => { 
+            recognition.abort();
+            currentRecognition = null;
+            resolve(null);
+         }, 5000);
          recognition.onresult = function(event) {
             clearTimeout(timeoutId);
+            currentRecognition = null;
             resolve(event.results[0][0].transcript);
          };
          recognition.onerror = function(event) {
             clearTimeout(timeoutId);
+            currentRecognition = null;
             resolve(null);
          };
          recognition.start();
@@ -505,9 +516,13 @@
       });
     }
     
-    // 新增完成點餐函式：按下後設定 orderingComplete 為 true 並隱藏狀態視窗
+    // 修改後的 completeOrder：按下時設定 orderingComplete 為 true，並中止目前語音辨識（若有）
     function completeOrder() {
       orderingComplete = true;
+      if (currentRecognition) {
+        currentRecognition.abort();
+        currentRecognition = null;
+      }
       document.getElementById("statusModal").style.display = "none";
     }
   </script>
