@@ -165,16 +165,15 @@
     }
     loadMenu();
     
-    // 原有轉譯邏輯：依據 charMapping 轉換中文字
+    // 修改後的轉譯邏輯：只輸出在 database.txt 中有對應的字元
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
         const ch = dishChinese.charAt(i);
         if (charMapping[ch] !== undefined) {
           converted += charMapping[ch];
-        } else {
-          converted += ch;
         }
+        // 若不在字庫中，則忽略該字元
       }
       return converted;
     }
