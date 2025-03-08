@@ -90,7 +90,7 @@
     let groupMapping = {};
     let orderingComplete = false; // 點餐完成旗標
     let currentRecognition = null; // 語音辨識物件
-    // 範例菜單（可用 fetch 載入外部檔案）
+    // 範例菜單（可從外部檔案載入）
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
       { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
@@ -173,7 +173,7 @@
     function addOrderRow(dish, quantity, remark) {
       if (dish.price === 0) return;
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-      // 若訂單中已有該品項則更新
+      // 若訂單中已有該品項則更新數量
       for (let i = 0; i < tbody.rows.length; i++) {
         let row = tbody.rows[i];
         if (row.cells[0].innerText === dish.name) {
@@ -235,11 +235,12 @@
          recognition.lang = 'zh-TW';
          recognition.interimResults = false;
          recognition.maxAlternatives = 1;
+         // 將等待時間縮短為 3000 毫秒
          let timeoutId = setTimeout(() => { 
             recognition.abort();
             currentRecognition = null;
             resolve(null);
-         }, 5000);
+         }, 3000);
          recognition.onresult = function(event) {
             clearTimeout(timeoutId);
             currentRecognition = null;
@@ -257,8 +258,9 @@
     function startVoiceInputLoop() {
       if (orderingComplete) return;
       startVoiceInputSingle().then(transcript => {
+         // 如果沒有收到任何輸入，直接完成點餐並關閉收音
          if (!transcript) {
-            startVoiceInputLoop();
+            completeOrder();
             return;
          }
          transcript = transcript.trim();
@@ -269,24 +271,24 @@
          if (transcript === "錯誤") {
             const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
             if (tbody.rows.length > 0) { tbody.deleteRow(tbody.rows.length - 1); }
-            startVoiceInputLoop();
+            completeOrder();
             return;
          }
          let orders = processMultipleVoiceInput(transcript);
          if (orders.length === 0) {
-            startVoiceInputLoop();
+            completeOrder();
          } else {
             orders.forEach(order => {
               addOrderRow(order.dish, order.quantity, "");
             });
             calculateTotal();
-            showMenuModalContent(); // 更新模態框中菜單的數量顯示
+            showMenuModalContent(); // 語音輸入後更新模態框中菜單的數量顯示
             startVoiceInputLoop();
          }
       });
     }
     
-    // 按下「完成點餐」時，直接中止錄音且不再判斷其他音訊
+    // 按下「完成點餐」時，立即中止語音錄音並關閉模態框，且不再處理後續音訊
     function completeOrder() {
       orderingComplete = true;
       if (currentRecognition) {
@@ -301,7 +303,6 @@
           tbody.rows[i].cells[j].style.color = "black";
         }
       }
-      // 此處不再進行任何語音輸入判斷，直接結束
     }
     
     /* ---------- 模態框：菜單選擇相關 ---------- */
