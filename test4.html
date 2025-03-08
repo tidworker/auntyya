@@ -11,53 +11,23 @@
     table, th, td { border: 1px solid #aaa; }
     th, td { padding: 8px; text-align: center; }
     @media (max-width: 600px) { button { font-size: 18px; } }
-    /* 彈出式模態框：菜單選擇（僅顯示非 0 元品項） */
-    #editModal {
-      display: none;
-      position: fixed;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
-      z-index: 3000;
-    }
-    #editModalContent {
-      background: #fff;
-      margin: 10% auto;
-      padding: 20px;
-      width: 300px;
-      position: relative;
-    }
-    /* 彈出式狀態視窗（語音輸入） */
-    #statusModal {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 2000;
-    }
-    #statusModalContent {
-      background: #fff;
-      width: 300px;
-      margin: 20% auto;
-      padding: 20px;
-      text-align: center;
-    }
+    /* 菜單區（不以表格呈現） */
+    #menuList { margin-top: 10px; }
+    #menuList div { padding: 5px; cursor: pointer; }
   </style>
 </head>
 <body>
   <h1>中文點餐系統</h1>
   
   <!-- 語音點餐區 -->
-  <section>
+  <section id="voiceSection">
     <h2>請使用語音輸入訂單內容</h2>
     <button onclick="startContinuousVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
   </section>
   
   <!-- 訂單明細 -->
-  <section>
+  <section id="orderSection">
     <h2>訂單明細</h2>
     <table id="orderTable">
       <thead>
@@ -77,29 +47,26 @@
     <p id="totalAmount">總金額：0 元</p>
   </section>
   
-  <!-- 隱藏系統狀態（除錯用） -->
-  <section style="display:none;">
-    <h2>系統狀態</h2>
-    <p id="dbStatus">尚未載入字庫資料...</p>
-    <p id="menuStatus">尚未載入菜單資料...</p>
+  <!-- 行動區：完成點餐按鈕及菜單列表 -->
+  <section id="actionSection">
+    <button onclick="completeOrder()">完成點餐</button>
+    <!-- 菜單直接顯示在此（僅顯示非 0 元品項） -->
+    <div id="menuList">
+      <!-- 這裡將由 JavaScript 動態產生菜單項目 -->
+    </div>
   </section>
   
-  <!-- 彈出式模態框：菜單選擇（僅顯示非 0 元品項） -->
-  <div id="editModal">
-    <div id="editModalContent">
-      <h3>請選擇菜品</h3>
-      <div id="menuModalContent">
-        <!-- 菜單項目將動態加入 -->
+  <!-- 模態框：編輯訂單項目（保留用於修改訂單） -->
+  <div id="editModal" style="display:none; position: fixed; left:0; top:0; width:100%; height:100%; background: rgba(0,0,0,0.5);">
+    <div id="editModalContent" style="background:#fff; margin:10% auto; padding:20px; width:300px; position:relative;">
+      <h3 id="modalDishName">編輯品項</h3>
+      <label for="modalQuantity">份數:</label>
+      <input type="number" id="modalQuantity" min="1" style="width:100%;">
+      <div style="margin-top:10px;">
+        <button onclick="saveModal()">儲存</button>
+        <button onclick="deleteModal()">刪除</button>
+        <button onclick="closeModal()">取消</button>
       </div>
-      <button onclick="closeModal()">關閉</button>
-    </div>
-  </div>
-  
-  <!-- 彈出式狀態視窗（語音輸入） -->
-  <div id="statusModal">
-    <div id="statusModalContent">
-      <p id="statusText">目前狀態：等待輸入<br>結束點餐請說：完成</p>
-      <button onclick="completeOrder()">完成點餐</button>
     </div>
   </div>
   
@@ -111,8 +78,10 @@
     let orderingComplete = false;
     // 儲存目前語音辨識物件
     let currentRecognition = null;
+    // 用於編輯訂單項目的變數
+    let currentEditRow = null;
     
-    // 範例菜單（menu.txt 亦可載入外部資料）
+    // 範例菜單（可透過外部 menu.txt 載入）
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
       { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
@@ -154,6 +123,7 @@
         .then(text => {
           menu = JSON.parse(text);
           document.getElementById("menuStatus").innerText = "菜單資料載入成功！";
+          showMenuList();
         })
         .catch(err => {
           document.getElementById("menuStatus").innerText = "載入菜單資料失敗：" + err.message;
@@ -174,7 +144,7 @@
     }
     
     /* ---------- 語音輸入處理 ---------- */
-    // 語音輸入解析邏輯採用斜線分隔
+    // 解析語音輸入，依照斜線分隔
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       let tokens = converted.split('/').filter(token => token.trim() !== "");
@@ -205,15 +175,14 @@
     
     /* ---------- 新增訂單項目與計算總金額 ---------- */
     function addOrderRow(dish, quantity, remark) {
-      // 若該品項價格為 0 則不處理
       if (dish.price === 0) return;
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
       const nameCell = row.insertCell();
       nameCell.innerText = dish.name;
-      // 點擊訂單列可重新開啟菜單選擇模態框
+      // 點擊訂單項目可進入編輯模式
       nameCell.style.cursor = 'pointer';
-      nameCell.onclick = function() { openModal(); };
+      nameCell.onclick = function() { openModal(row); };
       row.insertCell().innerText = quantity;
       row.insertCell().innerText = remark;
       row.insertCell().innerText = dish.price;
@@ -233,101 +202,44 @@
     function resetOrder() {
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
-      document.getElementById("statusModal").style.display = "none";
       orderingComplete = false;
     }
     
-    /* ---------- 模態框：菜單選擇相關 ---------- */
-    // 開啟模態框，顯示所有非 0 元菜品
-    function openModal() {
-      showMenuModal();
+    /* ---------- 模態框：編輯訂單項目（保留） ---------- */
+    function openModal(row) {
+      currentEditRow = row;
+      document.getElementById("modalDishName").innerText = row.cells[0].innerText;
+      document.getElementById("modalQuantity").value = row.cells[1].innerText;
       document.getElementById("editModal").style.display = "block";
     }
-    
     function closeModal() {
       document.getElementById("editModal").style.display = "none";
+      currentEditRow = null;
     }
-    
-    // 動態產生菜單選擇內容（僅包含非 0 元商品）
-    function showMenuModal() {
-      const container = document.getElementById("menuModalContent");
-      container.innerHTML = ""; // 清空原內容
-      menu.forEach(dish => {
-        if (dish.price > 0) {
-          let dishDiv = document.createElement("div");
-          dishDiv.innerText = dish.name;
-          dishDiv.style.cursor = "pointer";
-          dishDiv.style.padding = "5px";
-          // 點選時執行 selectDish，並傳入該菜品與當前元素（用來變紅）
-          dishDiv.onclick = function() {
-            selectDish(dish, dishDiv);
-          };
-          container.appendChild(dishDiv);
-        }
-      });
-    }
-    
-    // 當使用者點選模態框中的某道菜
-    function selectDish(dish, element) {
-      element.style.color = "red"; // 點選後變紅
-      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-      let found = false;
-      // 檢查訂單中是否已有此菜品，若有則更新數量及總價，並將菜名變紅
-      for (let i = 0; i < tbody.rows.length; i++) {
-        let row = tbody.rows[i];
-        if (row.cells[0].innerText === dish.name) {
-          let currentQty = parseInt(row.cells[1].innerText);
-          row.cells[1].innerText = currentQty + 1;
-          row.cells[4].innerText = dish.price * (currentQty + 1);
-          row.cells[0].style.color = "red";
-          found = true;
-          break;
-        }
+    function saveModal() {
+      if (!currentEditRow) return;
+      let newQuantity = parseInt(document.getElementById("modalQuantity").value);
+      if (isNaN(newQuantity) || newQuantity < 1) {
+        alert("份數必須大於或等於1");
+        return;
       }
-      // 若尚未加入，則新增訂單項目
-      if (!found) {
-        addOrderRow(dish, 1, "");
-        const newRow = tbody.rows[tbody.rows.length - 1];
-        newRow.cells[0].style.color = "red";
-      }
+      currentEditRow.cells[1].innerText = newQuantity;
+      let price = parseFloat(currentEditRow.cells[3].innerText);
+      currentEditRow.cells[4].innerText = price * newQuantity;
       closeModal();
-      calculateTotal();
+    }
+    function deleteModal() {
+      if (!currentEditRow) return;
+      currentEditRow.parentNode.removeChild(currentEditRow);
+      closeModal();
     }
     
     /* ---------- 語音輸入流程 ---------- */
     function startContinuousVoiceInput() {
       orderingComplete = false;
-      // 點下語音輸入按鈕後，立即顯示菜單內容
-      openModal();
-      const statusModal = document.getElementById("statusModal");
-      statusModal.style.display = "block";
-      document.getElementById("statusText").innerHTML = "目前狀態：等待輸入<br>結束點餐請說：完成";
       voiceInputLoop();
     }
     
-    function updateStatusText() {
-      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-      let summary = "";
-      let counter = 1;
-      for (let i = 0; i < tbody.rows.length; i++) {
-        let row = tbody.rows[i];
-        let dishName = row.cells[0].innerText;
-        let quantity = row.cells[1].innerText;
-        let price = parseFloat(row.cells[3].innerText);
-        if (price >= 0) {
-          summary += counter + ". " + dishName + "×" + quantity + "<br>";
-          counter++;
-          let remark = row.cells[2].innerText;
-          if (remark && remark.trim() !== "") {
-            summary += remark + "<br>";
-          }
-        }
-      }
-      let statusHTML = "目前狀態：等待輸入<br>" + summary + "結束點餐請說：完成";
-      document.getElementById("statusText").innerHTML = statusHTML;
-    }
-    
-    // 建立語音辨識單次輸入，並將實例存入全域變數
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -364,14 +276,13 @@
       if (orderingComplete) return;
       startVoiceInputSingle().then(transcript => {
          if (!transcript) {
-            document.getElementById("statusText").innerText = "目前狀態：無輸入，點餐結束";
-            setTimeout(() => { document.getElementById("statusModal").style.display = "none"; }, 1000);
+            // 若無語音輸入則繼續等待
+            voiceInputLoop();
             return;
          }
          transcript = transcript.trim();
          if (transcript === "完成") {
-            document.getElementById("statusText").innerText = "目前狀態：結束";
-            setTimeout(() => { document.getElementById("statusModal").style.display = "none"; }, 1000);
+            completeOrder();
             return;
          }
          if (transcript === "錯誤") {
@@ -379,35 +290,76 @@
             if (tbody.rows.length > 0) {
                tbody.deleteRow(tbody.rows.length - 1);
             }
-            updateStatusText();
             voiceInputLoop();
             return;
          }
          let orders = processMultipleVoiceInput(transcript);
          if (orders.length === 0) {
-            document.getElementById("statusText").innerHTML = "目前狀態：輸入錯誤，等待輸入<br>結束點餐請說：完成";
             voiceInputLoop();
          } else {
             orders.forEach(order => {
-              // 透過語音輸入，直接加入訂單
               addOrderRow(order.dish, order.quantity, "");
             });
-            updateStatusText();
             calculateTotal();
             voiceInputLoop();
          }
       });
     }
     
-    // 按下「完成點餐」時，設定 orderingComplete 為 true 並中止正在進行的語音辨識
+    // 按下「完成點餐」時，設定 orderingComplete 為 true
     function completeOrder() {
       orderingComplete = true;
       if (currentRecognition) {
         currentRecognition.abort();
         currentRecognition = null;
       }
-      document.getElementById("statusModal").style.display = "none";
     }
+    
+    /* ---------- 菜單列表（顯示於完成點餐按鈕下方） ---------- */
+    function showMenuList() {
+      const container = document.getElementById("menuList");
+      container.innerHTML = ""; // 清空原內容
+      menu.forEach(dish => {
+        if (dish.price > 0) {
+          let dishDiv = document.createElement("div");
+          dishDiv.innerText = dish.name;
+          // 點選時，該項目變成紅色並更新訂單中的數量
+          dishDiv.onclick = function() {
+            selectDish(dish, dishDiv);
+          };
+          container.appendChild(dishDiv);
+        }
+      });
+    }
+    
+    // 當使用者點選菜單項目時，若訂單中已有該品項則更新數量，否則新增一筆訂單，同時將該菜單項目變紅
+    function selectDish(dish, element) {
+      element.style.color = "red";
+      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      let found = false;
+      for (let i = 0; i < tbody.rows.length; i++) {
+        let row = tbody.rows[i];
+        if (row.cells[0].innerText === dish.name) {
+          let currentQty = parseInt(row.cells[1].innerText);
+          row.cells[1].innerText = currentQty + 1;
+          row.cells[4].innerText = dish.price * (currentQty + 1);
+          row.cells[0].style.color = "red";
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        addOrderRow(dish, 1, "");
+        const newRow = tbody.rows[tbody.rows.length - 1];
+        newRow.cells[0].style.color = "red";
+      }
+      calculateTotal();
+    }
+    
+    // 初始化時顯示菜單列表
+    window.onload = function() {
+      showMenuList();
+    };
   </script>
 </body>
 </html>
