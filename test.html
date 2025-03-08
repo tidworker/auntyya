@@ -6,11 +6,11 @@
   <title>中文點餐系統</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 10px; padding: 0; }
-    input, button { margin: 5px; padding: 10px; font-size: 16px; }
+    button { margin: 5px; padding: 10px; font-size: 16px; }
     table { border-collapse: collapse; width: 100%; margin-top: 10px; }
     table, th, td { border: 1px solid #aaa; }
     th, td { padding: 8px; text-align: center; }
-    @media (max-width: 600px) { input, button { font-size: 18px; } }
+    @media (max-width: 600px) { button { font-size: 18px; } }
     /* 模態框：編輯訂單項目 */
     #editModal {
       display: none;
@@ -48,15 +48,13 @@
 <body>
   <h1>中文點餐系統</h1>
   
-  <!-- 點餐區 -->
+  <!-- 語音點餐區 -->
   <section>
-    <h2>請輸入訂單內容（或直接使用語音輸入）</h2>
-    <!-- 範例形式：a3/2/b、3/a2/b、a3/b2/、3/a/b2 -->
-    <input type="text" id="orderInput" placeholder="例如：a3/2/b 或 3/a2/b">
-    <button onclick="orderFromChinese()">送出訂單</button>
+    <h2>請使用語音輸入訂單內容</h2>
     <button onclick="startContinuousVoiceInput()">語音輸入</button>
     <button onclick="resetOrder()">重置點餐</button>
-    <p id="convertedText">尚未轉譯</p>
+    <!-- 轉譯結果以紅色呈現 -->
+    <p id="convertedText" style="color: red;">尚未轉譯</p>
   </section>
   
   <!-- 訂單明細 -->
@@ -105,19 +103,19 @@
   <div id="statusModal">
     <div id="statusModalContent">
       <p id="statusText">目前狀態：等待輸入<br>結束點餐請說：完成</p>
-      <!-- 新增「完成點餐」按鈕 -->
+      <!-- 按下「完成點餐」會中止收音 -->
       <button onclick="completeOrder()">完成點餐</button>
     </div>
   </div>
   
   <script>
-    // 全域變數：字庫、菜單與編輯用變數（原有載入方式不變）
+    // 全域變數：字庫、菜單與編輯用變數
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
-    // 設定點餐是否完成的旗標，初始為 false
+    // 點餐完成旗標，初始為 false
     let orderingComplete = false;
-    // 新增全域變數，用以儲存當前的語音辨識物件
+    // 儲存目前語音辨識物件
     let currentRecognition = null;
     
     let menu = [
@@ -168,7 +166,7 @@
     }
     loadMenu();
     
-    // 修改後的轉譯邏輯：只輸出在 database.txt 中有對應的字元
+    // 轉譯邏輯：僅輸出 database.txt 中有對應的字元
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -176,111 +174,15 @@
         if (charMapping[ch] !== undefined) {
           converted += charMapping[ch];
         }
-        // 若不在字庫中，則忽略該字元
       }
       return converted;
     }
     
-    /* ---------- 手動輸入處理 ---------- */
-    function orderFromChinese() {
-      const inputElem = document.getElementById("orderInput");
-      const inputText = inputElem.value.trim();
-      if (!inputText) {
-        alert("請輸入訂單內容！");
-        return;
-      }
-      const translatedText = translateDishName(inputText);
-      document.getElementById("convertedText").innerText = "轉譯結果：" + translatedText;
-      
-      // 以斜線分割 token（忽略空字串）
-      let tokens = translatedText.split('/').filter(token => token.trim() !== "");
-      
-      // 分別抽取數字與餐點（依 token 出現順序）
-      let numbers = [];
-      let dishes = [];
-      tokens.forEach(token => {
-        let m = token.match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
-        if (m) {
-          if (m[1]) { numbers.push(parseInt(m[1])); }
-          dishes.push(m[2]);
-          if (m[3]) { numbers.push(parseInt(m[3])); }
-        } else {
-          if (/^\d+$/.test(token)) { numbers.push(parseInt(token)); }
-          else if (/^[a-zA-Z]+$/.test(token)) { dishes.push(token); }
-        }
-      });
-      
-      // 配對：若只有一個數字，則所有餐點均取該數字；若無數字則預設 1；若有多個則依序配對
-      let orders = [];
-      if (dishes.length === 0) {
-        alert("請重新輸入");
-        inputElem.value = "";
-        return;
-      }
-      if (numbers.length === 0) {
-        orders = dishes.map(d => ({ keyword: d, quantity: 1 }));
-      } else if (numbers.length === 1) {
-        orders = dishes.map(d => ({ keyword: d, quantity: numbers[0] }));
-      } else {
-        orders = dishes.map((d, i) => ({ keyword: d, quantity: i < numbers.length ? numbers[i] : 1 }));
-      }
-      
-      // 建立訂單項目（保持原有判定及免費品項處理邏輯）
-      let orderList = [];
-      let firstDish = menu.find(item => item.keywords.includes(orders[0].keyword));
-      if (firstDish && firstDish.price === 0) {
-        alert("請重新輸入");
-        inputElem.value = "";
-        return;
-      }
-      
-      for (let i = 0; i < orders.length; i++) {
-        let order = orders[i];
-        let foundDish = menu.find(item => item.keywords.includes(order.keyword));
-        if (!foundDish) {
-          alert("請重新輸入");
-          inputElem.value = "";
-          return;
-        }
-        if (foundDish.price === 0) {
-          let attached = false;
-          for (let j = orderList.length - 1; j >= 0; j--) {
-            if (orderList[j].dish.price !== 0) {
-              orderList[j].remark = orderList[j].remark 
-                ? orderList[j].remark + ", " + foundDish.name + "×" + order.quantity
-                : foundDish.name + "×" + order.quantity;
-              attached = true;
-              break;
-            }
-          }
-          if (!attached) {
-            alert("請重新輸入");
-            inputElem.value = "";
-            return;
-          }
-        } else {
-          orderList.push({ dish: foundDish, quantity: order.quantity, remark: "" });
-        }
-      }
-      
-      if (orderList.length === 0) {
-        alert("請重新輸入");
-        inputElem.value = "";
-        return;
-      }
-      
-      orderList.forEach(order => {
-        addOrderRow(order.dish, order.quantity, order.remark);
-      });
-      inputElem.value = "";
-      updateStatusText();
-    }
-    
     /* ---------- 語音輸入處理 ---------- */
-    // 語音輸入解析邏輯與手動輸入相同，均以斜線作為分隔符
+    // 語音輸入解析邏輯與手動輸入相同，採用斜線分隔
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
-      // 與手動輸入保持一致，使用斜線分割
+      // 使用斜線分割 token（忽略空字串）
       let tokens = converted.split('/').filter(token => token.trim() !== "");
       
       let numbers = [];
@@ -372,7 +274,6 @@
     function resetOrder() {
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("convertedText").innerText = "尚未轉譯";
-      document.getElementById("orderInput").value = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
       document.getElementById("statusModal").style.display = "none";
       orderingComplete = false;
@@ -411,7 +312,7 @@
     
     /* ---------- 語音輸入流程 ---------- */
     function startContinuousVoiceInput() {
-      document.getElementById("orderInput").value = "";
+      // 只保留語音輸入功能，移除 manual 輸入相關操作
       document.getElementById("convertedText").innerText = "";
       orderingComplete = false;
       const statusModal = document.getElementById("statusModal");
@@ -442,7 +343,7 @@
       document.getElementById("statusText").innerHTML = statusHTML;
     }
     
-    // 修改後的 startVoiceInputSingle：儲存 recognition 實例至全域變數 currentRecognition
+    // 修改後的 startVoiceInputSingle：將 recognition 實例儲存至全域變數 currentRecognition
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -516,7 +417,7 @@
       });
     }
     
-    // 修改後的 completeOrder：按下時設定 orderingComplete 為 true，並中止目前語音辨識（若有）
+    // 按下「完成點餐」時，設定 orderingComplete 為 true 並中止正在進行的語音辨識
     function completeOrder() {
       orderingComplete = true;
       if (currentRecognition) {
