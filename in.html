@@ -83,8 +83,8 @@
       let groups = normalizeOrder(order);
       let total = 0;
       groups.forEach(group => {
-        for (let item in group.items) {
-          let d = group.items[item];
+        for (let key in group.items) {
+          let d = group.items[key];
           total += d.price * d.quantity;
           if (d.eggCost) total += d.eggCost;
         }
@@ -99,7 +99,7 @@
       return line;
     }
 
-    // 顯示未分配訂單區，將 unassignedOrders 中所有訂單依序顯示
+    // 顯示未分配訂單區：依序呈現 unassignedOrders 中的所有訂單
     function displayUnassignedOrders(orders) {
       let orderDiv = document.getElementById("currentOrderList");
       let html = "";
@@ -108,8 +108,8 @@
         if (index > 0) html += "<hr>";
         groups.forEach((group, groupIndex) => {
           if (groupIndex > 0) html += "<br>加單:<br>";
-          for (let item in group.items) {
-            html += formatOrderLine(item, group.items[item]) + "<br>";
+          for (let key in group.items) {
+            html += formatOrderLine(key, group.items[key]) + "<br>";
           }
         });
         let total = calculateTotal(order);
@@ -118,7 +118,7 @@
       orderDiv.innerHTML = html || "目前無訂單";
     }
 
-    // 頁面載入時，讀取未分配訂單與各桌訂單狀態
+    // 頁面載入時：讀取未分配訂單與各桌訂單狀態
     window.onload = function() {
       let orders = JSON.parse(localStorage.getItem("unassignedOrders") || "[]");
       displayUnassignedOrders(orders);
@@ -137,7 +137,7 @@
       }
     };
 
-    // 點選桌號按鈕：若該桌尚無訂單，則存入未分配中最早的一筆訂單
+    // 點選桌號按鈕：若該桌尚無訂單，則將未分配中最早的一筆訂單存入該桌
     function handleTableClick(tableNumber) {
       let tableKey = "inHouseOrder_" + tableNumber;
       let storedOrder = localStorage.getItem(tableKey);
@@ -146,6 +146,14 @@
         if (orders.length > 0) {
           if (confirm("是否將最新訂單存入 " + tableNames[tableNumber] + "?")) {
             let orderRecord = orders[0];  // 取最早的一筆
+            /* 
+              為了能記錄各項目的服務狀態，初始時將各項目加入 served 屬性
+            */
+            for (let key in orderRecord) {
+              if (typeof orderRecord[key] === "object") {
+                orderRecord[key].served = false;
+              }
+            }
             let normalized = [{ header: "", items: orderRecord }];
             localStorage.setItem(tableKey, JSON.stringify(normalized));
             let total = calculateTotal(normalized);
@@ -165,7 +173,8 @@
       }
     }
 
-    // 顯示模態框：呈現該桌詳細訂單內容及【追加訂單】、【已出餐】、【結帳】按鈕
+    // 顯示模態框：呈現該桌詳細訂單內容及【追加訂單】、【已出餐】、【結帳】按鈕  
+    // 將依據訂單資料中的 served 狀態決定項目文字顏色
     function showOrderModal(tableNumber, order) {
       currentTableNumber = tableNumber;  // 記錄目前桌號
       let groups = normalizeOrder(order);
@@ -173,12 +182,15 @@
       let modalDetails = document.getElementById("modalOrderDetails");
       let modalButtons = document.getElementById("modalButtons");
       let lines = "<strong>" + tableNames[tableNumber] + " 的訂單:</strong><br>";
-      groups.forEach((group, index) => {
-        if (index > 0) lines += "<br>加單:<br>";
-        for (let item in group.items) {
-          let orderLine = formatOrderLine(item, group.items[item]);
-          // 每個項目用 span 包起來，點擊後變色（改為紅色）
-          lines += "<span class='order-item' style='cursor:pointer;' onclick='toggleItem(this)'>" + orderLine + "</span><br>";
+      groups.forEach((group, groupIndex) => {
+        if (groupIndex > 0) lines += "<br>加單:<br>";
+        for (let itemKey in group.items) {
+          let itemData = group.items[itemKey];
+          let orderLine = formatOrderLine(itemKey, itemData);
+          // 根據 served 狀態設定文字顏色（若已點選則紅色，否則預設顏色）
+          let colorStyle = itemData.served ? "red" : "inherit";
+          // 加上 data-group-index 與 data-item-key 用以識別該筆項目
+          lines += `<span class='order-item' data-group-index='${groupIndex}' data-item-key='${itemKey}' style='cursor:pointer; color:${colorStyle};' onclick='toggleItem(this)'>${orderLine}</span><br>`;
         }
       });
       let total = calculateTotal(order);
@@ -191,7 +203,7 @@
       modalButtons.appendChild(appendBtn);
       let serveBtn = document.createElement("button");
       serveBtn.textContent = "已出餐";
-      serveBtn.onclick = function() { serveOrder(tableNumber); };
+      serveBtn.onclick = function() { manualServe(tableNumber); };
       modalButtons.appendChild(serveBtn);
       let checkoutBtn = document.createElement("button");
       checkoutBtn.textContent = "結帳";
@@ -200,22 +212,33 @@
       modal.style.display = "block";
     }
 
-    // 點選訂單項目，將文字變為紅色（保持狀態），但不自動關閉模態框
+    // 點選訂單項目：更新該項目 served 狀態並存回 localStorage，同時改變文字為紅色  
+    // 並檢查若所有項目皆已點選，則自動更新該桌狀態為已出餐，但不關閉模態框
     function toggleItem(element) {
-      if (element.style.color !== 'red') {
+      let groupIndex = Number(element.getAttribute("data-group-index"));
+      let itemKey = element.getAttribute("data-item-key");
+      let tableKey = "inHouseOrder_" + currentTableNumber;
+      let order = JSON.parse(localStorage.getItem(tableKey));
+      if (!order[groupIndex].items[itemKey].served) {
+        order[groupIndex].items[itemKey].served = true;
+        localStorage.setItem(tableKey, JSON.stringify(order));
         element.style.color = 'red';
       }
-      // 檢查模態框內所有訂單項目是否皆已變紅，但不自動呼叫 serveOrder
-      let items = document.querySelectorAll("#modalOrderDetails .order-item");
-      let allRed = true;
-      items.forEach(item => {
-        if (item.style.color !== 'red') {
-          allRed = false;
+      // 檢查是否所有項目皆已 served
+      let allServed = true;
+      order.forEach(group => {
+        for (let key in group.items) {
+          if (!group.items[key].served) {
+            allServed = false;
+          }
         }
       });
-      if (allRed && items.length > 0) {
-        console.log("所有項目已確認！");
-        // 此處不自動執行 serveOrder，讓使用者自行決定是否點選【已出餐】
+      if (allServed && order.length > 0) {
+        // 自動標記該桌為已出餐，更新按鈕顏色，但不關閉模態框
+        localStorage.setItem("servedTable_" + currentTableNumber, "true");
+        let btn = document.getElementById("table" + currentTableNumber);
+        btn.style.backgroundColor = "#0066ff";
+        console.log("所有項目均已確認，該桌已自動標記為已出餐。");
       }
     }
 
@@ -225,6 +248,12 @@
         let orders = JSON.parse(localStorage.getItem("unassignedOrders") || "[]");
         if (orders.length > 0) {
           let newOrder = orders[0];
+          // 加入 served 屬性，初始為 false
+          for (let key in newOrder) {
+            if (typeof newOrder[key] === "object") {
+              newOrder[key].served = false;
+            }
+          }
           let tableKey = "inHouseOrder_" + tableNumber;
           let existingOrder = normalizeOrder(JSON.parse(localStorage.getItem(tableKey)));
           existingOrder.push({ header: "加單", items: newOrder });
@@ -243,15 +272,29 @@
       }
     }
 
-    // 已出餐：更新該桌狀態為已出餐，將按鈕背景更新為正藍色，並關閉模態框
-    function serveOrder(tableNumber) {
-      localStorage.setItem("servedTable_" + tableNumber, "true");
-      let btn = document.getElementById("table" + tableNumber);
-      btn.style.backgroundColor = "#0066ff";
-      closeModal();
+    // 手動點選【已出餐】按鈕：若所有項目皆已點選則更新狀態，否則提示確認
+    function manualServe(tableNumber) {
+      let tableKey = "inHouseOrder_" + tableNumber;
+      let order = JSON.parse(localStorage.getItem(tableKey));
+      let allServed = true;
+      order.forEach(group => {
+        for (let key in group.items) {
+          if (!group.items[key].served) {
+            allServed = false;
+          }
+        }
+      });
+      if (allServed) {
+        localStorage.setItem("servedTable_" + tableNumber, "true");
+        let btn = document.getElementById("table" + tableNumber);
+        btn.style.backgroundColor = "#0066ff";
+        alert("該桌訂單已標記為已出餐！");
+      } else {
+        alert("尚有未確認的項目！");
+      }
     }
 
-    // 結帳：確認結帳後清空該桌訂單資料，恢復預設狀態
+    // 結帳：確認後清除該桌訂單資料並恢復預設狀態
     function checkoutOrder(tableNumber) {
       let tableKey = "inHouseOrder_" + tableNumber;
       let storedOrder = localStorage.getItem(tableKey);
