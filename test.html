@@ -5,12 +5,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>中文點餐系統</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 10px; padding: 0; }
-    button { margin: 5px; padding: 10px; font-size: 16px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-    table, th, td { border: 1px solid #aaa; }
-    th, td { padding: 8px; text-align: center; }
-    @media (max-width: 600px) { button { font-size: 18px; } }
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 10px; 
+      padding: 0; 
+      background-color: black; 
+      text-align: center; /* 所有物件水平置中 */
+    }
+    /* 將按鈕改為無預設背景與邊框，方便以圖片呈現 */
+    button { 
+      margin: 5px; 
+      padding: 10px; 
+      font-size: 16px; 
+      background: none; 
+      border: none; 
+    }
+    /* 圖片點擊時動態調整透明度 */
+    button img {
+      transition: opacity 0.3s ease;
+    }
+    button:active img {
+      opacity: 0.7;
+    }
+    /* 表格：黑底、黑色框線、白色文字、3px圓角，並置中 */
+    table { 
+      border-collapse: separate;
+      border-spacing: 0;
+      width: 100%; 
+      margin: 10px auto; /* 水平置中 */
+      background-color: black;
+      color: white;
+      border: 1px solid black;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    table, th, td { 
+      border: 1px solid black; 
+    }
+    th, td { 
+      padding: 8px; 
+      text-align: center; 
+    }
+    /* 將表格標題欄位改成橘色底、黑色文字 */
+    table th { 
+      background-color: orange; 
+      color: black; 
+    }
+    @media (max-width: 600px) { 
+      button { font-size: 18px; } 
+    }
     /* 模態框：編輯訂單項目 */
     #editModal {
       display: none;
@@ -46,13 +89,20 @@
   </style>
 </head>
 <body>
-  <h1>中文點餐系統</h1>
+  <br>
+  <img src="3.png"> 
   
   <!-- 語音點餐區 -->
   <section>
     <h2>請使用語音輸入訂單內容</h2>
-    <button onclick="startContinuousVoiceInput()">語音輸入</button>
-    <button onclick="resetOrder()">重置點餐</button>
+    <!-- 語音輸入按鈕改為 1.png -->
+    <button onclick="startContinuousVoiceInput()">
+      <img src="1.png" alt="語音輸入" style="height:40px;">
+    </button>
+    <!-- 重製餐點按鈕改為 2.png -->
+    <button onclick="resetOrder()">
+      <img src="2.png" alt="重置餐點" style="height:40px;">
+    </button>
   </section>
   
   <!-- 訂單明細 -->
@@ -72,7 +122,7 @@
         <!-- 訂單項目將動態加入 -->
       </tbody>
     </table>
-    <button onclick="calculateTotal()">計算總金額</button>
+    <!-- 已移除計算總金額按鈕 -->
     <p id="totalAmount">總金額：0 元</p>
   </section>
   
@@ -257,16 +307,6 @@
       row.insertCell().innerText = remark;
       row.insertCell().innerText = dish.price;
       row.insertCell().innerText = dish.price * quantity;
-    }
-    
-    function calculateTotal() {
-      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-      let total = 0;
-      for (let i = 0; i < tbody.rows.length; i++) {
-        let cellValue = parseFloat(tbody.rows[i].cells[4].innerText);
-        if (!isNaN(cellValue)) total += cellValue;
-      }
-      document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
     }
     
     function resetOrder() {
