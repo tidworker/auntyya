@@ -58,35 +58,38 @@
     @media (max-width: 600px) { 
       button { font-size: 18px; } 
     }
-    /* 模態框：編輯訂單項目 */
+    /* 模態框：編輯訂單項目，使用 flex 置中 */
     #editModal {
       display: none;
       position: fixed;
       left: 0; top: 0;
       width: 100%; height: 100%;
       background: rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center; /* 垂直置中 */
+      justify-content: center; /* 水平置中 */
     }
     #editModalContent {
       background: #fff;
-      margin: 10% auto;
       padding: 20px;
       width: 300px;
       position: relative;
     }
-    /* 彈出式狀態視窗 */
+    /* 彈出式狀態視窗（語音輸入），使用 flex 置中 */
     #statusModal {
       display: none;
       position: fixed;
-      top: 0; left: 0;
-      width: 100%;
-      height: 100%;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
       background: rgba(0, 0, 0, 0.5);
       z-index: 2000;
+      display: flex;
+      align-items: center; /* 垂直置中 */
+      justify-content: center; /* 水平置中 */
     }
     #statusModalContent {
       background: #fff;
       width: 300px;
-      margin: 20% auto;
       padding: 20px;
       text-align: center;
     }
@@ -98,7 +101,7 @@
   
   <!-- 語音點餐區 -->
   <section>
-  <br>
+    <br>
     <!-- 語音輸入按鈕改為 1.png -->
     <button onclick="startContinuousVoiceInput()">
       <img src="1.png" alt="語音輸入" style="height:40px;">
@@ -323,7 +326,7 @@
       currentEditRow = row;
       document.getElementById("modalDishName").innerText = row.cells[0].innerText;
       document.getElementById("modalQuantity").value = row.cells[1].innerText;
-      document.getElementById("editModal").style.display = "block";
+      document.getElementById("editModal").style.display = "flex";
     }
     function closeModal() {
       document.getElementById("editModal").style.display = "none";
@@ -354,7 +357,7 @@
       // 移除轉譯內容相關操作
       orderingComplete = false;
       const statusModal = document.getElementById("statusModal");
-      statusModal.style.display = "block";
+      statusModal.style.display = "flex";
       document.getElementById("statusText").innerHTML = "目前狀態：等待輸入<br>結束點餐請說：完成";
       voiceInputLoop();
     }
