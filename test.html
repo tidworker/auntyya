@@ -31,7 +31,7 @@
     table { 
       border-collapse: separate;
       border-spacing: 0;
-      width: 100%; 
+      width: 90%; /* 表格寬度為版面90% */
       margin: 10px auto; /* 水平置中 */
       background-color: black;
       color: white;
@@ -50,6 +50,10 @@
     table th { 
       background-color: orange; 
       color: black; 
+    }
+    /* 總金額文字用白色 */
+    #totalAmount {
+      color: white;
     }
     @media (max-width: 600px) { 
       button { font-size: 18px; } 
@@ -90,11 +94,10 @@
 </head>
 <body>
   <br>
-  <img src="3.png"> 
+  <img src="3.png" alt="圖片">
   
   <!-- 語音點餐區 -->
   <section>
-    <h2>請使用語音輸入訂單內容</h2>
     <!-- 語音輸入按鈕改為 1.png -->
     <button onclick="startContinuousVoiceInput()">
       <img src="1.png" alt="語音輸入" style="height:40px;">
@@ -115,7 +118,6 @@
           <th>份數</th>
           <th>備註</th>
           <th>單價</th>
-          <th>總價</th>
         </tr>
       </thead>
       <tbody>
@@ -259,7 +261,7 @@
       return orders.filter(o => o.dish);
     }
     
-    /* ---------- 新增訂單項目與計算總金額 ---------- */
+    /* ---------- 新增訂單項目 ---------- */
     function addOrderRow(dish, quantity, remark) {
       if (dish.price === 0) {
         const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
@@ -306,7 +308,6 @@
       row.insertCell().innerText = quantity;
       row.insertCell().innerText = remark;
       row.insertCell().innerText = dish.price;
-      row.insertCell().innerText = dish.price * quantity;
     }
     
     function resetOrder() {
@@ -336,7 +337,7 @@
       }
       currentEditRow.cells[1].innerText = newQuantity;
       let price = parseFloat(currentEditRow.cells[3].innerText);
-      currentEditRow.cells[4].innerText = price * newQuantity;
+      // 若有其他需同步更新的項目，可在此調整
       closeModal();
       updateStatusText();
     }
