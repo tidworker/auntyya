@@ -10,9 +10,8 @@
       margin: 10px; 
       padding: 0; 
       background-color: black; 
-      text-align: center; /* 所有物件水平置中 */
+      text-align: center;
     }
-    /* 將按鈕改為無預設背景與邊框，方便以圖片呈現 */
     button { 
       margin: 5px; 
       padding: 10px; 
@@ -20,19 +19,17 @@
       background: none; 
       border: none; 
     }
-    /* 圖片點擊時動態調整透明度 */
     button img {
       transition: opacity 0.3s ease;
     }
     button:active img {
       opacity: 0.5;
     }
-    /* 表格：黑底、黑色框線、白色文字、3px圓角，並置中 */
     table { 
       border-collapse: separate;
       border-spacing: 0;
-      width: 87%; /* 表格寬度 */
-      margin: 10px auto; /* 水平置中 */
+      width: 87%; 
+      margin: 10px auto;
       background-color: black;
       color: white;
       border: 1px solid black;
@@ -46,12 +43,10 @@
       padding: 8px; 
       text-align: center; 
     }
-    /* 將表格標題欄位改成橘色底、黑色文字 */
     table th { 
       background-color: orange; 
       color: black; 
     }
-    /* 總金額文字用白色 */
     #totalAmount {
       color: white;
     }
@@ -73,7 +68,12 @@
       width: 300px;
       position: relative;
     }
-    /* 彈出式狀態視窗 */
+    /* 在模態框內容上方新增圖片 */
+    #editModalContent img {
+      max-width: 100%;
+      margin-bottom: 10px;
+    }
+    /* 彈出式狀態視窗（語音輸入） */
     #statusModal {
       display: none;
       position: fixed;
@@ -99,11 +99,9 @@
   <!-- 語音點餐區 -->
   <section>
     <br>
-    <!-- 語音輸入按鈕改為 1.png -->
     <button onclick="startContinuousVoiceInput()">
       <img src="1.png" alt="語音輸入" style="height:40px;">
     </button>
-    <!-- 重製餐點按鈕改為 2.png -->
     <button onclick="resetOrder()">
       <img src="2.png" alt="重置餐點" style="height:40px;">
     </button>
@@ -128,18 +126,17 @@
     <p id="totalAmount">總金額：0 元</p>
   </section>
   
-  <!-- 隱藏系統狀態（除錯用） -->
+  <!-- 隱藏系統狀態 -->
   <section style="display:none;">
     <h2>系統狀態</h2>
     <p id="dbStatus">尚未載入字庫資料...</p>
     <p id="menuStatus">尚未載入菜單資料...</p>
   </section>
   
-  <!-- 模態框：編輯訂單項目 -->
+  <!-- 模態框：編輯訂單項目，內含上方圖片 2.png -->
   <div id="editModal">
     <div id="editModalContent">
-      <!-- 在模態框上方新增圖片2.png -->
-      <img src="2.png" alt="Modal Image" style="max-width:100%; margin-bottom:10px;">
+      <img src="2.png" alt="Modal Header Image">
       <h3 id="modalDishName">編輯品項</h3>
       <label for="modalQuantity">份數:</label>
       <input type="number" id="modalQuantity" min="1" style="width:100%;">
@@ -160,7 +157,6 @@
   </div>
   
   <script>
-    // 全域變數：字庫、菜單與編輯用變數
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
@@ -215,7 +211,6 @@
     }
     loadMenu();
     
-    // 轉譯邏輯：僅輸出 database.txt 中有對應的字元
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -227,7 +222,6 @@
       return converted;
     }
     
-    /* ---------- 語音輸入處理 ---------- */
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       let tokens = converted.split('/').filter(token => token.trim() !== "");
@@ -256,7 +250,6 @@
       return orders.filter(o => o.dish);
     }
     
-    /* ---------- 自動更新總金額 ---------- */
     function updateTotalAmount() {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       let total = 0;
@@ -270,7 +263,6 @@
       document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
     }
     
-    /* ---------- 新增訂單項目 ---------- */
     function addOrderRow(dish, quantity, remark) {
       if (dish.price === 0) {
         const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
@@ -328,7 +320,6 @@
       orderingComplete = false;
     }
     
-    /* ---------- 模態框：編輯訂單項目 ---------- */
     function openModal(row) {
       currentEditRow = row;
       document.getElementById("modalDishName").innerText = row.cells[0].innerText;
@@ -359,7 +350,6 @@
       updateStatusText();
     }
     
-    /* ---------- 語音輸入流程 ---------- */
     function startContinuousVoiceInput() {
       orderingComplete = false;
       document.getElementById("statusModal").style.display = "block";
