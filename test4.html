@@ -28,7 +28,7 @@
     table { 
       border-collapse: separate;
       border-spacing: 0;
-      width: 87%; 
+      width: 87%;
       margin: 10px auto;
       background-color: black;
       color: white;
@@ -68,12 +68,7 @@
       width: 300px;
       position: relative;
     }
-    /* 在模態框內容上方新增圖片 */
-    #editModalContent img {
-      max-width: 100%;
-      margin-bottom: 10px;
-    }
-    /* 彈出式狀態視窗（語音輸入） */
+    /* 彈出式狀態視窗（語音輸入）：在模態框上方新增圖片2.png */
     #statusModal {
       display: none;
       position: fixed;
@@ -89,6 +84,11 @@
       margin: 20% auto;
       padding: 20px;
       text-align: center;
+    }
+    /* 新增圖片2.png樣式於語音點餐模態框上方 */
+    #statusModalContent img {
+      max-width: 100%;
+      margin-bottom: 10px;
     }
   </style>
 </head>
@@ -126,17 +126,16 @@
     <p id="totalAmount">總金額：0 元</p>
   </section>
   
-  <!-- 隱藏系統狀態 -->
+  <!-- 隱藏系統狀態（除錯用） -->
   <section style="display:none;">
     <h2>系統狀態</h2>
     <p id="dbStatus">尚未載入字庫資料...</p>
     <p id="menuStatus">尚未載入菜單資料...</p>
   </section>
   
-  <!-- 模態框：編輯訂單項目，內含上方圖片 2.png -->
+  <!-- 模態框：編輯訂單項目 -->
   <div id="editModal">
     <div id="editModalContent">
-      <img src="2.png" alt="Modal Header Image">
       <h3 id="modalDishName">編輯品項</h3>
       <label for="modalQuantity">份數:</label>
       <input type="number" id="modalQuantity" min="1" style="width:100%;">
@@ -148,9 +147,10 @@
     </div>
   </div>
   
-  <!-- 彈出式狀態視窗（語音輸入） -->
+  <!-- 彈出式狀態視窗（語音輸入）：上方新增圖片2.png -->
   <div id="statusModal">
     <div id="statusModalContent">
+      <img src="2.png" alt="點餐圖片">
       <p id="statusText">目前狀態：等待輸入<br>結束點餐請說：完成</p>
       <button onclick="completeOrder()">完成點餐</button>
     </div>
