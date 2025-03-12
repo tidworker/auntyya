@@ -86,7 +86,7 @@
     #statusModalContent {
       background: #fff;
       width: 300px;
-      margin: 10% auto;
+      margin: 0% auto;
       padding: 20px;
       text-align: center;
     }
@@ -166,7 +166,7 @@
     let currentEditRow = null;
     let orderingComplete = false;
     let currentRecognition = null;
-    // 新增 hold 控制旗標
+    // hold 狀態旗標
     let holdActive = false;
     
     let menu = [
@@ -424,7 +424,7 @@
     
     function voiceInputLoop() {
       if (orderingComplete) return;
-      // 如果按住Hold則不啟動新語音輸入
+      // 若按住 Hold 則僅等待，不啟動新的語音識別
       if (holdActive) {
         setTimeout(voiceInputLoop, 500);
         return;
@@ -474,27 +474,18 @@
       document.getElementById("statusModal").style.display = "none";
     }
     
-    // --- 新增 Hold 按鈕事件 ---
-    // 當使用者按下Hold按鈕時，取消當前語音識別並保持 hold 狀態
+    // --- Hold 按鈕事件 ---
+    // 按下時僅設置旗標，放開後立即恢復語音輸入
     document.getElementById("holdButton").addEventListener("mousedown", function(e) {
       holdActive = true;
-      if (currentRecognition) {
-        currentRecognition.abort();
-        currentRecognition = null;
-      }
     });
     document.getElementById("holdButton").addEventListener("mouseup", function(e) {
       holdActive = false;
-      // 放開後重新啟動語音輸入
       voiceInputLoop();
     });
-    // 為支援觸控裝置
+    // 為觸控裝置支援
     document.getElementById("holdButton").addEventListener("touchstart", function(e) {
       holdActive = true;
-      if (currentRecognition) {
-        currentRecognition.abort();
-        currentRecognition = null;
-      }
     });
     document.getElementById("holdButton").addEventListener("touchend", function(e) {
       holdActive = false;
