@@ -72,6 +72,7 @@
       padding: 20px;
       width: 300px;
       position: relative;
+      border-radius: 5px;
     }
     /* 彈出式狀態視窗（語音輸入，初始隱藏） */
     #statusModal {
@@ -86,9 +87,10 @@
     #statusModalContent {
       background: #fff;
       width: 300px;
-      margin: 0% auto;
+      margin: 10% auto;
       padding: 20px;
       text-align: center;
+      border-radius: 5px;
     }
   </style>
 </head>
@@ -424,7 +426,7 @@
     
     function voiceInputLoop() {
       if (orderingComplete) return;
-      // 若按住 Hold 則僅等待，不啟動新的語音識別
+      // 如果 Hold 處於按下狀態，則延遲再檢查
       if (holdActive) {
         setTimeout(voiceInputLoop, 500);
         return;
@@ -475,21 +477,20 @@
     }
     
     // --- Hold 按鈕事件 ---
-    // 按下時僅設置旗標，放開後立即恢復語音輸入
+    // 按下時僅設置旗標（暫停語音輸入），放開後延遲 500 毫秒再重新啟動語音輸入（重新計時）
     document.getElementById("holdButton").addEventListener("mousedown", function(e) {
       holdActive = true;
     });
     document.getElementById("holdButton").addEventListener("mouseup", function(e) {
       holdActive = false;
-      voiceInputLoop();
+      setTimeout(() => { voiceInputLoop(); }, 500);
     });
-    // 為觸控裝置支援
     document.getElementById("holdButton").addEventListener("touchstart", function(e) {
       holdActive = true;
     });
     document.getElementById("holdButton").addEventListener("touchend", function(e) {
       holdActive = false;
-      voiceInputLoop();
+      setTimeout(() => { voiceInputLoop(); }, 500);
     });
   </script>
 </body>
