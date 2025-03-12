@@ -80,11 +80,11 @@
       position: relative;
       border-radius: 5px;
     }
-    /* 模態框：語音輸入狀態 */
+    /* 模態框：語音輸入狀態（保持顯示直到手動關閉） */
     #statusModal {
       display: none;
       position: fixed;
-      top: 20%;
+      top: 20%; 
       left: 50%;
       transform: translateX(-50%);
       width: 300px;
@@ -103,7 +103,7 @@
     /* 浮動紅色圓形錄音按鈕 */
     #voiceButton {
       position: fixed;
-      bottom: 25%; /* 可依需求調整 */
+      bottom: 25%;  /* 可根據需求微調 */
       left: 50%;
       transform: translateX(-50%);
       width: 80px;
@@ -114,7 +114,7 @@
       cursor: pointer;
       z-index: 3000;
     }
-    /* 禁止浮動按鈕文字選取 */
+    /* 禁止在浮動按鈕上選取文字 */
     #voiceButton, #voiceButton * {
       user-select: none;
     }
@@ -128,7 +128,7 @@
   <!-- 原有圖片保持不變 -->
   <img src="3.png" alt="圖片">
   
-  <!-- 訂單明細區 -->
+  <!-- 訂單明細 -->
   <section>
     <br>
     <table id="orderTable">
@@ -161,11 +161,11 @@
     </div>
   </div>
   
-  <!-- 模態框：語音輸入狀態 -->
+  <!-- 模態框：語音輸入狀態（保持開啟直到使用者手動關閉） -->
   <div id="statusModal">
     <div id="statusModalContent">
       <p id="statusText">錄音中…</p>
-      <!-- 使用者手動點擊完成關閉模態框 -->
+      <!-- 使用者手動點擊「完成點餐」關閉模態框 -->
       <button onclick="completeOrder()">完成點餐</button>
     </div>
   </div>
@@ -180,6 +180,8 @@
     let currentEditRow = null;
     let orderingComplete = false;
     let currentRecognition = null;
+    // hold 狀態旗標：當按住錄音按鈕時為 true
+    let holdActive = false;
     
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
@@ -241,70 +243,90 @@
       return converted;
     }
     
-    /* ---------- 新交互邏輯：錄音按住/放開 ---------- */
-    function startVoiceRecognition() {
-      // 建立 SpeechRecognition 物件
-      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        alert("您的瀏覽器不支援語音輸入功能。");
-        return;
-      }
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      currentRecognition = recognition;
-      recognition.lang = 'zh-TW';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-      
-      recognition.onresult = function(event) {
-        let transcript = event.results[0][0].transcript.trim();
-        if (transcript === "錯誤") {
-          let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-          if (tbody.rows.length > 0) {
-            tbody.deleteRow(tbody.rows.length - 1);
-          }
-          updateTotalAmount();
-          updateStatusText();
-        } else if (transcript !== "") {
-          let orders = processMultipleVoiceInput(transcript);
-          if (orders.length === 0) {
-            document.getElementById("statusText").innerHTML = "輸入錯誤，請重試";
-          } else {
-            orders.forEach(order => {
-              addOrderRow(order.dish, order.quantity, "");
-            });
-            updateStatusText();
-          }
-        }
-        currentRecognition = null;
-      };
-      recognition.onerror = function(event) {
-        alert("語音識別錯誤：" + event.error);
-        currentRecognition = null;
-      };
-      
-      recognition.start();
+    /* ---------- 新語音輸入邏輯：按住時持續錄音 ---------- */
+    // 使用 startVoiceInputSingle() 進行單次錄音，返回識別結果的 Promise
+    function startVoiceInputSingle() {
+      return new Promise((resolve) => {
+         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+           alert("您的瀏覽器不支援語音輸入功能。");
+           resolve(null);
+           return;
+         }
+         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+         const recognition = new SpeechRecognition();
+         currentRecognition = recognition;
+         recognition.lang = 'zh-TW';
+         recognition.interimResults = false;
+         recognition.maxAlternatives = 1;
+         recognition.onresult = function(event) {
+            currentRecognition = null;
+            resolve(event.results[0][0].transcript);
+         };
+         recognition.onerror = function(event) {
+            currentRecognition = null;
+            resolve(null);
+         };
+         recognition.start();
+      });
+    }
+    
+    // 持續錄音函式：當 holdActive 為 true 時，完成一次錄音後立即重啟錄音
+    function continuousRecognition() {
+      if (!holdActive) return;
+      startVoiceInputSingle().then(transcript => {
+         if (transcript) {
+            transcript = transcript.trim();
+            // 若收到特殊指令則可處理（例如 "錯誤"）—這裡僅作簡單處理
+            if (transcript === "錯誤") {
+              let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+              if (tbody.rows.length > 0) {
+                tbody.deleteRow(tbody.rows.length - 1);
+              }
+              updateTotalAmount();
+              updateStatusText();
+            } else if (transcript !== "") {
+              let orders = processMultipleVoiceInput(transcript);
+              if (orders.length !== 0) {
+                orders.forEach(order => {
+                  addOrderRow(order.dish, order.quantity, "");
+                });
+                updateStatusText();
+              }
+            }
+         }
+         // 若按鈕仍被按住，繼續進行下一次錄音
+         if (holdActive) {
+            continuousRecognition();
+         }
+      });
+    }
+    
+    // 浮動紅色錄音按鈕事件：按下時開始錄音；放開時結束當前錄音並停止持續錄音
+    const voiceButton = document.getElementById("voiceButton");
+    voiceButton.addEventListener("mousedown", function(e) {
+      holdActive = true;
       // 顯示語音輸入模態框並更新狀態文字
       document.getElementById("statusModal").style.display = "block";
       document.getElementById("statusText").innerHTML = "錄音中…";
-    }
-    
-    // 浮動按鈕事件：按住開始錄音，放開結束錄音
-    const voiceButton = document.getElementById("voiceButton");
-    voiceButton.addEventListener("mousedown", function(e) {
-      startVoiceRecognition();
+      continuousRecognition();
       e.preventDefault();
     });
     voiceButton.addEventListener("touchstart", function(e) {
-      startVoiceRecognition();
+      holdActive = true;
+      document.getElementById("statusModal").style.display = "block";
+      document.getElementById("statusText").innerHTML = "錄音中…";
+      continuousRecognition();
       e.preventDefault();
     });
     voiceButton.addEventListener("mouseup", function(e) {
+      holdActive = false;
       if (currentRecognition) {
         currentRecognition.stop();
       }
       e.preventDefault();
     });
     voiceButton.addEventListener("touchend", function(e) {
+      holdActive = false;
       if (currentRecognition) {
         currentRecognition.stop();
       }
