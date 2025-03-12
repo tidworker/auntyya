@@ -27,7 +27,7 @@
       cursor: pointer;
       z-index: 3000;
     }
-    /* 內嵌表格容器：固定高度並可垂直滾動，不與底部按鈕重疊 */
+    /* 內嵌表格容器：固定高度且可垂直滾動，不與底部按鈕重疊 */
     #tableContainer {
       width: 90%;
       height: 400px; /* 可依需求調整 */
@@ -66,11 +66,12 @@
     @media (max-width: 600px) { 
       button { font-size: 18px; } 
     }
-    /* 模態框：編輯訂單項目（保留原有編輯模態框） */
+    /* 模態框：編輯訂單項目 */
     #editModal {
       display: none;
       position: fixed;
-      left: 0; top: 0;
+      left: 0; 
+      top: 0;
       width: 100%; 
       height: 100%;
       background: rgba(0,0,0,0.5);
@@ -99,7 +100,7 @@
       cursor: pointer;
       z-index: 3000;
     }
-    /* 禁止浮動按鈕上文字選取 */
+    /* 禁止在浮動按鈕上選取文字 */
     #voiceButton, #voiceButton * {
       user-select: none;
     }
@@ -131,7 +132,7 @@
   </div>
   <p id="totalAmount">總金額：0 元</p>
   
-  <!-- 刪除原有模態框，僅保留編輯訂單項目的模態框 -->
+  <!-- 模態框：編輯訂單項目 -->
   <div id="editModal">
     <div id="editModalContent">
       <h3 id="modalDishName">編輯品項</h3>
@@ -237,7 +238,7 @@
       });
     }
     
-    // 按住期間持續錄音：每次識別完若仍持續按住則立即重新啟動
+    // 按住期間持續錄音：每次識別完後，若仍處於按住狀態則立即重啟錄音
     function continuousRecognition() {
       if (!holdActive) return;
       startVoiceInputSingle().then(transcript => {
@@ -259,7 +260,7 @@
       });
     }
     
-    // 浮動紅色錄音按鈕事件：按下時開始持續錄音，放開時停止
+    // 浮動紅色錄音按鈕事件：按下時開始持續錄音，放開時立即停止錄音
     const voiceButton = document.getElementById("voiceButton");
     voiceButton.addEventListener("mousedown", function(e) {
       holdActive = true;
@@ -379,7 +380,7 @@
     }
     
     function resetOrder() {
-      document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
+      document.getElementById("tableContainer").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
       orderingComplete = false;
     }
