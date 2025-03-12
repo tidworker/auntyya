@@ -5,39 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>中文點餐系統</title>
   <style>
+    /* 黑底白字 */
     body { 
       font-family: Arial, sans-serif; 
       margin: 10px; 
       padding: 0; 
       background-color: black; 
-      text-align: center; /* 所有物件水平置中 */
+      color: white;
+      text-align: center;
     }
-    /* 按鈕樣式：以圖片呈現 */
-    button { 
-      margin: 5px; 
-      padding: 10px; 
-      font-size: 16px; 
-      background: none; 
-      border: none; 
-      /* 防止長按時選取文字 */
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
+    /* 重新點餐按鈕（右上角） */
+    #resetButton {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      z-index: 3000;
     }
-    /* 圖片點擊時動態調整透明度 */
-    button img {
-      transition: opacity 0.3s ease;
-    }
-    button:active img {
-      opacity: 0.5;
-    }
-    /* 表格：黑底、黑色框線、白色文字、3px圓角，並置中 */
+    /* 表格：黑底、黑色框線、白色文字、3px圓角 */
     table { 
       border-collapse: separate;
       border-spacing: 0;
-      width: 89%; /* 表格寬度 */
-      margin: 10px auto; /* 水平置中 */
+      width: 89%; 
+      margin: 10px auto;
       background-color: black;
       color: white;
       border: 1px solid black;
@@ -51,72 +46,89 @@
       padding: 8px; 
       text-align: left; 
     }
-    /* 將表格標題欄位改成橘色底、黑色文字 */
+    /* 表頭：白底黑字 */
     table th { 
       background-color: white; 
       color: black; 
     }
-    /* 總金額文字用白色 */
+    /* 總金額文字 */
     #totalAmount {
       color: white;
+      font-size: 18px;
+      margin-top: 10px;
     }
     @media (max-width: 600px) { 
       button { font-size: 18px; } 
     }
-    /* 模態框：編輯訂單項目（初始隱藏） */
+    /* 模態框：編輯訂單項目 */
     #editModal {
       display: none;
       position: fixed;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
+      left: 0; 
+      top: 0;
+      width: 100%; 
+      height: 100%;
       background: rgba(0,0,0,0.5);
+      z-index: 2000;
     }
     #editModalContent {
       background: #fff;
+      color: black;
       margin: 10% auto;
       padding: 20px;
       width: 300px;
       position: relative;
       border-radius: 5px;
     }
-    /* 彈出式狀態視窗（語音輸入，初始隱藏） */
+    /* 模態框：語音輸入狀態 */
     #statusModal {
       display: none;
       position: fixed;
-      top: 239px; left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 2000;
+      top: 20%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 300px;
+      background: rgba(0,0,0,0.8);
+      padding: 20px;
+      z-index: 2500;
+      border-radius: 5px;
     }
     #statusModalContent {
       background: #fff;
-      width: 300px;
-      margin: 10% auto;
+      color: black;
       padding: 20px;
       text-align: center;
       border-radius: 5px;
     }
+    /* 浮動紅色圓形錄音按鈕 */
+    #voiceButton {
+      position: fixed;
+      bottom: 25%; /* 可依需求調整 */
+      left: 50%;
+      transform: translateX(-50%);
+      width: 80px;
+      height: 80px;
+      background-color: red;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      z-index: 3000;
+    }
+    /* 禁止浮動按鈕文字選取 */
+    #voiceButton, #voiceButton * {
+      user-select: none;
+    }
   </style>
 </head>
 <body>
+  <!-- 右上角重新點餐按鈕 -->
+  <button id="resetButton" onclick="resetOrder()">重新點餐</button>
+  
   <br>
+  <!-- 原有圖片保持不變 -->
   <img src="3.png" alt="圖片">
   
-  <!-- 語音點餐區 -->
-  <section>
-    <br>
-    <!-- 語音輸入按鈕改為 1.png -->
-    <button onclick="startContinuousVoiceInput()">
-      <img src="1.png" alt="語音輸入" style="height:40px;">
-    </button>
-    <!-- 重製餐點按鈕改為 2.png -->
-    <button onclick="resetOrder()">
-      <img src="2.png" alt="重置餐點" style="height:40px;">
-    </button>
-  </section>
-  
-  <!-- 訂單明細 -->
+  <!-- 訂單明細區 -->
   <section>
     <br>
     <table id="orderTable">
@@ -135,13 +147,6 @@
     <p id="totalAmount">總金額：0 元</p>
   </section>
   
-  <!-- 隱藏系統狀態（除錯用） -->
-  <section style="display:none;">
-    <h2>系統狀態</h2>
-    <p id="dbStatus">尚未載入字庫資料...</p>
-    <p id="menuStatus">尚未載入菜單資料...</p>
-  </section>
-  
   <!-- 模態框：編輯訂單項目 -->
   <div id="editModal">
     <div id="editModalContent">
@@ -156,25 +161,25 @@
     </div>
   </div>
   
-  <!-- 彈出式狀態視窗（語音輸入） -->
+  <!-- 模態框：語音輸入狀態 -->
   <div id="statusModal">
     <div id="statusModalContent">
-      <p id="statusText">目前狀態：等待輸入<br>結束點餐請說：完成</p>
-      <!-- 新增 Hold 按鈕 -->
-      <button id="holdButton">Hold</button>
+      <p id="statusText">錄音中…</p>
+      <!-- 使用者手動點擊完成關閉模態框 -->
       <button onclick="completeOrder()">完成點餐</button>
     </div>
   </div>
   
+  <!-- 浮動紅色圓形錄音按鈕 -->
+  <button id="voiceButton"></button>
+  
   <script>
-    // 全域變數：字庫、菜單與編輯用變數（運算邏輯保持不變）
+    // 全域變數（運算邏輯保持不變）
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
     let orderingComplete = false;
     let currentRecognition = null;
-    // hold 狀態旗標
-    let holdActive = false;
     
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
@@ -236,7 +241,77 @@
       return converted;
     }
     
-    /* ---------- 語音輸入處理 ---------- */
+    /* ---------- 新交互邏輯：錄音按住/放開 ---------- */
+    function startVoiceRecognition() {
+      // 建立 SpeechRecognition 物件
+      if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert("您的瀏覽器不支援語音輸入功能。");
+        return;
+      }
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      currentRecognition = recognition;
+      recognition.lang = 'zh-TW';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      
+      recognition.onresult = function(event) {
+        let transcript = event.results[0][0].transcript.trim();
+        if (transcript === "錯誤") {
+          let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+          if (tbody.rows.length > 0) {
+            tbody.deleteRow(tbody.rows.length - 1);
+          }
+          updateTotalAmount();
+          updateStatusText();
+        } else if (transcript !== "") {
+          let orders = processMultipleVoiceInput(transcript);
+          if (orders.length === 0) {
+            document.getElementById("statusText").innerHTML = "輸入錯誤，請重試";
+          } else {
+            orders.forEach(order => {
+              addOrderRow(order.dish, order.quantity, "");
+            });
+            updateStatusText();
+          }
+        }
+        currentRecognition = null;
+      };
+      recognition.onerror = function(event) {
+        alert("語音識別錯誤：" + event.error);
+        currentRecognition = null;
+      };
+      
+      recognition.start();
+      // 顯示語音輸入模態框並更新狀態文字
+      document.getElementById("statusModal").style.display = "block";
+      document.getElementById("statusText").innerHTML = "錄音中…";
+    }
+    
+    // 浮動按鈕事件：按住開始錄音，放開結束錄音
+    const voiceButton = document.getElementById("voiceButton");
+    voiceButton.addEventListener("mousedown", function(e) {
+      startVoiceRecognition();
+      e.preventDefault();
+    });
+    voiceButton.addEventListener("touchstart", function(e) {
+      startVoiceRecognition();
+      e.preventDefault();
+    });
+    voiceButton.addEventListener("mouseup", function(e) {
+      if (currentRecognition) {
+        currentRecognition.stop();
+      }
+      e.preventDefault();
+    });
+    voiceButton.addEventListener("touchend", function(e) {
+      if (currentRecognition) {
+        currentRecognition.stop();
+      }
+      e.preventDefault();
+    });
+    
+    /* ---------- 以下維持原有訂單與模態框處理 ---------- */
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       let tokens = converted.split('/').filter(token => token.trim() !== "");
@@ -265,7 +340,6 @@
       return orders.filter(o => o.dish);
     }
     
-    /* ---------- 自動更新總金額 ---------- */
     function updateTotalAmount() {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       let total = 0;
@@ -279,7 +353,6 @@
       document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
     }
     
-    /* ---------- 新增訂單項目 ---------- */
     function addOrderRow(dish, quantity, remark) {
       if (dish.price === 0) {
         const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
@@ -337,7 +410,6 @@
       orderingComplete = false;
     }
     
-    /* ---------- 模態框：編輯訂單項目 ---------- */
     function openModal(row) {
       currentEditRow = row;
       document.getElementById("modalDishName").innerText = row.cells[0].innerText;
@@ -368,14 +440,6 @@
       updateStatusText();
     }
     
-    /* ---------- 語音輸入流程 ---------- */
-    function startContinuousVoiceInput() {
-      orderingComplete = false;
-      document.getElementById("statusModal").style.display = "block";
-      document.getElementById("statusText").innerHTML = "目前狀態：等待輸入<br>結束點餐請說：完成";
-      voiceInputLoop();
-    }
-    
     function updateStatusText() {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       let summary = "";
@@ -397,81 +461,6 @@
       document.getElementById("statusText").innerHTML = "目前狀態：等待輸入<br>" + summary + "結束點餐請說：完成";
     }
     
-    function startVoiceInputSingle() {
-      return new Promise((resolve) => {
-         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-           alert("您的瀏覽器不支援語音輸入功能。");
-           resolve(null);
-           return;
-         }
-         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-         const recognition = new SpeechRecognition();
-         currentRecognition = recognition;
-         recognition.lang = 'zh-TW';
-         recognition.interimResults = false;
-         recognition.maxAlternatives = 1;
-         let timeoutId = setTimeout(() => { 
-            recognition.abort();
-            currentRecognition = null;
-            resolve(null);
-         }, 5000);
-         recognition.onresult = function(event) {
-            clearTimeout(timeoutId);
-            currentRecognition = null;
-            resolve(event.results[0][0].transcript);
-         };
-         recognition.onerror = function(event) {
-            clearTimeout(timeoutId);
-            currentRecognition = null;
-            resolve(null);
-         };
-         recognition.start();
-      });
-    }
-    
-    function voiceInputLoop() {
-      if (orderingComplete) return;
-      // 若 Hold 按鈕處於按下狀態，則延遲再檢查（保持當前輸入狀態，不結束）
-      if (holdActive) {
-        setTimeout(voiceInputLoop, 500);
-        return;
-      }
-      startVoiceInputSingle().then(transcript => {
-         if (!transcript) {
-            document.getElementById("statusText").innerText = "目前狀態：無輸入，點餐結束";
-            setTimeout(() => { document.getElementById("statusModal").style.display = "none"; }, 1000);
-            return;
-         }
-         transcript = transcript.trim();
-         if (transcript === "完成") {
-            document.getElementById("statusText").innerText = "目前狀態：結束";
-            setTimeout(() => { document.getElementById("statusModal").style.display = "none"; }, 1000);
-            return;
-         }
-         if (transcript === "錯誤") {
-            let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-            if (tbody.rows.length > 0) {
-               tbody.deleteRow(tbody.rows.length - 1);
-            }
-            updateTotalAmount();
-            updateStatusText();
-            voiceInputLoop();
-            return;
-         }
-         let orders = processMultipleVoiceInput(transcript);
-         if (orders.length === 0) {
-            document.getElementById("statusText").innerHTML = "目前狀態：輸入錯誤，等待輸入<br>結束點餐請說：完成";
-            voiceInputLoop();
-         } else {
-            orders.forEach(order => {
-              addOrderRow(order.dish, order.quantity, "");
-            });
-            updateStatusText();
-            voiceInputLoop();
-         }
-      });
-    }
-    
     function completeOrder() {
       orderingComplete = true;
       if (currentRecognition) {
@@ -480,26 +469,6 @@
       }
       document.getElementById("statusModal").style.display = "none";
     }
-    
-    // --- Hold 按鈕事件 ---
-    // 按下時僅設置旗標暫停語音輸入；放開後延遲 500 毫秒再重新啟動語音輸入（重新計時）
-    document.getElementById("holdButton").addEventListener("mousedown", function(e) {
-      holdActive = true;
-      // 防止預設行為（例如文字選取）
-      e.preventDefault();
-    });
-    document.getElementById("holdButton").addEventListener("mouseup", function(e) {
-      holdActive = false;
-      setTimeout(() => { voiceInputLoop(); }, 500);
-    });
-    document.getElementById("holdButton").addEventListener("touchstart", function(e) {
-      holdActive = true;
-      e.preventDefault();
-    });
-    document.getElementById("holdButton").addEventListener("touchend", function(e) {
-      holdActive = false;
-      setTimeout(() => { voiceInputLoop(); }, 500);
-    });
   </script>
 </body>
 </html>
