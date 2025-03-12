@@ -14,18 +14,15 @@
       color: white;
       text-align: center;
     }
-    /* 右上角重新點餐按鈕 */
+    /* 重新點餐按鈕：橘色背景，置於總金額下方（不固定） */
     #resetButton {
-      position: fixed;
-      top: 10px;
-      right: 10px;
-      background-color: #007BFF;
-      color: white;
+      background-color: orange;
+      color: black;
       border: none;
       padding: 10px 20px;
       border-radius: 4px;
       cursor: pointer;
-      z-index: 3000;
+      margin-top: 10px;
     }
     /* 內嵌表格容器：固定高度且可垂直滾動，不與底部按鈕重疊 */
     #tableContainer {
@@ -107,11 +104,8 @@
   </style>
 </head>
 <body>
-  <!-- 右上角重新點餐按鈕 -->
-  <button id="resetButton" onclick="resetOrder()">重新點餐</button>
-  
+  <!-- 右上角的圖片保持不變 -->
   <br>
-  <!-- 保持原有圖片位置 -->
   <img src="3.png" alt="圖片">
   
   <!-- 內嵌表格容器 -->
@@ -131,6 +125,9 @@
     </table>
   </div>
   <p id="totalAmount">總金額：0 元</p>
+  
+  <!-- 重新點餐按鈕：放在總金額下方 -->
+  <button id="resetButton" onclick="resetOrder()">重新點餐</button>
   
   <!-- 模態框：編輯訂單項目 -->
   <div id="editModal">
@@ -238,7 +235,7 @@
       });
     }
     
-    // 按住期間持續錄音：每次識別完後，若仍處於按住狀態則立即重啟錄音
+    // 按住期間持續錄音：每次識別完後，若仍處於按住狀態則立即重啟
     function continuousRecognition() {
       if (!holdActive) return;
       startVoiceInputSingle().then(transcript => {
