@@ -229,7 +229,7 @@
       "waidai"
     ],
     "name": "外帶",
-    "price": #
+    "price": "#"
   },
   {
     "keywords": [
