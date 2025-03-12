@@ -24,15 +24,15 @@
       cursor: pointer;
       margin-top: 10px;
     }
-    /* 內嵌表格容器：固定高度340px，並可垂直滾動 */
+    /* 內嵌表格容器：固定高度 340px，垂直滾動 */
     #tableContainer {
       width: 90%;
-      height: 340px; /* 修改為 340px */
+      height: 340px;
       margin: 20px auto;
       border: 1px solid black;
       overflow-y: auto;
     }
-    /* 表格：黑底、黑色框線、白色文字、3px圓角 */
+    /* 表格：黑底、黑色框線、白色文字、3px 圓角 */
     table { 
       width: 100%;
       background-color: black;
@@ -63,7 +63,7 @@
     @media (max-width: 600px) { 
       button { font-size: 18px; } 
     }
-    /* 模態框：編輯訂單項目 */
+    /* 模態框：編輯訂單項目（保持不變） */
     #editModal {
       display: none;
       position: fixed;
@@ -83,21 +83,21 @@
       position: relative;
       border-radius: 5px;
     }
-    /* 浮動紅色圓形錄音按鈕：固定在頁面下方，距離底部 50px */
+    /* 浮動紅色圓形錄音按鈕 */
     #voiceButton {
       position: fixed;
       bottom: 50px;
       left: 50%;
       transform: translateX(-50%);
-      width: 70px;  /* 修改為 70px */
-      height: 70px; /* 修改為 70px */
+      width: 70px;   /* 修改尺寸 */
+      height: 70px;  /* 修改尺寸 */
       background-color: red;
-      border: 3px solid white; /* 加上 3px 白色邊框 */
+      border: 5px solid white; /* 加上 3px 白邊框 */
       border-radius: 50%;
       cursor: pointer;
       z-index: 3000;
     }
-    /* 按下時紅色變深 */
+    /* 按下時紅色部分變深 */
     #voiceButton:active {
       background-color: darkred;
     }
@@ -108,11 +108,8 @@
   </style>
 </head>
 <body>
-  <!-- 右上角重新點餐按鈕 -->
-  <button id="resetButton" onclick="resetOrder()">重新點餐</button>
-  
+  <!-- 重新點餐按鈕，放置在總金額下方 -->
   <br>
-  <!-- 原有圖片保持不變 -->
   <img src="3.png" alt="圖片">
   
   <!-- 內嵌表格容器 -->
@@ -132,6 +129,9 @@
     </table>
   </div>
   <p id="totalAmount">總金額：0 元</p>
+  
+  <!-- 重新點餐按鈕（正常流） -->
+  <button id="resetButton" onclick="resetOrder()">重新點餐</button>
   
   <!-- 模態框：編輯訂單項目 -->
   <div id="editModal">
@@ -213,7 +213,7 @@
       return converted;
     }
     
-    /* ---------- 新語音輸入邏輯：持續錄音，按住時持續識別 ---------- */
+    /* ---------- 新語音輸入邏輯：持續錄音 ---------- */
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -239,7 +239,7 @@
       });
     }
     
-    // 按住期間持續錄音：每次識別完後，若仍處於按住狀態則立即重啟識別
+    // 按住期間持續錄音：每次識別完後若仍處於按住狀態則立即重啟
     function continuousRecognition() {
       if (!holdActive) return;
       startVoiceInputSingle().then(transcript => {
