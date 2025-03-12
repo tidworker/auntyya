@@ -12,13 +12,18 @@
       background-color: black; 
       text-align: center; /* 所有物件水平置中 */
     }
-    /* 將按鈕改為無預設背景與邊框，方便以圖片呈現 */
+    /* 按鈕樣式：以圖片呈現 */
     button { 
       margin: 5px; 
       padding: 10px; 
       font-size: 16px; 
       background: none; 
       border: none; 
+      /* 防止長按時選取文字 */
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
     }
     /* 圖片點擊時動態調整透明度 */
     button img {
@@ -426,7 +431,7 @@
     
     function voiceInputLoop() {
       if (orderingComplete) return;
-      // 如果 Hold 處於按下狀態，則延遲再檢查
+      // 若 Hold 按鈕處於按下狀態，則延遲再檢查（保持當前輸入狀態，不結束）
       if (holdActive) {
         setTimeout(voiceInputLoop, 500);
         return;
@@ -477,9 +482,11 @@
     }
     
     // --- Hold 按鈕事件 ---
-    // 按下時僅設置旗標（暫停語音輸入），放開後延遲 500 毫秒再重新啟動語音輸入（重新計時）
+    // 按下時僅設置旗標暫停語音輸入；放開後延遲 500 毫秒再重新啟動語音輸入（重新計時）
     document.getElementById("holdButton").addEventListener("mousedown", function(e) {
       holdActive = true;
+      // 防止預設行為（例如文字選取）
+      e.preventDefault();
     });
     document.getElementById("holdButton").addEventListener("mouseup", function(e) {
       holdActive = false;
@@ -487,6 +494,7 @@
     });
     document.getElementById("holdButton").addEventListener("touchstart", function(e) {
       holdActive = true;
+      e.preventDefault();
     });
     document.getElementById("holdButton").addEventListener("touchend", function(e) {
       holdActive = false;
