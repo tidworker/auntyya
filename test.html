@@ -14,7 +14,7 @@
       color: white;
       text-align: center;
     }
-    /* 重新點餐按鈕：橘色背景，置於總金額下方（不固定） */
+    /* 右上角重新點餐按鈕 */
     #resetButton {
       background-color: orange;
       color: black;
@@ -24,7 +24,7 @@
       cursor: pointer;
       margin-top: 10px;
     }
-    /* 內嵌表格容器：固定高度且可垂直滾動，不與底部按鈕重疊 */
+    /* 內嵌表格容器：固定高度且可垂直滾動 */
     #tableContainer {
       width: 90%;
       height: 330px; /* 可依需求調整 */
@@ -104,8 +104,11 @@
   </style>
 </head>
 <body>
-  <!-- 右上角的圖片保持不變 -->
+  <!-- 右上角重新點餐按鈕（位於總金額下方） -->
+  <button id="resetButton" onclick="resetOrder()">重新點餐</button>
+  
   <br>
+  <!-- 原有圖片保持不變 -->
   <img src="3.png" alt="圖片">
   
   <!-- 內嵌表格容器 -->
@@ -125,9 +128,6 @@
     </table>
   </div>
   <p id="totalAmount">總金額：0 元</p>
-  
-  <!-- 重新點餐按鈕：放在總金額下方 -->
-  <button id="resetButton" onclick="resetOrder()">重新點餐</button>
   
   <!-- 模態框：編輯訂單項目 -->
   <div id="editModal">
@@ -209,7 +209,7 @@
       return converted;
     }
     
-    /* ---------- 新語音輸入邏輯：按住錄音按鈕持續錄音 ---------- */
+    /* ---------- 新語音輸入邏輯：持續錄音，按住時重複識別 ---------- */
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -235,7 +235,7 @@
       });
     }
     
-    // 按住期間持續錄音：每次識別完後，若仍處於按住狀態則立即重啟
+    // 持續錄音函式：當 holdActive 為 true 時，完成一次錄音後立即重啟
     function continuousRecognition() {
       if (!holdActive) return;
       startVoiceInputSingle().then(transcript => {
@@ -260,16 +260,21 @@
     // 浮動紅色錄音按鈕事件：按下時開始持續錄音，放開時立即停止錄音
     const voiceButton = document.getElementById("voiceButton");
     voiceButton.addEventListener("mousedown", function(e) {
+      // 震動 50 毫秒
+      if (navigator.vibrate) navigator.vibrate(50);
       holdActive = true;
       continuousRecognition();
       e.preventDefault();
     });
     voiceButton.addEventListener("touchstart", function(e) {
+      if (navigator.vibrate) navigator.vibrate(50);
       holdActive = true;
       continuousRecognition();
       e.preventDefault();
     });
     voiceButton.addEventListener("mouseup", function(e) {
+      // 震動 50 毫秒
+      if (navigator.vibrate) navigator.vibrate(50);
       holdActive = false;
       if (currentRecognition) {
         currentRecognition.stop();
@@ -277,6 +282,7 @@
       e.preventDefault();
     });
     voiceButton.addEventListener("touchend", function(e) {
+      if (navigator.vibrate) navigator.vibrate(50);
       holdActive = false;
       if (currentRecognition) {
         currentRecognition.stop();
