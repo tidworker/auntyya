@@ -14,6 +14,16 @@
       color: white;
       text-align: center;
     }
+    /* 重新點餐按鈕：橘色背景，置於總金額下方 */
+    #resetButton {
+      background-color: orange;
+      color: black;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
     /* 內嵌表格容器：固定高度 340px，垂直滾動 */
     #tableContainer {
       width: 90%;
@@ -61,25 +71,17 @@
       font-size: 18px;
       margin-top: 10px;
     }
-    /* 重新點餐按鈕：橘色背景，黑色文字，正常流定位 */
-    #resetButton {
-      background-color: orange;
-      color: black;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
     @media (max-width: 600px) { 
       button { font-size: 18px; } 
     }
-    /* 模態框：編輯訂單項目 */
+    /* 模態框：編輯訂單項目（保持不變） */
     #editModal {
       display: none;
       position: fixed;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
+      left: 0; 
+      top: 0;
+      width: 100%; 
+      height: 100%;
       background: rgba(0,0,0,0.5);
       z-index: 2000;
     }
@@ -89,6 +91,7 @@
       margin: 10% auto;
       padding: 20px;
       width: 300px;
+      position: relative;
       border-radius: 5px;
     }
     /* 浮動紅色圓形錄音按鈕 */
@@ -100,12 +103,12 @@
       width: 70px;
       height: 70px;
       background-color: red;
-      border: 3px solid white;
+      border: 3px solid white; /* 3px 白色邊框 */
       border-radius: 50%;
       cursor: pointer;
       z-index: 3000;
     }
-    /* 按下時背景色變深 */
+    /* 按下時紅色部分變深 */
     #voiceButton:active {
       background-color: darkred;
     }
@@ -165,14 +168,14 @@
     let currentRecognition = null;
     // hold 狀態旗標：當按住錄音按鈕時為 true
     let holdActive = false;
-    // specialMode：收到價格為 "#" 的產品後啟動，後續以文字輸出
+    // specialMode：收到價格為 "#" 的產品後啟動
     let specialMode = false;
     
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
       { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
       { "keywords": ["la"], "name": "辣", "price": 0 },
-      // 示例特殊產品：價格為 "#"
+      // 特殊商品：價格設定為 "#"
       { "keywords": ["mod1"], "name": "額外起司", "price": "#" }
     ];
     
@@ -224,7 +227,7 @@
       return converted;
     }
     
-    /* ---------- 語音輸入邏輯：持續錄音 ---------- */
+    /* ---------- 新語音輸入邏輯：持續錄音 ---------- */
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -250,7 +253,7 @@
       });
     }
     
-    // 按住期間持續錄音：每次識別完後若仍處於按住狀態則立即重新啟動識別
+    // 按住期間持續錄音：每次識別完後，若仍處於按住狀態則立即重啟識別
     function continuousRecognition() {
       if (!holdActive) return;
       startVoiceInputSingle().then(transcript => {
@@ -259,7 +262,7 @@
             if (transcript !== "") {
               let orders = processMultipleVoiceInput(transcript);
               orders.forEach(order => {
-                // 如果收到特殊商品（price 為 "#"），則啟動特殊模式
+                // 如果收到特殊商品（price 為 "#"），則啟動 specialMode 並輸出文字
                 if (order.dish.price === "#") {
                   specialMode = true;
                   appendSpecialOrder(order.dish, order.quantity);
@@ -455,6 +458,91 @@
       closeModal();
       updateTotalAmount();
     }
+    
+    /* ---------- 新語音輸入邏輯：持續錄音 ---------- */
+    function startVoiceInputSingle() {
+      return new Promise((resolve) => {
+         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+           alert("您的瀏覽器不支援語音輸入功能。");
+           resolve(null);
+           return;
+         }
+         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+         const recognition = new SpeechRecognition();
+         currentRecognition = recognition;
+         recognition.lang = 'zh-TW';
+         recognition.interimResults = false;
+         recognition.maxAlternatives = 1;
+         recognition.onresult = function(event) {
+            currentRecognition = null;
+            resolve(event.results[0][0].transcript);
+         };
+         recognition.onerror = function(event) {
+            currentRecognition = null;
+            resolve(null);
+         };
+         recognition.start();
+      });
+    }
+    
+    // 按住期間持續錄音：每次識別完後若仍處於按住狀態則立即重啟識別
+    function continuousRecognition() {
+      if (!holdActive) return;
+      startVoiceInputSingle().then(transcript => {
+         if (transcript) {
+            transcript = transcript.trim();
+            if (transcript !== "") {
+              let orders = processMultipleVoiceInput(transcript);
+              orders.forEach(order => {
+                // 如果收到特殊商品（price 為 "#"），則啟動特殊模式並以文字方式輸出
+                if (order.dish.price === "#") {
+                  specialMode = true;
+                  appendSpecialOrder(order.dish, order.quantity);
+                } else if (specialMode) {
+                  appendSpecialOrder(order.dish, order.quantity);
+                } else {
+                  addOrderRow(order.dish, order.quantity, "");
+                }
+              });
+              updateTotalAmount();
+            }
+         }
+         if (holdActive) {
+            continuousRecognition();
+         }
+      });
+    }
+    
+    // 浮動紅色錄音按鈕事件：按下時開始持續錄音，放開時立即停止錄音
+    const voiceButton = document.getElementById("voiceButton");
+    voiceButton.addEventListener("mousedown", function(e) {
+      if (navigator.vibrate) navigator.vibrate(50);
+      holdActive = true;
+      continuousRecognition();
+      e.preventDefault();
+    });
+    voiceButton.addEventListener("touchstart", function(e) {
+      if (navigator.vibrate) navigator.vibrate(50);
+      holdActive = true;
+      continuousRecognition();
+      e.preventDefault();
+    });
+    voiceButton.addEventListener("mouseup", function(e) {
+      if (navigator.vibrate) navigator.vibrate(50);
+      holdActive = false;
+      if (currentRecognition) {
+        currentRecognition.stop();
+      }
+      e.preventDefault();
+    });
+    voiceButton.addEventListener("touchend", function(e) {
+      if (navigator.vibrate) navigator.vibrate(50);
+      holdActive = false;
+      if (currentRecognition) {
+        currentRecognition.stop();
+      }
+      e.preventDefault();
+    });
   </script>
 </body>
 </html>
