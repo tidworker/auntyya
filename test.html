@@ -14,7 +14,7 @@
       color: white;
       text-align: center;
     }
-    /* 重新點餐按鈕（右上角） */
+    /* 右上角重新點餐按鈕 */
     #resetButton {
       position: fixed;
       top: 10px;
@@ -27,17 +27,23 @@
       cursor: pointer;
       z-index: 3000;
     }
+    /* 內嵌表格容器：固定高度並可垂直滾動，不與底部按鈕重疊 */
+    #tableContainer {
+      width: 90%;
+      height: 400px; /* 可依需求調整 */
+      margin: 20px auto;
+      border: 1px solid black;
+      overflow-y: auto;
+    }
     /* 表格：黑底、黑色框線、白色文字、3px圓角 */
     table { 
-      border-collapse: separate;
-      border-spacing: 0;
-      width: 89%; 
-      margin: 10px auto;
+      width: 100%;
       background-color: black;
       color: white;
+      border-collapse: separate;
+      border-spacing: 0;
       border: 1px solid black;
       border-radius: 3px;
-      overflow: hidden;
     }
     table, th, td { 
       border: 1px solid black; 
@@ -60,12 +66,11 @@
     @media (max-width: 600px) { 
       button { font-size: 18px; } 
     }
-    /* 模態框：編輯訂單項目 */
+    /* 模態框：編輯訂單項目（保留原有編輯模態框） */
     #editModal {
       display: none;
       position: fixed;
-      left: 0; 
-      top: 0;
+      left: 0; top: 0;
       width: 100%; 
       height: 100%;
       background: rgba(0,0,0,0.5);
@@ -80,30 +85,10 @@
       position: relative;
       border-radius: 5px;
     }
-    /* 模態框：語音輸入狀態（保持顯示直到手動關閉） */
-    #statusModal {
-      display: none;
-      position: fixed;
-      top: 20%; 
-      left: 50%;
-      transform: translateX(-50%);
-      width: 300px;
-      background: rgba(0,0,0,0.8);
-      padding: 20px;
-      z-index: 2500;
-      border-radius: 5px;
-    }
-    #statusModalContent {
-      background: #fff;
-      color: black;
-      padding: 20px;
-      text-align: center;
-      border-radius: 5px;
-    }
-    /* 浮動紅色圓形錄音按鈕 */
+    /* 浮動紅色圓形錄音按鈕：固定在頁面下方，距離底部 50px */
     #voiceButton {
       position: fixed;
-      bottom: 25%;  /* 可根據需求微調 */
+      bottom: 50px;
       left: 50%;
       transform: translateX(-50%);
       width: 80px;
@@ -114,7 +99,7 @@
       cursor: pointer;
       z-index: 3000;
     }
-    /* 禁止在浮動按鈕上選取文字 */
+    /* 禁止浮動按鈕上文字選取 */
     #voiceButton, #voiceButton * {
       user-select: none;
     }
@@ -125,12 +110,11 @@
   <button id="resetButton" onclick="resetOrder()">重新點餐</button>
   
   <br>
-  <!-- 原有圖片保持不變 -->
+  <!-- 保持原有圖片位置 -->
   <img src="3.png" alt="圖片">
   
-  <!-- 訂單明細 -->
-  <section>
-    <br>
+  <!-- 內嵌表格容器 -->
+  <div id="tableContainer">
     <table id="orderTable">
       <thead>
         <tr>
@@ -144,10 +128,10 @@
         <!-- 訂單項目將動態加入 -->
       </tbody>
     </table>
-    <p id="totalAmount">總金額：0 元</p>
-  </section>
+  </div>
+  <p id="totalAmount">總金額：0 元</p>
   
-  <!-- 模態框：編輯訂單項目 -->
+  <!-- 刪除原有模態框，僅保留編輯訂單項目的模態框 -->
   <div id="editModal">
     <div id="editModalContent">
       <h3 id="modalDishName">編輯品項</h3>
@@ -161,15 +145,6 @@
     </div>
   </div>
   
-  <!-- 模態框：語音輸入狀態（保持開啟直到使用者手動關閉） -->
-  <div id="statusModal">
-    <div id="statusModalContent">
-      <p id="statusText">錄音中…</p>
-      <!-- 使用者手動點擊「完成點餐」關閉模態框 -->
-      <button onclick="completeOrder()">完成點餐</button>
-    </div>
-  </div>
-  
   <!-- 浮動紅色圓形錄音按鈕 -->
   <button id="voiceButton"></button>
   
@@ -178,7 +153,6 @@
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
-    let orderingComplete = false;
     let currentRecognition = null;
     // hold 狀態旗標：當按住錄音按鈕時為 true
     let holdActive = false;
@@ -201,16 +175,11 @@
             charMapping = db.charMapping;
             if (db.groupMapping) {
               groupMapping = db.groupMapping;
-              document.getElementById("dbStatus").innerText = "字庫及群組資料載入成功！";
-            } else {
-              document.getElementById("dbStatus").innerText = "字庫資料載入成功！（未包含群組資料）";
             }
-          } else {
-            document.getElementById("dbStatus").innerText = "database.txt 格式不正確！";
           }
         })
         .catch(err => {
-          document.getElementById("dbStatus").innerText = "載入字庫資料失敗：" + err.message;
+          console.error("載入字庫資料失敗：" + err.message);
         });
     }
     loadTranslationDatabase();
@@ -223,10 +192,9 @@
         })
         .then(text => {
           menu = JSON.parse(text);
-          document.getElementById("menuStatus").innerText = "菜單資料載入成功！";
         })
         .catch(err => {
-          document.getElementById("menuStatus").innerText = "載入菜單資料失敗：" + err.message;
+          console.error("載入菜單資料失敗：" + err.message);
         });
     }
     loadMenu();
@@ -243,8 +211,7 @@
       return converted;
     }
     
-    /* ---------- 新語音輸入邏輯：按住時持續錄音 ---------- */
-    // 使用 startVoiceInputSingle() 進行單次錄音，返回識別結果的 Promise
+    /* ---------- 新語音輸入邏輯：按住錄音按鈕持續錄音 ---------- */
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -270,51 +237,37 @@
       });
     }
     
-    // 持續錄音函式：當 holdActive 為 true 時，完成一次錄音後立即重啟錄音
+    // 按住期間持續錄音：每次識別完若仍持續按住則立即重新啟動
     function continuousRecognition() {
       if (!holdActive) return;
       startVoiceInputSingle().then(transcript => {
          if (transcript) {
             transcript = transcript.trim();
-            // 若收到特殊指令則可處理（例如 "錯誤"）—這裡僅作簡單處理
-            if (transcript === "錯誤") {
-              let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-              if (tbody.rows.length > 0) {
-                tbody.deleteRow(tbody.rows.length - 1);
-              }
-              updateTotalAmount();
-              updateStatusText();
-            } else if (transcript !== "") {
+            if (transcript !== "") {
               let orders = processMultipleVoiceInput(transcript);
               if (orders.length !== 0) {
                 orders.forEach(order => {
                   addOrderRow(order.dish, order.quantity, "");
                 });
-                updateStatusText();
+                updateTotalAmount();
               }
             }
          }
-         // 若按鈕仍被按住，繼續進行下一次錄音
          if (holdActive) {
             continuousRecognition();
          }
       });
     }
     
-    // 浮動紅色錄音按鈕事件：按下時開始錄音；放開時結束當前錄音並停止持續錄音
+    // 浮動紅色錄音按鈕事件：按下時開始持續錄音，放開時停止
     const voiceButton = document.getElementById("voiceButton");
     voiceButton.addEventListener("mousedown", function(e) {
       holdActive = true;
-      // 顯示語音輸入模態框並更新狀態文字
-      document.getElementById("statusModal").style.display = "block";
-      document.getElementById("statusText").innerHTML = "錄音中…";
       continuousRecognition();
       e.preventDefault();
     });
     voiceButton.addEventListener("touchstart", function(e) {
       holdActive = true;
-      document.getElementById("statusModal").style.display = "block";
-      document.getElementById("statusText").innerHTML = "錄音中…";
       continuousRecognition();
       e.preventDefault();
     });
@@ -333,7 +286,7 @@
       e.preventDefault();
     });
     
-    /* ---------- 以下維持原有訂單與模態框處理 ---------- */
+    /* ---------- 以下維持原有訂單處理邏輯 ---------- */
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       let tokens = converted.split('/').filter(token => token.trim() !== "");
@@ -428,7 +381,6 @@
     function resetOrder() {
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
-      document.getElementById("statusModal").style.display = "none";
       orderingComplete = false;
     }
     
@@ -452,44 +404,12 @@
       currentEditRow.cells[1].innerText = newQuantity;
       closeModal();
       updateTotalAmount();
-      updateStatusText();
     }
     function deleteModal() {
       if (!currentEditRow) return;
       currentEditRow.parentNode.removeChild(currentEditRow);
       closeModal();
       updateTotalAmount();
-      updateStatusText();
-    }
-    
-    function updateStatusText() {
-      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-      let summary = "";
-      let counter = 1;
-      for (let i = 0; i < tbody.rows.length; i++) {
-        let row = tbody.rows[i];
-        let dishName = row.cells[0].innerText;
-        let quantity = row.cells[1].innerText;
-        let price = parseFloat(row.cells[3].innerText);
-        if (price >= 0) {
-          summary += counter + ". " + dishName + "×" + quantity + "<br>";
-          counter++;
-          let remark = row.cells[2].innerText;
-          if (remark && remark.trim() !== "") {
-            summary += remark + "<br>";
-          }
-        }
-      }
-      document.getElementById("statusText").innerHTML = "目前狀態：等待輸入<br>" + summary + "結束點餐請說：完成";
-    }
-    
-    function completeOrder() {
-      orderingComplete = true;
-      if (currentRecognition) {
-        currentRecognition.abort();
-        currentRecognition = null;
-      }
-      document.getElementById("statusModal").style.display = "none";
     }
   </script>
 </body>
