@@ -14,16 +14,6 @@
       color: white;
       text-align: center;
     }
-    /* 重新點餐按鈕：橘色背景，置於總金額下方 */
-    #resetButton {
-      background-color: orange;
-      color: black;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-top: 10px;
-    }
     /* 內嵌表格容器：固定高度 340px，垂直滾動 */
     #tableContainer {
       width: 90%;
@@ -54,13 +44,7 @@
       background-color: white; 
       color: black; 
     }
-    /* 總金額文字 */
-    #totalAmount {
-      color: white;
-      font-size: 18px;
-      margin-top: 10px;
-    }
-    /* 特殊模式輸出區 */
+    /* 特殊輸出區：顯示特殊模式下的文字 */
     #specialOutput {
       width: 90%;
       margin: 10px auto;
@@ -69,6 +53,23 @@
       min-height: 30px;
       text-align: left;
       white-space: pre-wrap;
+      display: none;
+    }
+    /* 總金額文字 */
+    #totalAmount {
+      color: white;
+      font-size: 18px;
+      margin-top: 10px;
+    }
+    /* 重新點餐按鈕：橘色背景，黑色文字，正常流定位 */
+    #resetButton {
+      background-color: orange;
+      color: black;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
     }
     @media (max-width: 600px) { 
       button { font-size: 18px; } 
@@ -88,7 +89,6 @@
       margin: 10% auto;
       padding: 20px;
       width: 300px;
-      position: relative;
       border-radius: 5px;
     }
     /* 浮動紅色圓形錄音按鈕 */
@@ -105,7 +105,7 @@
       cursor: pointer;
       z-index: 3000;
     }
-    /* 按下時紅色部分變深 */
+    /* 按下時背景色變深 */
     #voiceButton:active {
       background-color: darkred;
     }
@@ -116,13 +116,6 @@
   </style>
 </head>
 <body>
-  <!-- 重新點餐按鈕，放置在總金額下方 -->
-  <button id="resetButton" onclick="resetOrder()">重新點餐</button>
-  
-  <br>
-  <!-- 原有圖片保持不變 -->
-  <img src="3.png" alt="圖片">
-  
   <!-- 內嵌表格容器 -->
   <div id="tableContainer">
     <table id="orderTable">
@@ -141,8 +134,11 @@
   </div>
   <p id="totalAmount">總金額：0 元</p>
   
-  <!-- 新增：特殊模式輸出區，顯示特殊模式下的商品及數字 -->
-  <div id="specialOutput" style="display:none;"></div>
+  <!-- 特殊模式輸出區 -->
+  <div id="specialOutput"></div>
+  
+  <!-- 重新點餐按鈕（正常流） -->
+  <button id="resetButton" onclick="resetOrder()">重新點餐</button>
   
   <!-- 模態框：編輯訂單項目 -->
   <div id="editModal">
@@ -169,14 +165,14 @@
     let currentRecognition = null;
     // hold 狀態旗標：當按住錄音按鈕時為 true
     let holdActive = false;
-    // 特殊模式旗標：收到價格為 "#" 的產品後設為 true
+    // specialMode：收到價格為 "#" 的產品後啟動，後續以文字輸出
     let specialMode = false;
     
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
       { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
       { "keywords": ["la"], "name": "辣", "price": 0 },
-      // 新增特殊產品示例：價格設定為 "#"
+      // 示例特殊產品：價格為 "#"
       { "keywords": ["mod1"], "name": "額外起司", "price": "#" }
     ];
     
@@ -228,7 +224,7 @@
       return converted;
     }
     
-    /* ---------- 新語音輸入邏輯：持續錄音 ---------- */
+    /* ---------- 語音輸入邏輯：持續錄音 ---------- */
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -254,7 +250,7 @@
       });
     }
     
-    // 按住期間持續錄音：每次識別完後，若仍處於按住狀態則立即重啟識別
+    // 按住期間持續錄音：每次識別完後若仍處於按住狀態則立即重新啟動識別
     function continuousRecognition() {
       if (!holdActive) return;
       startVoiceInputSingle().then(transcript => {
@@ -262,22 +258,17 @@
             transcript = transcript.trim();
             if (transcript !== "") {
               let orders = processMultipleVoiceInput(transcript);
-              // 如果 specialMode 為 true，所有訂單以文字方式輸出
-              if (specialMode) {
-                orders.forEach(order => {
+              orders.forEach(order => {
+                // 如果收到特殊商品（price 為 "#"），則啟動特殊模式
+                if (order.dish.price === "#") {
+                  specialMode = true;
                   appendSpecialOrder(order.dish, order.quantity);
-                });
-              } else {
-                orders.forEach(order => {
-                  // 如果此訂單的價格為 "#"，則啟動 specialMode
-                  if (order.dish.price === "#") {
-                    specialMode = true;
-                    appendSpecialOrder(order.dish, order.quantity);
-                  } else {
-                    addOrderRow(order.dish, order.quantity, "");
-                  }
-                });
-              }
+                } else if (specialMode) {
+                  appendSpecialOrder(order.dish, order.quantity);
+                } else {
+                  addOrderRow(order.dish, order.quantity, "");
+                }
+              });
               updateTotalAmount();
             }
          }
@@ -319,14 +310,11 @@
     });
     
     /* ---------- 特殊模式輸出 ---------- */
-    // 如果 specialMode 為 true，所有訂單以文字方式輸出於 #specialOutput 區塊
     function appendSpecialOrder(dish, quantity) {
       const specialOutput = document.getElementById("specialOutput");
-      // 如果 specialOutput 尚未顯示，則顯示之
       if (specialOutput.style.display === "none") {
         specialOutput.style.display = "block";
       }
-      // 依序追加商品名稱與數字，使用換行分隔
       specialOutput.innerText += dish.name + "×" + quantity + "\n";
     }
     
@@ -375,12 +363,12 @@
     }
     
     function addOrderRow(dish, quantity, remark) {
-      // 如果特殊模式啟動，則所有訂單以文字輸出，不加入表格
+      // 如果 specialMode 為 true，則所有訂單以文字方式輸出，不加入表格
       if (specialMode) {
         appendSpecialOrder(dish, quantity);
         return;
       }
-      // 正常處理：若產品價格為 0，則特殊處理（保持不變）
+      // 正常處理：若產品價格為 0，則特殊處理
       if (dish.price === 0) {
         const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
         if (tbody.rows.length === 0) {
@@ -418,7 +406,6 @@
         updateTotalAmount();
         return;
       }
-      
       // 正常處理：新增訂單項目
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
@@ -435,7 +422,6 @@
     function resetOrder() {
       document.getElementById("tableContainer").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
-      // 清除特殊模式文字輸出
       document.getElementById("specialOutput").innerText = "";
       document.getElementById("specialOutput").style.display = "none";
       specialMode = false;
@@ -468,102 +454,6 @@
       currentEditRow.parentNode.removeChild(currentEditRow);
       closeModal();
       updateTotalAmount();
-    }
-    
-    /* ---------- 新語音輸入邏輯：持續錄音 ---------- */
-    function startVoiceInputSingle() {
-      return new Promise((resolve) => {
-         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-           alert("您的瀏覽器不支援語音輸入功能。");
-           resolve(null);
-           return;
-         }
-         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-         const recognition = new SpeechRecognition();
-         currentRecognition = recognition;
-         recognition.lang = 'zh-TW';
-         recognition.interimResults = false;
-         recognition.maxAlternatives = 1;
-         recognition.onresult = function(event) {
-            currentRecognition = null;
-            resolve(event.results[0][0].transcript);
-         };
-         recognition.onerror = function(event) {
-            currentRecognition = null;
-            resolve(null);
-         };
-         recognition.start();
-      });
-    }
-    
-    // 按住期間持續錄音：每次識別完成後若仍處於按住狀態則立即重啟識別
-    function continuousRecognition() {
-      if (!holdActive) return;
-      startVoiceInputSingle().then(transcript => {
-         if (transcript) {
-            transcript = transcript.trim();
-            if (transcript !== "") {
-              let orders = processMultipleVoiceInput(transcript);
-              if (orders.length !== 0) {
-                orders.forEach(order => {
-                  // 如果收到特殊商品（price 為 "#"），啟動特殊模式
-                  if (order.dish.price === "#") {
-                    specialMode = true;
-                    appendSpecialOrder(order.dish, order.quantity);
-                  } else if (specialMode) {
-                    appendSpecialOrder(order.dish, order.quantity);
-                  } else {
-                    addOrderRow(order.dish, order.quantity, "");
-                  }
-                });
-                updateTotalAmount();
-              }
-            }
-         }
-         if (holdActive) {
-            continuousRecognition();
-         }
-      });
-    }
-    
-    // 浮動紅色錄音按鈕事件：按下時開始持續錄音，放開時立即停止錄音
-    const voiceButton = document.getElementById("voiceButton");
-    voiceButton.addEventListener("mousedown", function(e) {
-      if (navigator.vibrate) navigator.vibrate(50);
-      holdActive = true;
-      continuousRecognition();
-      e.preventDefault();
-    });
-    voiceButton.addEventListener("touchstart", function(e) {
-      if (navigator.vibrate) navigator.vibrate(50);
-      holdActive = true;
-      continuousRecognition();
-      e.preventDefault();
-    });
-    voiceButton.addEventListener("mouseup", function(e) {
-      if (navigator.vibrate) navigator.vibrate(50);
-      holdActive = false;
-      if (currentRecognition) {
-        currentRecognition.stop();
-      }
-      e.preventDefault();
-    });
-    voiceButton.addEventListener("touchend", function(e) {
-      if (navigator.vibrate) navigator.vibrate(50);
-      holdActive = false;
-      if (currentRecognition) {
-        currentRecognition.stop();
-      }
-      e.preventDefault();
-    });
-    
-    /* ---------- 特殊模式輸出 ---------- */
-    function appendSpecialOrder(dish, quantity) {
-      const specialOutput = document.getElementById("specialOutput");
-      if (specialOutput.style.display === "none") {
-        specialOutput.style.display = "block";
-      }
-      specialOutput.innerText += dish.name + "×" + quantity + "\n";
     }
   </script>
 </body>
