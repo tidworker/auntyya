@@ -86,7 +86,7 @@
     #statusModalContent {
       background: #fff;
       width: 300px;
-      margin: 0% auto;
+      margin: 10% auto;
       padding: 20px;
       text-align: center;
     }
@@ -153,17 +153,21 @@
   <div id="statusModal">
     <div id="statusModalContent">
       <p id="statusText">目前狀態：等待輸入<br>結束點餐請說：完成</p>
+      <!-- 新增 Hold 按鈕 -->
+      <button id="holdButton">Hold</button>
       <button onclick="completeOrder()">完成點餐</button>
     </div>
   </div>
   
   <script>
-    // 全域變數：字庫、菜單與編輯用變數
+    // 全域變數：字庫、菜單與編輯用變數（運算邏輯保持不變）
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
     let orderingComplete = false;
     let currentRecognition = null;
+    // 新增 hold 控制旗標
+    let holdActive = false;
     
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
@@ -420,6 +424,11 @@
     
     function voiceInputLoop() {
       if (orderingComplete) return;
+      // 如果按住Hold則不啟動新語音輸入
+      if (holdActive) {
+        setTimeout(voiceInputLoop, 500);
+        return;
+      }
       startVoiceInputSingle().then(transcript => {
          if (!transcript) {
             document.getElementById("statusText").innerText = "目前狀態：無輸入，點餐結束";
@@ -464,6 +473,33 @@
       }
       document.getElementById("statusModal").style.display = "none";
     }
+    
+    // --- 新增 Hold 按鈕事件 ---
+    // 當使用者按下Hold按鈕時，取消當前語音識別並保持 hold 狀態
+    document.getElementById("holdButton").addEventListener("mousedown", function(e) {
+      holdActive = true;
+      if (currentRecognition) {
+        currentRecognition.abort();
+        currentRecognition = null;
+      }
+    });
+    document.getElementById("holdButton").addEventListener("mouseup", function(e) {
+      holdActive = false;
+      // 放開後重新啟動語音輸入
+      voiceInputLoop();
+    });
+    // 為支援觸控裝置
+    document.getElementById("holdButton").addEventListener("touchstart", function(e) {
+      holdActive = true;
+      if (currentRecognition) {
+        currentRecognition.abort();
+        currentRecognition = null;
+      }
+    });
+    document.getElementById("holdButton").addEventListener("touchend", function(e) {
+      holdActive = false;
+      voiceInputLoop();
+    });
   </script>
 </body>
 </html>
