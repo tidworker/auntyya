@@ -279,7 +279,7 @@
     // 向上：刪除最新一筆訂單（包含備註內容）
     function triggerUp() {
       voiceButton.style.backgroundColor = "darkred";
-      if(navigator.vibrate){ navigator.vibrate(50); }
+      if (navigator.vibrate) { navigator.vibrate(50); }
       let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       if (tbody.rows.length > 0) {
         tbody.deleteRow(tbody.rows.length - 1);
@@ -290,7 +290,7 @@
     // 向下：直接語音輸入，不轉譯；若有輸入則前置 "/" 分隔，若無則清除輸入區
     function triggerDown() {
       voiceButton.style.backgroundColor = "darkred";
-      if(navigator.vibrate){ navigator.vibrate(50); }
+      if (navigator.vibrate) { navigator.vibrate(50); }
       startVoiceInputSingle().then(transcript => {
         let voiceOutputDiv = document.getElementById("voiceOutput");
         if (transcript && transcript.trim() !== "") {
@@ -308,7 +308,7 @@
     // 向左：將最新訂單品項數量減 1（若數量為 1 則刪除該筆訂單）
     function triggerLeft() {
       voiceButton.style.backgroundColor = "darkred";
-      if(navigator.vibrate){ navigator.vibrate(50); }
+      if (navigator.vibrate) { navigator.vibrate(50); }
       let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       if (tbody.rows.length > 0) {
         let lastRow = tbody.rows[tbody.rows.length - 1];
@@ -327,7 +327,7 @@
     // 向右：將最新訂單品項數量加 1
     function triggerRight() {
       voiceButton.style.backgroundColor = "darkred";
-      if(navigator.vibrate){ navigator.vibrate(50); }
+      if (navigator.vibrate) { navigator.vibrate(50); }
       let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       if (tbody.rows.length > 0) {
         let lastRow = tbody.rows[tbody.rows.length - 1];
@@ -373,9 +373,9 @@
       startY = e.pageY;
       swipeToggled = false;
       holdActive = true;
-      if(navigator.vibrate){ navigator.vibrate(50); }
+      if (navigator.vibrate) { navigator.vibrate(50); }
       voiceButton.style.transform = "translate(-50%, 0)";
-      continuousRecognition(); // red 模式下持續辨識
+      continuousRecognition();
       e.preventDefault();
     });
     voiceButton.addEventListener("touchstart", function(e) {
@@ -383,7 +383,7 @@
       startY = e.touches[0].pageY;
       swipeToggled = false;
       holdActive = true;
-      if(navigator.vibrate){ navigator.vibrate(50); }
+      if (navigator.vibrate) { navigator.vibrate(50); }
       voiceButton.style.transform = "translate(-50%, 0)";
       continuousRecognition();
       e.preventDefault();
@@ -403,7 +403,7 @@
     
     // 放開時：停止錄音、復原按鈕位置，並重置模式為 red
     function endDrag() {
-      if(navigator.vibrate){ navigator.vibrate(50); }
+      if (navigator.vibrate) { navigator.vibrate(50); }
       holdActive = false;
       if (currentRecognition) {
         currentRecognition.stop();
