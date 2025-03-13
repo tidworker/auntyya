@@ -272,7 +272,7 @@
       "busiangcai",
       "bujiasiangcai"
     ],
-    "name": "不香菜",
+    "name": "不菜",
     "price": 0
   },
   {
