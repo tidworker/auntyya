@@ -14,7 +14,7 @@
       color: white;
       text-align: center;
     }
-    /* 重新點餐按鈕：橘色背景 */
+    /* 重新點餐按鈕 */
     #resetButton {
       background-color: orange;
       color: black;
@@ -24,15 +24,16 @@
       cursor: pointer;
       margin-top: 10px;
     }
-    /* 內嵌表格容器：固定高度 340px，垂直滾動 */
-    #tableContainer {
+    /* 合併表格與語音輸入區的容器，限定高度 340px */
+    #contentContainer {
       width: 90%;
       height: 340px;
       margin: 20px auto;
       border: 1px solid black;
       overflow-y: auto;
+      background-color: black;
     }
-    /* 表格：黑底、黑色框線、白色文字、3px 圓角 */
+    /* 訂單表格樣式 */
     table { 
       width: 100%;
       background-color: black;
@@ -54,24 +55,18 @@
       background-color: white; 
       color: black; 
     }
+    /* 語音輸入區（僅於綠色模式下使用）：移除固定高度，僅設定間距與文字樣式 */
+    #voiceOutput {
+      margin-top: 10px;
+      text-align: left;
+      color: white;
+      padding: 10px;
+    }
     /* 總金額文字 */
     #totalAmount {
       color: white;
       font-size: 18px;
       margin-top: 10px;
-    }
-    /* 語音輸出區域：背景黑色，位於表格下方、總金額上方，限定高度 340px */
-    #voiceOutput {
-      width: 90%;
-      height: 340px;
-      margin: 10px auto;
-      overflow-y: auto;
-      text-align: left;
-      color: white;
-      border: 1px solid black;
-      padding: 10px;
-      border-radius: 3px;
-      background-color: black;
     }
     @media (max-width: 600px) { 
       button { font-size: 18px; } 
@@ -96,7 +91,7 @@
       position: relative;
       border-radius: 5px;
     }
-    /* 浮動錄音按鈕（原始置中效果：translate(-50%, 0)） */
+    /* 浮動錄音按鈕：初始置中，原 transform 為 translate(-50%, 0) */
     #voiceButton {
       position: fixed;
       bottom: 50px;
@@ -114,19 +109,18 @@
     #voiceButton:active {
       background-color: darkred;
     }
-    /* 禁止在浮動按鈕上選取文字 */
+    /* 禁止在按鈕上選取文字 */
     #voiceButton, #voiceButton * {
       user-select: none;
     }
   </style>
 </head>
 <body>
-  <!-- 重新點餐按鈕 -->
   <br>
   <img src="3.png" alt="圖片">
   
-  <!-- 內嵌表格容器 -->
-  <div id="tableContainer">
+  <!-- 統一容器：包含訂單表格與語音輸入區 -->
+  <div id="contentContainer">
     <table id="orderTable">
       <thead>
         <tr>
@@ -140,14 +134,12 @@
         <!-- 訂單項目將動態加入 -->
       </tbody>
     </table>
+    <!-- 語音輸入區（綠色模式下顯示語音辨識結果） -->
+    <div id="voiceOutput"></div>
   </div>
-  
-  <!-- 語音輸出區域（綠色模式下顯示語音內容），背景黑色、限定高度 340px -->
-  <div id="voiceOutput"></div>
   
   <p id="totalAmount">總金額：0 元</p>
   
-  <!-- 重新點餐按鈕 -->
   <button id="resetButton" onclick="resetOrder()">重新點餐</button>
   
   <!-- 模態框：編輯訂單項目 -->
@@ -260,7 +252,7 @@
       });
     }
     
-    // 按住期間持續錄音：每次識別完後若仍處於按住狀態則立即重啟
+    // 按住期間持續錄音：識別完成後若仍處於按住狀態則重新啟動
     function continuousRecognition() {
       if (!holdActive) return;
       startVoiceInputSingle().then(transcript => {
@@ -268,7 +260,7 @@
             transcript = transcript.trim();
             if (transcript !== "") {
               if (isGreenMode) {
-                // 綠色模式：直接輸入，不轉譯，輸出至語音輸出區域
+                // 綠色模式：直接輸入，不轉譯，輸出至語音輸入區
                 let voiceOutputDiv = document.getElementById("voiceOutput");
                 let p = document.createElement("p");
                 p.innerText = transcript;
@@ -291,28 +283,22 @@
       });
     }
     
-    // 定義模式切換函式，加入震動效果
+    // 定義模式切換函式，並在切換時震動
     function toggleMode() {
       isGreenMode = !isGreenMode;
       if (navigator.vibrate) {
         navigator.vibrate(50);
       }
-      if (isGreenMode) {
-        voiceButton.style.backgroundColor = "green";
-      } else {
-        voiceButton.style.backgroundColor = "red";
-      }
+      voiceButton.style.backgroundColor = isGreenMode ? "green" : "red";
     }
     
-    // 事件：按下（mousedown / touchstart）時記錄起始位置，並復原按鈕位置
+    // 事件：按下時記錄起始位置，並重置按鈕位置
     const voiceButton = document.getElementById("voiceButton");
-    
     voiceButton.addEventListener("mousedown", function(e) {
       startX = e.pageX;
       startY = e.pageY;
       swipeToggled = false;
       holdActive = true;
-      // 恢復至原始置中（translate(-50%,0)）
       voiceButton.style.transform = "translate(-50%, 0)";
       continuousRecognition();
       e.preventDefault();
@@ -327,19 +313,16 @@
       e.preventDefault();
     });
     
-    // 事件：滑動偵測（mousemove / touchmove）
+    // 更新按鈕位置：拖動時依方向偏移固定 20px，並檢查水平位移觸發模式切換
     function updateButtonPosition(currentX, currentY) {
       let deltaX = currentX - startX;
       let deltaY = currentY - startY;
-      // 若尚未切換模式且水平位移超過 30px 則切換模式
       if (!swipeToggled && Math.abs(deltaX) > 30) {
         toggleMode();
         swipeToggled = true;
       }
-      // 計算拖動方向角度，無論位移大小皆移動固定 20px
       if (deltaX !== 0 || deltaY !== 0) {
         const angle = Math.atan2(deltaY, deltaX);
-        // 同時保留原始置中效果 translate(-50%,0)
         voiceButton.style.transform = `translate(-50%, 0) translate(${20 * Math.cos(angle)}px, ${20 * Math.sin(angle)}px)`;
       }
     }
@@ -356,7 +339,7 @@
       e.preventDefault();
     });
     
-    // 事件：放開（mouseup / touchend）時停止錄音，復原按鈕位置，並若處於綠色模式則自動恢復紅色
+    // 放開時停止錄音、復原按鈕位置，並若為綠色模式則自動恢復紅色
     function endDrag() {
       if (navigator.vibrate) {
         navigator.vibrate(50);
@@ -365,7 +348,6 @@
       if (currentRecognition) {
         currentRecognition.stop();
       }
-      // 復原按鈕位置（保持原本置中效果）
       voiceButton.style.transform = "translate(-50%, 0)";
       if (isGreenMode) {
         isGreenMode = false;
@@ -381,7 +363,7 @@
       e.preventDefault();
     });
     
-    /* ---------- 以下維持原有訂單處理邏輯 ---------- */
+    /* ---------- 以下訂單處理邏輯保持不變 ---------- */
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       let tokens = converted.split('/').filter(token => token.trim() !== "");
@@ -474,9 +456,9 @@
     }
     
     function resetOrder() {
-      document.getElementById("tableContainer").getElementsByTagName("tbody")[0].innerHTML = "";
+      document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
-      // 清空語音輸出區
+      // 清空語音輸入區
       document.getElementById("voiceOutput").innerHTML = "";
     }
     
