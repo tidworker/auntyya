@@ -14,12 +14,14 @@
       color: white;
       text-align: center;
     }
-    /* 頁框容器 */
+    /* 頁框容器，限定高度 340px，無邊框 */
     #pageFrame {
       width: 90%;
       margin: 20px auto;
       padding: 10px;
-      border: 2px solid white;
+      height: 340px;
+      overflow-y: auto;
+      border: none;
     }
     /* 重新點餐按鈕 */
     #resetButton {
@@ -34,10 +36,6 @@
     /* 表格容器 */
     #tableContainer {
       width: 100%;
-      height: 340px;
-      margin: 10px auto;
-      border: 1px solid black;
-      overflow-y: auto;
     }
     /* 表格 */
     table {
@@ -46,11 +44,11 @@
       color: white;
       border-collapse: separate;
       border-spacing: 0;
-      border: 1px solid black;
+      border: none;
       border-radius: 3px;
     }
     table, th, td {
-      border: 1px solid black;
+      border: none;
     }
     th, td {
       padding: 8px;
@@ -60,22 +58,18 @@
       background-color: white;
       color: black;
     }
-    /* 總金額文字 */
-    #totalAmount {
-      font-size: 18px;
-      margin: 10px 0;
-    }
-    /* 特別輸出區 */
+    /* 特別輸出區，無邊框 */
     #specialOutput {
       display: none;
       width: 100%;
       margin: 10px auto;
       padding: 8px;
-      border: 1px solid white;
       min-height: 30px;
       text-align: left;
       white-space: pre-wrap;
+      border: none;
     }
+    /* 響應式 */
     @media (max-width: 600px) {
       button { font-size: 18px; }
     }
@@ -124,12 +118,10 @@
 <body>
   <br>
   <img src="3.png" alt="圖片">
-  <!-- 頁框容器，內含特別輸出、總金額與訂單表格 -->
+  <!-- 頁框容器，內含特別輸出與訂單表格 -->
   <div id="pageFrame">
     <!-- 特別輸出區 -->
     <div id="specialOutput"></div>
-    <!-- 總金額 -->
-    <p id="totalAmount">總金額：0 元</p>
     <!-- 內嵌表格容器 -->
     <div id="tableContainer">
       <table id="orderTable">
@@ -147,7 +139,8 @@
       </table>
     </div>
   </div>
-  <!-- 重新點餐按鈕 -->
+  <!-- 總金額置於頁框外，下方顯示 -->
+  <p id="totalAmount">總金額：0 元</p>
   <button id="resetButton" onclick="resetOrder()">重新點餐</button>
   <!-- 模態框：編輯訂單項目 -->
   <div id="editModal">
@@ -165,20 +158,16 @@
   <!-- 浮動紅色圓形錄音按鈕 -->
   <button id="voiceButton"></button>
   <script>
-    // 全域變數
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
     let currentRecognition = null;
-    // 當按住按鈕期間持續錄音
     let holdActive = false;
     let orderingComplete = false;
-    // 當遇到 price=999（例如外帶）時進入特別輸出模式
     let specialMode = false;
     // 菜單資料將從外部 menu.txt 載入
     let menu = [];
     
-    // 載入字庫（若有 database.txt，請確認內容正確）
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -200,7 +189,6 @@
     }
     loadTranslationDatabase();
     
-    // 從外部 menu.txt 載入菜單資料
     function loadMenu() {
       fetch("menu.txt")
         .then(response => {
@@ -216,7 +204,6 @@
     }
     loadMenu();
     
-    // 將中文轉換成對應字母（依據字庫）
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -228,7 +215,6 @@
       return converted;
     }
     
-    // 單次語音輸入
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -254,7 +240,6 @@
       });
     }
     
-    // 按住按鈕期間持續進行語音識別
     function continuousRecognition() {
       if (!holdActive) return;
       startVoiceInputSingle().then(transcript => {
@@ -276,7 +261,6 @@
       });
     }
     
-    // 錄音按鈕事件
     const voiceButton = document.getElementById("voiceButton");
     voiceButton.addEventListener("mousedown", function(e) {
       if (navigator.vibrate) navigator.vibrate(50);
@@ -293,21 +277,16 @@
     voiceButton.addEventListener("mouseup", function(e) {
       if (navigator.vibrate) navigator.vibrate(50);
       holdActive = false;
-      if (currentRecognition) {
-        currentRecognition.stop();
-      }
+      if (currentRecognition) { currentRecognition.stop(); }
       e.preventDefault();
     });
     voiceButton.addEventListener("touchend", function(e) {
       if (navigator.vibrate) navigator.vibrate(50);
       holdActive = false;
-      if (currentRecognition) {
-        currentRecognition.stop();
-      }
+      if (currentRecognition) { currentRecognition.stop(); }
       e.preventDefault();
     });
     
-    // 將特別商品（例如外帶）只以品項名稱形式輸出
     function appendSpecialOrder(dish, quantity) {
       const spOut = document.getElementById("specialOutput");
       if (spOut.style.display === "none") {
@@ -316,7 +295,6 @@
       spOut.innerText += dish.name + "\n";
     }
     
-    // 處理語音輸入中的多筆訂單
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       let tokens = converted.split('/').filter(token => token.trim() !== "");
@@ -348,7 +326,6 @@
       return orders.filter(o => o.dish);
     }
     
-    // 更新總金額（999 元商品不計入）
     function updateTotalAmount() {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       let total = 0;
@@ -363,7 +340,6 @@
       document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
     }
     
-    // 新增訂單項目
     function addOrderRow(dish, quantity, remark) {
       if (specialMode) {
         appendSpecialOrder(dish, quantity);
@@ -433,7 +409,6 @@
       spOut.style.display = "none";
     }
     
-    // 編輯訂單項目
     function openModal(row) {
       currentEditRow = row;
       document.getElementById("modalDishName").innerText = row.cells[0].innerText;
