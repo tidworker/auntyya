@@ -204,7 +204,7 @@
   {
     "keywords": [
       "wenmijiang",
-      "wenmi"
+      "wendou"
     ],
     "name": "米漿-溫",
     "price": 15
@@ -219,23 +219,64 @@
   },
   {
     "keywords": [
-      "busuan"
+      "busuan",
+      "busuanni"
     ],
     "name": "不蒜",
     "price": 0
   },
   {
     "keywords": [
-      "neiyong"
+      "waidai"
     ],
-    "name": "內用",
-    "price": 999
+    "name": "外帶",
+    "price": 0
   },
   {
     "keywords": [
-      "7dian10"
+      "dian"
     ],
-    "name": "7：10",
-    "price": 999
+    "name": "：",
+    "price": 0
+  },
+  {
+    "keywords": [
+      "hebaodan"
+    ],
+    "name": "荷包蛋",
+    "price": 15
+  },
+  {
+    "keywords": [
+      "siaochaodan",
+      "siaochaomianjiadan"
+    ],
+    "name": "小炒麵加蛋",
+    "price": 45
+  },
+  {
+    "keywords": [
+      "dachaodan",
+      "dachaomianjiadan",
+      "chaomianjiadan",
+      "chaomiandan"
+    ],
+    "name": "大炒麵加蛋",
+    "price": 55
+  },
+  {
+    "keywords": [
+      "bucai"
+    ],
+    "name": "不香菜",
+    "price": 0
+  },
+  {
+    "keywords": [
+      "bujiacu",
+      "bucu"
+    ],
+    "name": "不醋",
+    "price": 0
   }
 ]
