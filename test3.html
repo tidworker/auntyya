@@ -5,16 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>中文點餐系統</title>
   <style>
-    /* 黑底白字 */
-    body { 
-      font-family: Arial, sans-serif; 
-      margin: 10px; 
-      padding: 0; 
-      background-color: black; 
+    /* 基本樣式 */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 10px;
+      padding: 0;
+      background-color: black;
       color: white;
       text-align: center;
     }
-    /* 重新點餐按鈕：橘色背景，置於總金額下方 */
+    /* 頁框容器 */
+    #pageFrame {
+      width: 90%;
+      margin: 20px auto;
+      padding: 10px;
+      border: 2px solid white;
+    }
+    /* 重新點餐按鈕 */
     #resetButton {
       background-color: orange;
       color: black;
@@ -24,16 +31,16 @@
       cursor: pointer;
       margin-top: 10px;
     }
-    /* 內嵌表格容器：固定高度 340px，垂直滾動 */
+    /* 表格容器 */
     #tableContainer {
-      width: 90%;
+      width: 100%;
       height: 340px;
-      margin: 20px auto;
+      margin: 10px auto;
       border: 1px solid black;
       overflow-y: auto;
     }
-    /* 表格：黑底、黑色框線、白色文字、3px 圓角 */
-    table { 
+    /* 表格 */
+    table {
       width: 100%;
       background-color: black;
       color: white;
@@ -42,34 +49,43 @@
       border: 1px solid black;
       border-radius: 3px;
     }
-    table, th, td { 
-      border: 1px solid black; 
+    table, th, td {
+      border: 1px solid black;
     }
-    th, td { 
-      padding: 8px; 
-      text-align: left; 
+    th, td {
+      padding: 8px;
+      text-align: left;
     }
-    /* 表頭：白底黑字 */
-    table th { 
-      background-color: white; 
-      color: black; 
+    table th {
+      background-color: white;
+      color: black;
     }
     /* 總金額文字 */
     #totalAmount {
-      color: white;
       font-size: 18px;
-      margin-top: 10px;
+      margin: 10px 0;
     }
-    @media (max-width: 600px) { 
-      button { font-size: 18px; } 
+    /* 特別輸出區 */
+    #specialOutput {
+      display: none;
+      width: 100%;
+      margin: 10px auto;
+      padding: 8px;
+      border: 1px solid white;
+      min-height: 30px;
+      text-align: left;
+      white-space: pre-wrap;
     }
-    /* 模態框：編輯訂單項目（保持不變） */
+    @media (max-width: 600px) {
+      button { font-size: 18px; }
+    }
+    /* 模態框 */
     #editModal {
       display: none;
       position: fixed;
-      left: 0; 
+      left: 0;
       top: 0;
-      width: 100%; 
+      width: 100%;
       height: 100%;
       background: rgba(0,0,0,0.5);
       z-index: 2000;
@@ -97,53 +113,42 @@
       cursor: pointer;
       z-index: 3000;
     }
-    /* 按下時紅色部分變深 */
     #voiceButton:active {
       background-color: darkred;
     }
-    /* 禁止在浮動按鈕上選取文字 */
     #voiceButton, #voiceButton * {
       user-select: none;
-    }
-    /* 特別輸出區：顯示時為白字、邊框 */
-    #specialOutput {
-      display: none;         /* 初始隱藏 */
-      width: 90%;
-      margin: 10px auto;
-      padding: 8px;
-      border: 1px solid white;
-      min-height: 30px;
-      text-align: left;
-      white-space: pre-wrap; /* 保留換行 */
-      color: white;
     }
   </style>
 </head>
 <body>
   <br>
   <img src="3.png" alt="圖片">
-  <!-- 內嵌表格容器 -->
-  <div id="tableContainer">
-    <table id="orderTable">
-      <thead>
-        <tr>
-          <th>菜品</th>
-          <th>份數</th>
-          <th>備註</th>
-          <th>單價</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- 訂單項目將動態加入 -->
-      </tbody>
-    </table>
+  <!-- 頁框容器，內含特別輸出、總金額與訂單表格 -->
+  <div id="pageFrame">
+    <!-- 特別輸出區 -->
+    <div id="specialOutput"></div>
+    <!-- 總金額 -->
+    <p id="totalAmount">總金額：0 元</p>
+    <!-- 內嵌表格容器 -->
+    <div id="tableContainer">
+      <table id="orderTable">
+        <thead>
+          <tr>
+            <th>菜品</th>
+            <th>份數</th>
+            <th>備註</th>
+            <th>單價</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- 訂單項目將動態加入 -->
+        </tbody>
+      </table>
+    </div>
   </div>
-  <!-- 特別輸出區（調整至總金額上方） -->
-  <div id="specialOutput"></div>
-  <p id="totalAmount">總金額：0 元</p>
   <!-- 重新點餐按鈕 -->
   <button id="resetButton" onclick="resetOrder()">重新點餐</button>
-
   <!-- 模態框：編輯訂單項目 -->
   <div id="editModal">
     <div id="editModalContent">
@@ -159,52 +164,21 @@
   </div>
   <!-- 浮動紅色圓形錄音按鈕 -->
   <button id="voiceButton"></button>
-
   <script>
-    // ==== 全域變數：保持原有邏輯 ====
+    // 全域變數
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
     let currentRecognition = null;
+    // 當按住按鈕期間持續錄音
     let holdActive = false;
     let orderingComplete = false;
-    // 當偵測到 price=999 時，啟動 specialMode，後續商品都輸出至特別輸出區
+    // 當遇到 price=999（例如外帶）時進入特別輸出模式
     let specialMode = false;
-
-    let menu = [
-      { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
-      { "keywords": ["chonyobinjiadan", "danbin", "jiadan"], "name": "蔥油餅加蛋", "price": 30 },
-      { "keywords": ["dacharngmiansian", "dacharng", "miansian", "charng"], "name": "大腸麵線", "price": 50 },
-      { "keywords": ["rougengmiansian", "rougeng", "geng"], "name": "肉羹麵線", "price": 50 },
-      { "keywords": ["zonghemiansian", "zonghe"], "name": "綜合麵線", "price": 50 },
-      { "keywords": ["chingmiansian", "ching"], "name": "清麵線", "price": 40 },
-      { "keywords": ["chunmiansian", "chun"], "name": "純麵線", "price": 40 },
-      { "keywords": ["rougengtong", "gengtong"], "name": "肉羹湯", "price": 35 },
-      { "keywords": ["gongwantong", "gongwan"], "name": "貢丸湯", "price": 35 },
-      { "keywords": ["zonghetong"], "name": "綜合湯", "price": 35 },
-      { "keywords": ["dachaomian", "dachao", "chaomian"], "name": "大炒麵", "price": 40 },
-      { "keywords": ["siaochaomian", "siaochao"], "name": "小炒麵", "price": 30 },
-      { "keywords": ["hongcha", "hong"], "name": "紅茶", "price": 10 },
-      { "keywords": ["naicha", "nai"], "name": "奶茶", "price": 15 },
-      { "keywords": ["mijiang", "mi"], "name": "米漿", "price": 15 },
-      { "keywords": ["doujiang", "dou"], "name": "豆漿", "price": 15 },
-      { "keywords": ["la"], "name": "辣", "price": 0 },
-      { "keywords": ["wen"], "name": "溫", "price": 0 },
-      { "keywords": ["ben"], "name": "冰", "price": 0 },
-      { "keywords": ["bendoujiang", "bendou"], "name": "豆漿-冰", "price": 15 },
-      { "keywords": ["wenhongcha", "wenhing"], "name": "紅茶-溫", "price": 10 },
-      { "keywords": ["benhongcha", "benhong"], "name": "紅茶-冰", "price": 10 },
-      { "keywords": ["wennaicha", "wennai"], "name": "奶茶-溫", "price": 15 },
-      { "keywords": ["bennaicha", "bennai"], "name": "奶茶-冰", "price": 15 },
-      { "keywords": ["wendoujiang", "wendou"], "name": "豆漿-溫", "price": 15 },
-      { "keywords": ["wenmijiang", "wendou"], "name": "米漿-溫", "price": 15 },
-      { "keywords": ["benmijiang", "benmi"], "name": "米漿-冰", "price": 15 },
-      { "keywords": ["busuan"], "name": "不蒜", "price": 0 },
-      { "keywords": ["waidai"], "name": "外帶", "price": 999 },
-      { "keywords": ["dian"], "name": "：", "price": 0 }
-    ];
+    // 菜單資料將從外部 menu.txt 載入
+    let menu = [];
     
-    // 載入字庫資料（若有 database.txt，請確認內容正確）
+    // 載入字庫（若有 database.txt，請確認內容正確）
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -226,6 +200,7 @@
     }
     loadTranslationDatabase();
     
+    // 從外部 menu.txt 載入菜單資料
     function loadMenu() {
       fetch("menu.txt")
         .then(response => {
@@ -241,7 +216,7 @@
     }
     loadMenu();
     
-    // 轉譯函式，依據字庫將中文轉換成對應的字母
+    // 將中文轉換成對應字母（依據字庫）
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -253,50 +228,51 @@
       return converted;
     }
     
-    /* 語音輸入保持原邏輯 */
+    // 單次語音輸入
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
-         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-           alert("您的瀏覽器不支援語音輸入功能。");
-           resolve(null);
-           return;
-         }
-         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-         const recognition = new SpeechRecognition();
-         currentRecognition = recognition;
-         recognition.lang = 'zh-TW';
-         recognition.interimResults = false;
-         recognition.maxAlternatives = 1;
-         recognition.onresult = function(event) {
-            currentRecognition = null;
-            resolve(event.results[0][0].transcript);
-         };
-         recognition.onerror = function(event) {
-            currentRecognition = null;
-            resolve(null);
-         };
-         recognition.start();
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+          alert("您的瀏覽器不支援語音輸入功能。");
+          resolve(null);
+          return;
+        }
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        currentRecognition = recognition;
+        recognition.lang = 'zh-TW';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+        recognition.onresult = function(event) {
+          currentRecognition = null;
+          resolve(event.results[0][0].transcript);
+        };
+        recognition.onerror = function(event) {
+          currentRecognition = null;
+          resolve(null);
+        };
+        recognition.start();
       });
     }
     
+    // 按住按鈕期間持續進行語音識別
     function continuousRecognition() {
       if (!holdActive) return;
       startVoiceInputSingle().then(transcript => {
-         if (transcript) {
-            transcript = transcript.trim();
-            if (transcript !== "") {
-              let orders = processMultipleVoiceInput(transcript);
-              if (orders.length !== 0) {
-                orders.forEach(order => {
-                  addOrderRow(order.dish, order.quantity, "");
-                });
-                updateTotalAmount();
-              }
+        if (transcript) {
+          transcript = transcript.trim();
+          if (transcript !== "") {
+            let orders = processMultipleVoiceInput(transcript);
+            if (orders.length !== 0) {
+              orders.forEach(order => {
+                addOrderRow(order.dish, order.quantity, "");
+              });
+              updateTotalAmount();
             }
-         }
-         if (holdActive) {
-            continuousRecognition();
-         }
+          }
+        }
+        if (holdActive) {
+          continuousRecognition();
+        }
       });
     }
     
@@ -330,18 +306,17 @@
       }
       e.preventDefault();
     });
-
-    /* 將特別商品輸出到 specialOutput 區域，只顯示品項名稱 */
+    
+    // 將特別商品（例如外帶）只以品項名稱形式輸出
     function appendSpecialOrder(dish, quantity) {
       const spOut = document.getElementById("specialOutput");
       if (spOut.style.display === "none") {
         spOut.style.display = "block";
       }
-      // 只加入品項名稱（可用 <br> 分隔）
       spOut.innerText += dish.name + "\n";
     }
-
-    /* 處理語音輸入的多筆訂單 */
+    
+    // 處理語音輸入中的多筆訂單
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       let tokens = converted.split('/').filter(token => token.trim() !== "");
@@ -373,13 +348,13 @@
       return orders.filter(o => o.dish);
     }
     
+    // 更新總金額（999 元商品不計入）
     function updateTotalAmount() {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       let total = 0;
       for (let i = 0; i < tbody.rows.length; i++) {
         let qty = parseFloat(tbody.rows[i].cells[1].innerText);
         let price = parseFloat(tbody.rows[i].cells[3].innerText);
-        // price=999 的商品不計入總金額
         if (price === 999) continue;
         if (!isNaN(qty) && !isNaN(price)) {
           total += qty * price;
@@ -388,19 +363,17 @@
       document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
     }
     
+    // 新增訂單項目
     function addOrderRow(dish, quantity, remark) {
-      // 如果已進入 specialMode，所有後續商品均直接輸出到 specialOutput
       if (specialMode) {
         appendSpecialOrder(dish, quantity);
         return;
       }
-      // 如果此商品為 999 元（例如外帶），立即啟動 specialMode 並輸出到 specialOutput
       if (dish.price === 999) {
         specialMode = true;
         appendSpecialOrder(dish, quantity);
         return;
       }
-      // 0元商品：加入上一筆非免費訂單的備註
       if (dish.price === 0) {
         const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
         if (tbody.rows.length === 0) {
@@ -438,7 +411,6 @@
         updateTotalAmount();
         return;
       }
-      // 一般商品：加入訂單表格中
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
       const nameCell = row.insertCell();
@@ -455,7 +427,6 @@
       document.getElementById("tableContainer").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
       orderingComplete = false;
-      // 重置 specialMode 並清空 specialOutput 區域
       specialMode = false;
       const spOut = document.getElementById("specialOutput");
       spOut.innerText = "";
@@ -469,10 +440,12 @@
       document.getElementById("modalQuantity").value = row.cells[1].innerText;
       document.getElementById("editModal").style.display = "block";
     }
+    
     function closeModal() {
       document.getElementById("editModal").style.display = "none";
       currentEditRow = null;
     }
+    
     function saveModal() {
       if (!currentEditRow) return;
       let newQuantity = parseInt(document.getElementById("modalQuantity").value);
@@ -484,6 +457,7 @@
       closeModal();
       updateTotalAmount();
     }
+    
     function deleteModal() {
       if (!currentEditRow) return;
       currentEditRow.parentNode.removeChild(currentEditRow);
