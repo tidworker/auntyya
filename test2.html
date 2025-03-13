@@ -332,20 +332,54 @@
       continuousRecognition();
       e.preventDefault();
     });
+
+    // 新增：刪除最新的一筆訂單
+    function deleteLatestOrder() {
+      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      if (tbody.rows.length > 0) {
+        tbody.deleteRow(tbody.rows.length - 1);
+        updateTotalAmount();
+      }
+    }
+
+    // 新增：刪除當前（語音輸入區最後一行）
+    function deleteCurrentVoiceLine() {
+      const voiceOutputDiv = document.getElementById("voiceOutput");
+      if (voiceOutputDiv.lastChild) {
+        voiceOutputDiv.removeChild(voiceOutputDiv.lastChild);
+      }
+    }
     
-    // 更新按鈕位置：拖動時依據位移方向偏移固定 20px，同時依 deltaX 與 deltaY 比較決定模式
+    // 更新按鈕位置：依據滑動方向，執行對應動作（向左刪除最新，向下刪除當前，向上保留綠色模式，向右保留黃色模式）
     function updateButtonPosition(currentX, currentY) {
       let deltaX = currentX - startX;
       let deltaY = currentY - startY;
-      if (!swipeToggled) {
-        if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 30) {
-          setMode("green");
-          swipeToggled = true;
-        } else if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
-          setMode("yellow");
-          swipeToggled = true;
+      
+      // 只在尚未觸發過一次「方向動作」且位移超過 30px 時，才進行判斷
+      if (!swipeToggled && (Math.abs(deltaX) > 30 || Math.abs(deltaY) > 30)) {
+        // 橫向位移大於縱向 => 判斷左/右
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+          if (deltaX < 0) {
+            // 向左 => 刪除最新的一筆訂單
+            deleteLatestOrder();
+          } else {
+            // 向右 => 原本的黃色模式（加入備註）
+            setMode("yellow");
+          }
+        } else {
+          // 縱向位移大於橫向 => 判斷上/下
+          if (deltaY > 0) {
+            // 向下 => 刪除當前（語音輸入區最後一行）
+            deleteCurrentVoiceLine();
+          } else {
+            // 向上 => 原本的綠色模式（輸入內容）
+            setMode("green");
+          }
         }
+        swipeToggled = true;
       }
+      
+      // 保持原本微移動按鈕位置的程式碼
       if (deltaX !== 0 || deltaY !== 0) {
         const angle = Math.atan2(deltaY, deltaX);
         voiceButton.style.transform = `translate(-50%, 0) translate(${20 * Math.cos(angle)}px, ${20 * Math.sin(angle)}px)`;
