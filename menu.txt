@@ -221,10 +221,25 @@
     "keywords": [
       "busuan",
       "busuanni"
-      "bujiasuanni"
     ],
     "name": "不蒜",
     "price": 0
+  },
+  {
+    "keywords": [
+      "bulujhih",
+      "bujhih",
+      "bujialujhih"
+    ],
+    "name": "不要滷汁",
+    "price": 0
+  },
+  {
+    "keywords": [
+      "erarjian"
+    ],
+    "name": "蚵仔煎",
+    "price": 99
   },
   {
     "keywords": [
@@ -253,15 +268,18 @@
   },
   {
     "keywords": [
-      "bucai"
+      "bucai",
+      "busiangcai",
+      "bujiasiangcai"
     ],
     "name": "不香菜",
     "price": 0
   },
   {
     "keywords": [
+      "bucu",
       "bujiacu",
-      "bucu"
+      "bujiacu"
     ],
     "name": "不醋",
     "price": 0
