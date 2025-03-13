@@ -37,6 +37,12 @@
       font-size: 14px;
       cursor: pointer;
     }
+    .conversionOutput {
+      margin-left: 10px;
+      color: #888;
+      min-width: 80px;
+      display: inline-block;
+    }
     @media (max-width: 600px) {
       input, button, textarea { font-size: 18px; }
     }
@@ -111,8 +117,8 @@
   <section>
     <h2>菜單管理</h2>
     <button onclick="openMenuModal()">新增菜單</button>
-    <button onclick="downloadMenuData()">下載菜單資料</button>
-    <button onclick="document.getElementById('uploadMenuFile').click()">上傳菜單資料</button>
+    <button onclick="downloadMenuData()">下載菜單</button>
+    <button onclick="document.getElementById('uploadMenuFile').click()">上傳菜單</button>
     <!-- 新增排序按鈕 -->
     <button onclick="sortMenu()">排序菜單</button>
     <input type="file" id="uploadMenuFile" accept=".txt" style="display:none;" onchange="uploadMenuData()">
@@ -134,6 +140,7 @@
           <!-- 初始建立一個中文輸入欄位 -->
           <div class="chinese-field">
             <input type="text" class="menuChineseInput" placeholder="輸入中文進行轉碼">
+            <span class="conversionOutput"></span>
             <button onclick="removeChineseField(this)">刪除</button>
           </div>
         </div>
@@ -182,7 +189,7 @@
     }
     loadTranslationDatabase();
 
-    // 更新菜單列表：僅顯示「餐點名稱 - 價錢」，保持原有順序
+    // 更新菜單列表（保持上傳時原有順序，僅顯示「餐點名稱 - 價錢」）
     function updateMenuDisplay() {
       const menuListDiv = document.getElementById("menuList");
       menuListDiv.innerHTML = "";
@@ -249,15 +256,40 @@
       updateMenuDisplay();
     }
 
-    // 新增中文輸入欄位
+    // 更新輸入欄位的轉譯結果
+    function updateConversion(inputElem) {
+      let value = inputElem.value.trim();
+      let output = "";
+      for (let i = 0; i < value.length; i++) {
+        let ch = value.charAt(i);
+        if (charMapping[ch] === undefined) {
+          alert("字庫中沒有該中文字：" + ch);
+          return;
+        }
+        output += charMapping[ch];
+      }
+      output = output.toLowerCase();
+      let spanElem = inputElem.parentNode.querySelector('.conversionOutput');
+      if (spanElem) {
+        spanElem.textContent = output;
+      }
+    }
+
+    // 新增中文輸入欄位（含轉譯顯示）
     function addChineseField() {
       const container = document.getElementById("menuChineseContainer");
       const div = document.createElement("div");
       div.className = "chinese-field";
       div.innerHTML = '<input type="text" class="menuChineseInput" placeholder="輸入中文進行轉碼">' +
+                      '<span class="conversionOutput"></span>' +
                       '<button onclick="removeChineseField(this)">刪除</button>';
       container.appendChild(div);
+      const inputElem = div.querySelector('.menuChineseInput');
+      inputElem.addEventListener("input", function() {
+        updateConversion(this);
+      });
     }
+
     // 刪除指定中文輸入欄位
     function removeChineseField(btn) {
       const fieldDiv = btn.parentNode;
@@ -276,13 +308,18 @@
         const item = menu[index];
         document.getElementById("menuName").value = item.name;
         document.getElementById("menuPrice").value = item.price;
-        // 根據原有關鍵字建立輸入欄位
+        // 依據原有關鍵字建立輸入欄位（同時顯示轉譯英文）
         item.keywords.forEach(keyword => {
           const div = document.createElement("div");
           div.className = "chinese-field";
-          div.innerHTML = `<input type="text" class="menuChineseInput" value="${keyword}" placeholder="輸入中文進行轉碼">
-                           <button onclick="removeChineseField(this)">刪除</button>`;
+          div.innerHTML = `<input type="text" class="menuChineseInput" value="${keyword}" placeholder="輸入中文進行轉碼">` +
+                          `<span class="conversionOutput">${keyword}</span>` +
+                          `<button onclick="removeChineseField(this)">刪除</button>`;
           container.appendChild(div);
+          let inputElem = div.querySelector('.menuChineseInput');
+          inputElem.addEventListener("input", function() {
+            updateConversion(this);
+          });
         });
         if (item.keywords.length === 0) {
           addChineseField();
@@ -294,13 +331,14 @@
         addChineseField();
       }
     }
+
     // 關閉編輯視窗
     function closeMenuModal() {
       document.getElementById("menuModal").style.display = "none";
       currentEditingIndex = null;
     }
 
-    // 新增或更新菜單項目：利用字庫轉碼生成關鍵字，若遇到資料庫中沒有的中文字則跳出提示
+    // 新增或更新菜單項目：採用每個中文輸入欄位旁的轉譯結果（若遇到資料庫中未定義之中文字則跳出提示）
     function saveMenuItem() {
       const name = document.getElementById("menuName").value.trim();
       const price = parseFloat(document.getElementById("menuPrice").value.trim());
@@ -311,21 +349,23 @@
       const inputFields = document.getElementsByClassName("menuChineseInput");
       let keywords = [];
       for (let field of inputFields) {
-        const chineseInput = field.value.trim();
-        if (chineseInput) {
-          let converted = "";
-          for (let i = 0; i < chineseInput.length; i++) {
-            const ch = chineseInput.charAt(i);
-            if (charMapping[ch] === undefined) {
-              alert("字庫中沒有該中文字：" + ch);
-              return;
+        const value = field.value.trim();
+        if (value) {
+          let conversionSpan = field.parentNode.querySelector('.conversionOutput');
+          let converted = conversionSpan ? conversionSpan.textContent : "";
+          if (!converted) {
+            // 若未計算轉譯則手動計算
+            for (let i = 0; i < value.length; i++) {
+              const ch = value.charAt(i);
+              if (charMapping[ch] === undefined) {
+                alert("字庫中沒有該中文字：" + ch);
+                return;
+              }
+              converted += charMapping[ch];
             }
-            converted += charMapping[ch];
+            converted = converted.toLowerCase();
           }
-          converted = converted.toLowerCase();
-          if (converted) {
-            keywords.push(converted);
-          }
+          keywords.push(converted);
         }
       }
       if (keywords.length === 0) {
@@ -351,7 +391,7 @@
       closeMenuModal();
     }
 
-    // 下載菜單資料（存成 JSON 格式）
+    // 下載菜單資料（以 JSON 格式儲存）
     function downloadMenuData() {
       const dataStr = JSON.stringify(menu, null, 2);
       const blob = new Blob([dataStr], { type: "text/plain" });
