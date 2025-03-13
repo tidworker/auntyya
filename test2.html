@@ -99,15 +99,16 @@
       transform: translate(-50%, 0);
       width: 70px;
       height: 70px;
-      background-color: darkred; /* 預設也改成深紅色 */
+      /* ---- 1. 起始顏色改回紅色 ---- */
+      background-color: red;
       border: 5px solid white;
       border-radius: 50%;
       cursor: pointer;
       z-index: 3000;
     }
-    /* 按下時變深(同樣用darkred即可，不變) */
+    /* 按下時也可保持紅色或變深，此處略作示範 */
     #voiceButton:active {
-      background-color: darkred;
+      background-color: red;
     }
     /* 禁止在按鈕上選取文字 */
     #voiceButton, #voiceButton * {
@@ -298,13 +299,13 @@
       });
     }
     
-    // 設定模式函式：不論哪種模式都切換成深紅色
+    // 設定模式函式：原先是紅色；只要切換模式(滑動)就改成深紅色
     function setMode(newMode) {
       currentMode = newMode;
       if (navigator.vibrate) {
         navigator.vibrate(50);
       }
-      // 四種模式最終都改為深紅色
+      // 不論綠/黃/紅模式，一旦進入就改為深紅
       voiceButton.style.backgroundColor = "darkred";
     }
     
@@ -315,6 +316,7 @@
       startY = e.pageY;
       swipeToggled = false;
       holdActive = true;
+      // 按住開始錄音前，也先把按鈕移回原位 (雖然此時是紅色)
       voiceButton.style.transform = "translate(-50%, 0)";
       continuousRecognition();
       e.preventDefault();
@@ -336,7 +338,7 @@
         tbody.deleteRow(tbody.rows.length - 1);
         updateTotalAmount();
       }
-      // 變色為深紅色
+      // 更改顏色為深紅
       voiceButton.style.backgroundColor = "darkred";
     }
 
@@ -346,11 +348,11 @@
       if (voiceOutputDiv.lastChild) {
         voiceOutputDiv.removeChild(voiceOutputDiv.lastChild);
       }
-      // 變色為深紅色
+      // 更改顏色為深紅
       voiceButton.style.backgroundColor = "darkred";
     }
     
-    // 更新按鈕位置：依據滑動方向執行對應動作（左：刪除最新；下：刪除當前；右/上：進入不同模式）
+    // 更新按鈕位置：依據滑動方向執行對應動作（左：刪除最新；下：刪除當前；右：yellow；上：green）
     function updateButtonPosition(currentX, currentY) {
       let deltaX = currentX - startX;
       let deltaY = currentY - startY;
@@ -363,7 +365,7 @@
             // 向左 => 刪除最新的一筆訂單
             deleteLatestOrder();
           } else {
-            // 向右 => 原本的黃色模式，但顏色也改成深紅
+            // 向右 => yellow(備註)
             setMode("yellow");
           }
         } else {
@@ -372,7 +374,7 @@
             // 向下 => 刪除當前
             deleteCurrentVoiceLine();
           } else {
-            // 向上 => 綠色模式（實際顏色也改成深紅）
+            // 向上 => green(語音輸入)
             setMode("green");
           }
         }
@@ -398,7 +400,7 @@
       e.preventDefault();
     });
     
-    // 放開時停止錄音、復原按鈕位置，並自動恢復(紅)深紅色模式
+    // 放開時停止錄音、復原按鈕位置，並自動恢復「原本的紅色」
     function endDrag() {
       if (navigator.vibrate) {
         navigator.vibrate(50);
@@ -408,8 +410,9 @@
         currentRecognition.stop();
       }
       voiceButton.style.transform = "translate(-50%, 0)";
-      // 放開後回到預設模式 => 也統一深紅
-      setMode("red");
+      // 回到初始紅色
+      currentMode = "red";
+      voiceButton.style.backgroundColor = "red";
     }
     voiceButton.addEventListener("mouseup", function(e) {
       endDrag();
@@ -477,7 +480,7 @@
           if (price > 0) {
             let currentRemark = row.cells[2].innerText;
             if (currentRemark && currentRemark.trim() !== "") {
-              // 以 "|" 分隔
+              // 備註改用 "|"
               let remarksArr = currentRemark.split('|').map(s => s.trim());
               let index = remarksArr.findIndex(entry => entry.startsWith(dish.name + "×"));
               if (index >= 0) {
