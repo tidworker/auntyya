@@ -162,17 +162,18 @@
   
   <script>
     // 全域變數與模式設定：
-    // 預設模式為 red（原轉譯模式），下滑與左右拖動會觸發各自功能
+    // 預設模式為 "red"（轉譯模式）；向下拖動改為 "green"（純語音輸入，不轉譯），
+    // 向左/向右分別用以減/加最新訂單數量，向上用以刪除最新訂單
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
     let currentRecognition = null;
     let holdActive = false;
-    let currentMode = "red";  // 目前模式 ("red"、"green"、"yellow")
+    let currentMode = "red";
     let startX = 0, startY = 0;
     let swipeToggled = false;
-    const threshold = 30;  // 觸發閾值
-
+    const threshold = 30;
+    
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
       { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
@@ -276,10 +277,10 @@
     }
     
     /* ---------- 方向觸發功能 ---------- */
-    // 向上：刪除最新一筆訂單（包含備註內容）
+    // 向上：刪除最新一筆訂單（包含備註）
     function triggerUp() {
       voiceButton.style.backgroundColor = "darkred";
-      if (navigator.vibrate) { navigator.vibrate(50); }
+      if(navigator.vibrate){ navigator.vibrate(50); }
       let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       if (tbody.rows.length > 0) {
         tbody.deleteRow(tbody.rows.length - 1);
@@ -287,10 +288,12 @@
       }
     }
     
-    // 向下：直接語音輸入，不轉譯；若有輸入則前置 "/" 分隔，若無則清除輸入區
+    // 向下：直接透過語音輸入，不轉譯；若有輸入則前置 "/" 分隔，若無則清除輸入區
     function triggerDown() {
       voiceButton.style.backgroundColor = "darkred";
-      if (navigator.vibrate) { navigator.vibrate(50); }
+      if(navigator.vibrate){ navigator.vibrate(50); }
+      // 設定模式為 green（表示向下輸入）
+      currentMode = "green";
       startVoiceInputSingle().then(transcript => {
         let voiceOutputDiv = document.getElementById("voiceOutput");
         if (transcript && transcript.trim() !== "") {
@@ -305,10 +308,10 @@
       });
     }
     
-    // 向左：將最新訂單品項數量減 1（若數量為 1 則刪除該筆訂單）
+    // 向左：將最新訂單品項數量減 1（若數量為 1 則刪除此筆訂單）
     function triggerLeft() {
       voiceButton.style.backgroundColor = "darkred";
-      if (navigator.vibrate) { navigator.vibrate(50); }
+      if(navigator.vibrate){ navigator.vibrate(50); }
       let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       if (tbody.rows.length > 0) {
         let lastRow = tbody.rows[tbody.rows.length - 1];
@@ -327,7 +330,7 @@
     // 向右：將最新訂單品項數量加 1
     function triggerRight() {
       voiceButton.style.backgroundColor = "darkred";
-      if (navigator.vibrate) { navigator.vibrate(50); }
+      if(navigator.vibrate){ navigator.vibrate(50); }
       let tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       if (tbody.rows.length > 0) {
         let lastRow = tbody.rows[tbody.rows.length - 1];
@@ -350,6 +353,7 @@
             triggerUp();
           } else {
             voiceButton.style.transform = "translate(-50%, 0) translate(0, 20px)";
+            currentMode = "green";
             triggerDown();
           }
           swipeToggled = true;
@@ -373,9 +377,12 @@
       startY = e.pageY;
       swipeToggled = false;
       holdActive = true;
-      if (navigator.vibrate) { navigator.vibrate(50); }
+      if(navigator.vibrate){ navigator.vibrate(50); }
       voiceButton.style.transform = "translate(-50%, 0)";
-      continuousRecognition();
+      // 只有在預設 red 模式下才啟動連續辨識
+      if (currentMode === "red") {
+        continuousRecognition();
+      }
       e.preventDefault();
     });
     voiceButton.addEventListener("touchstart", function(e) {
@@ -383,9 +390,11 @@
       startY = e.touches[0].pageY;
       swipeToggled = false;
       holdActive = true;
-      if (navigator.vibrate) { navigator.vibrate(50); }
+      if(navigator.vibrate){ navigator.vibrate(50); }
       voiceButton.style.transform = "translate(-50%, 0)";
-      continuousRecognition();
+      if (currentMode === "red") {
+        continuousRecognition();
+      }
       e.preventDefault();
     });
     
@@ -403,7 +412,7 @@
     
     // 放開時：停止錄音、復原按鈕位置，並重置模式為 red
     function endDrag() {
-      if (navigator.vibrate) { navigator.vibrate(50); }
+      if(navigator.vibrate){ navigator.vibrate(50); }
       holdActive = false;
       if (currentRecognition) {
         currentRecognition.stop();
