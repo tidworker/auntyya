@@ -14,7 +14,7 @@
       color: white;
       text-align: center;
     }
-    /* 重新點餐按鈕：橘色背景，置於總金額下方 */
+    /* 重新點餐按鈕：橘色背景 */
     #resetButton {
       background-color: orange;
       color: black;
@@ -60,16 +60,18 @@
       font-size: 18px;
       margin-top: 10px;
     }
-    /* 語音輸出區域：位於表格下方、總金額上方 */
+    /* 語音輸出區域：背景黑色，位於表格下方、總金額上方，限定高度 340px */
     #voiceOutput {
       width: 90%;
+      height: 340px;
       margin: 10px auto;
+      overflow-y: auto;
       text-align: left;
       color: white;
       border: 1px solid black;
       padding: 10px;
       border-radius: 3px;
-      background-color: #333;
+      background-color: black;
     }
     @media (max-width: 600px) { 
       button { font-size: 18px; } 
@@ -94,12 +96,12 @@
       position: relative;
       border-radius: 5px;
     }
-    /* 浮動錄音按鈕 */
+    /* 浮動錄音按鈕（原始置中效果：translate(-50%, 0)） */
     #voiceButton {
       position: fixed;
       bottom: 50px;
       left: 50%;
-      transform: translateX(-50%);
+      transform: translate(-50%, 0);
       width: 70px;
       height: 70px;
       background-color: red;
@@ -140,7 +142,7 @@
     </table>
   </div>
   
-  <!-- 語音輸出區域（綠色模式下顯示語音內容） -->
+  <!-- 語音輸出區域（綠色模式下顯示語音內容），背景黑色、限定高度 340px -->
   <div id="voiceOutput"></div>
   
   <p id="totalAmount">總金額：0 元</p>
@@ -174,8 +176,8 @@
     let holdActive = false;  // 按住錄音時為 true
     // 模式旗標：false 為紅色模式（轉譯），true 為綠色模式（直接輸入）
     let isGreenMode = false;
-    // 記錄起始 X 座標與是否已切換過模式
-    let startX = 0;
+    // 記錄起始 X 與 Y 座標，以及是否已切換模式
+    let startX = 0, startY = 0;
     let swipeToggled = false;
     
     let menu = [
@@ -302,70 +304,80 @@
       }
     }
     
-    // 事件：按下（mousedown / touchstart）時記錄起始位置
+    // 事件：按下（mousedown / touchstart）時記錄起始位置，並復原按鈕位置
     const voiceButton = document.getElementById("voiceButton");
     
     voiceButton.addEventListener("mousedown", function(e) {
       startX = e.pageX;
+      startY = e.pageY;
       swipeToggled = false;
       holdActive = true;
+      // 恢復至原始置中（translate(-50%,0)）
+      voiceButton.style.transform = "translate(-50%, 0)";
       continuousRecognition();
       e.preventDefault();
     });
     voiceButton.addEventListener("touchstart", function(e) {
       startX = e.touches[0].pageX;
+      startY = e.touches[0].pageY;
       swipeToggled = false;
       holdActive = true;
+      voiceButton.style.transform = "translate(-50%, 0)";
       continuousRecognition();
       e.preventDefault();
     });
     
     // 事件：滑動偵測（mousemove / touchmove）
+    function updateButtonPosition(currentX, currentY) {
+      let deltaX = currentX - startX;
+      let deltaY = currentY - startY;
+      // 若尚未切換模式且水平位移超過 30px 則切換模式
+      if (!swipeToggled && Math.abs(deltaX) > 30) {
+        toggleMode();
+        swipeToggled = true;
+      }
+      // 計算拖動方向角度，無論位移大小皆移動固定 20px
+      if (deltaX !== 0 || deltaY !== 0) {
+        const angle = Math.atan2(deltaY, deltaX);
+        // 同時保留原始置中效果 translate(-50%,0)
+        voiceButton.style.transform = `translate(-50%, 0) translate(${20 * Math.cos(angle)}px, ${20 * Math.sin(angle)}px)`;
+      }
+    }
+    
     voiceButton.addEventListener("mousemove", function(e) {
-      if (holdActive && !swipeToggled) {
-        let deltaX = e.pageX - startX;
-        if (Math.abs(deltaX) > 30) {  // 當滑動超過 30 像素時切換模式
-          toggleMode();
-          swipeToggled = true;
-        }
+      if (holdActive) {
+        updateButtonPosition(e.pageX, e.pageY);
       }
     });
     voiceButton.addEventListener("touchmove", function(e) {
-      if (holdActive && !swipeToggled) {
-        let deltaX = e.touches[0].pageX - startX;
-        if (Math.abs(deltaX) > 30) {
-          toggleMode();
-          swipeToggled = true;
-        }
+      if (holdActive) {
+        updateButtonPosition(e.touches[0].pageX, e.touches[0].pageY);
       }
       e.preventDefault();
     });
     
-    // 事件：放開（mouseup / touchend）時停止錄音，並若為綠色模式則恢復紅色
-    voiceButton.addEventListener("mouseup", function(e) {
-      if (navigator.vibrate) navigator.vibrate(50);
+    // 事件：放開（mouseup / touchend）時停止錄音，復原按鈕位置，並若處於綠色模式則自動恢復紅色
+    function endDrag() {
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
       holdActive = false;
       if (currentRecognition) {
         currentRecognition.stop();
       }
-      // 放開後若處於綠色模式則自動恢復為紅色模式
+      // 復原按鈕位置（保持原本置中效果）
+      voiceButton.style.transform = "translate(-50%, 0)";
       if (isGreenMode) {
         isGreenMode = false;
         voiceButton.style.backgroundColor = "red";
       }
+    }
+    voiceButton.addEventListener("mouseup", function(e) {
+      endDrag();
       e.preventDefault();
     });
     voiceButton.addEventListener("touchend", function(e) {
-      if (navigator.vibrate) navigator.vibrate(50);
-      holdActive = false;
-      if (currentRecognition) {
-        currentRecognition.stop();
-      }
-      // 放開後若處於綠色模式則自動恢復為紅色模式
-      if (isGreenMode) {
-        isGreenMode = false;
-        voiceButton.style.backgroundColor = "red";
-      }
+      endDrag();
       e.preventDefault();
     });
     
