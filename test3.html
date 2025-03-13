@@ -105,7 +105,7 @@
     #voiceButton, #voiceButton * {
       user-select: none;
     }
-    /* ========== 新增：price=999 之後的商品輸出區（白字） ========== */
+    /* 特別輸出區：顯示時為白字、邊框 */
     #specialOutput {
       display: none;         /* 初始隱藏 */
       width: 90%;
@@ -115,7 +115,7 @@
       min-height: 30px;
       text-align: left;
       white-space: pre-wrap; /* 保留換行 */
-      color: white;          /* 保持白字 */
+      color: white;
     }
   </style>
 </head>
@@ -138,7 +138,7 @@
       </tbody>
     </table>
   </div>
-  <!-- 特別輸出區調整至總金額上方 -->
+  <!-- 特別輸出區（調整至總金額上方） -->
   <div id="specialOutput"></div>
   <p id="totalAmount">總金額：0 元</p>
   <!-- 重新點餐按鈕 -->
@@ -161,24 +161,50 @@
   <button id="voiceButton"></button>
 
   <script>
-    // ==== 全域變數：保持原狀 + 新增 specialMode ====
+    // ==== 全域變數：保持原有邏輯 ====
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
     let currentRecognition = null;
-    // 按住錄音按鈕時
     let holdActive = false;
     let orderingComplete = false;
-    // 一旦偵測到 price=999，就設為 true，後續商品都輸出至下方
+    // 當偵測到 price=999 時，啟動 specialMode，後續商品都輸出至特別輸出區
     let specialMode = false;
 
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
-      { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
-      { "keywords": ["la"], "name": "辣", "price": 0 }
-      // 如需測試 999: { "keywords": ["waidai"], "name": "外帶", "price": 999 }
+      { "keywords": ["chonyobinjiadan", "danbin", "jiadan"], "name": "蔥油餅加蛋", "price": 30 },
+      { "keywords": ["dacharngmiansian", "dacharng", "miansian", "charng"], "name": "大腸麵線", "price": 50 },
+      { "keywords": ["rougengmiansian", "rougeng", "geng"], "name": "肉羹麵線", "price": 50 },
+      { "keywords": ["zonghemiansian", "zonghe"], "name": "綜合麵線", "price": 50 },
+      { "keywords": ["chingmiansian", "ching"], "name": "清麵線", "price": 40 },
+      { "keywords": ["chunmiansian", "chun"], "name": "純麵線", "price": 40 },
+      { "keywords": ["rougengtong", "gengtong"], "name": "肉羹湯", "price": 35 },
+      { "keywords": ["gongwantong", "gongwan"], "name": "貢丸湯", "price": 35 },
+      { "keywords": ["zonghetong"], "name": "綜合湯", "price": 35 },
+      { "keywords": ["dachaomian", "dachao", "chaomian"], "name": "大炒麵", "price": 40 },
+      { "keywords": ["siaochaomian", "siaochao"], "name": "小炒麵", "price": 30 },
+      { "keywords": ["hongcha", "hong"], "name": "紅茶", "price": 10 },
+      { "keywords": ["naicha", "nai"], "name": "奶茶", "price": 15 },
+      { "keywords": ["mijiang", "mi"], "name": "米漿", "price": 15 },
+      { "keywords": ["doujiang", "dou"], "name": "豆漿", "price": 15 },
+      { "keywords": ["la"], "name": "辣", "price": 0 },
+      { "keywords": ["wen"], "name": "溫", "price": 0 },
+      { "keywords": ["ben"], "name": "冰", "price": 0 },
+      { "keywords": ["bendoujiang", "bendou"], "name": "豆漿-冰", "price": 15 },
+      { "keywords": ["wenhongcha", "wenhing"], "name": "紅茶-溫", "price": 10 },
+      { "keywords": ["benhongcha", "benhong"], "name": "紅茶-冰", "price": 10 },
+      { "keywords": ["wennaicha", "wennai"], "name": "奶茶-溫", "price": 15 },
+      { "keywords": ["bennaicha", "bennai"], "name": "奶茶-冰", "price": 15 },
+      { "keywords": ["wendoujiang", "wendou"], "name": "豆漿-溫", "price": 15 },
+      { "keywords": ["wenmijiang", "wendou"], "name": "米漿-溫", "price": 15 },
+      { "keywords": ["benmijiang", "benmi"], "name": "米漿-冰", "price": 15 },
+      { "keywords": ["busuan"], "name": "不蒜", "price": 0 },
+      { "keywords": ["waidai"], "name": "外帶", "price": 999 },
+      { "keywords": ["dian"], "name": "：", "price": 0 }
     ];
     
+    // 載入字庫資料（若有 database.txt，請確認內容正確）
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -215,7 +241,7 @@
     }
     loadMenu();
     
-    // 轉譯：保持原狀
+    // 轉譯函式，依據字庫將中文轉換成對應的字母
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -227,7 +253,7 @@
       return converted;
     }
     
-    /* ---------- 語音輸入保持原狀 ---------- */
+    /* 語音輸入保持原邏輯 */
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -274,7 +300,7 @@
       });
     }
     
-    // 錄音按鈕事件：不動
+    // 錄音按鈕事件
     const voiceButton = document.getElementById("voiceButton");
     voiceButton.addEventListener("mousedown", function(e) {
       if (navigator.vibrate) navigator.vibrate(50);
@@ -305,17 +331,17 @@
       e.preventDefault();
     });
 
-    /* ---------- 新增：appendSpecialOrder()：輸出至 #specialOutput ---------- */
+    /* 將特別商品輸出到 specialOutput 區域，只顯示品項名稱 */
     function appendSpecialOrder(dish, quantity) {
       const spOut = document.getElementById("specialOutput");
       if (spOut.style.display === "none") {
         spOut.style.display = "block";
       }
-      // 只輸出品項名稱，不包含數量
+      // 只加入品項名稱（可用 <br> 分隔）
       spOut.innerText += dish.name + "\n";
     }
 
-    /* ---------- 訂單邏輯：僅新增 price=999 判斷 ---------- */
+    /* 處理語音輸入的多筆訂單 */
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       let tokens = converted.split('/').filter(token => token.trim() !== "");
@@ -353,7 +379,7 @@
       for (let i = 0; i < tbody.rows.length; i++) {
         let qty = parseFloat(tbody.rows[i].cells[1].innerText);
         let price = parseFloat(tbody.rows[i].cells[3].innerText);
-        // price=999 不計金額
+        // price=999 的商品不計入總金額
         if (price === 999) continue;
         if (!isNaN(qty) && !isNaN(price)) {
           total += qty * price;
@@ -363,18 +389,18 @@
     }
     
     function addOrderRow(dish, quantity, remark) {
-      // 若已進入 specialMode => 一律輸出到下方
+      // 如果已進入 specialMode，所有後續商品均直接輸出到 specialOutput
       if (specialMode) {
         appendSpecialOrder(dish, quantity);
         return;
       }
-      // 檢查 price=999 => 立即啟動 specialMode + 輸出
+      // 如果此商品為 999 元（例如外帶），立即啟動 specialMode 並輸出到 specialOutput
       if (dish.price === 999) {
         specialMode = true;
         appendSpecialOrder(dish, quantity);
         return;
       }
-      // 0元商品：保持原邏輯
+      // 0元商品：加入上一筆非免費訂單的備註
       if (dish.price === 0) {
         const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
         if (tbody.rows.length === 0) {
@@ -412,7 +438,7 @@
         updateTotalAmount();
         return;
       }
-      // 一般商品
+      // 一般商品：加入訂單表格中
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
       const nameCell = row.insertCell();
@@ -429,7 +455,7 @@
       document.getElementById("tableContainer").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
       orderingComplete = false;
-      // 重置specialMode & 清空特殊輸出
+      // 重置 specialMode 並清空 specialOutput 區域
       specialMode = false;
       const spOut = document.getElementById("specialOutput");
       spOut.innerText = "";
