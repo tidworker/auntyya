@@ -221,22 +221,9 @@
     "keywords": [
       "busuan",
       "busuanni"
+      "bujiasuanni"
     ],
     "name": "不蒜",
-    "price": 0
-  },
-  {
-    "keywords": [
-      "waidai"
-    ],
-    "name": "外帶",
-    "price": 0
-  },
-  {
-    "keywords": [
-      "dian"
-    ],
-    "name": "：",
     "price": 0
   },
   {
