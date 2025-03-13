@@ -74,7 +74,7 @@
     @media (max-width: 600px) { 
       button { font-size: 18px; } 
     }
-    /* 模態框：編輯訂單項目（保持不變） */
+    /* 模態框：編輯訂單項目 */
     #editModal {
       display: none;
       position: fixed;
@@ -108,7 +108,7 @@
       cursor: pointer;
       z-index: 3000;
     }
-    /* 按下時紅色部分變深 */
+    /* 按下時變深 */
     #voiceButton:active {
       background-color: darkred;
     }
@@ -119,7 +119,7 @@
   </style>
 </head>
 <body>
-  <!-- 重新點餐按鈕，放置在總金額下方 -->
+  <!-- 重新點餐按鈕 -->
   <br>
   <img src="3.png" alt="圖片">
   
@@ -145,7 +145,7 @@
   
   <p id="totalAmount">總金額：0 元</p>
   
-  <!-- 重新點餐按鈕（正常流） -->
+  <!-- 重新點餐按鈕 -->
   <button id="resetButton" onclick="resetOrder()">重新點餐</button>
   
   <!-- 模態框：編輯訂單項目 -->
@@ -289,9 +289,12 @@
       });
     }
     
-    // 定義模式切換函式
+    // 定義模式切換函式，加入震動效果
     function toggleMode() {
       isGreenMode = !isGreenMode;
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
       if (isGreenMode) {
         voiceButton.style.backgroundColor = "green";
       } else {
@@ -317,7 +320,7 @@
       e.preventDefault();
     });
     
-    // 事件：滑動偵測（mousemove 與 touchmove）
+    // 事件：滑動偵測（mousemove / touchmove）
     voiceButton.addEventListener("mousemove", function(e) {
       if (holdActive && !swipeToggled) {
         let deltaX = e.pageX - startX;
@@ -338,12 +341,17 @@
       e.preventDefault();
     });
     
-    // 事件：放開（mouseup / touchend）時停止錄音
+    // 事件：放開（mouseup / touchend）時停止錄音，並若為綠色模式則恢復紅色
     voiceButton.addEventListener("mouseup", function(e) {
       if (navigator.vibrate) navigator.vibrate(50);
       holdActive = false;
       if (currentRecognition) {
         currentRecognition.stop();
+      }
+      // 放開後若處於綠色模式則自動恢復為紅色模式
+      if (isGreenMode) {
+        isGreenMode = false;
+        voiceButton.style.backgroundColor = "red";
       }
       e.preventDefault();
     });
@@ -352,6 +360,11 @@
       holdActive = false;
       if (currentRecognition) {
         currentRecognition.stop();
+      }
+      // 放開後若處於綠色模式則自動恢復為紅色模式
+      if (isGreenMode) {
+        isGreenMode = false;
+        voiceButton.style.backgroundColor = "red";
       }
       e.preventDefault();
     });
