@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>中文點餐系統</title>
   <style>
     /* 黑底白字 */
@@ -41,7 +41,6 @@
       border-spacing: 0;
       border: 1px solid black;
       border-radius: 3px;
-      margin: 0 auto;
     }
     table, th, td { 
       border: 1px solid black; 
@@ -55,18 +54,6 @@
       background-color: white; 
       color: black; 
     }
-    /* 新增 specialOutput：放在總金額上方，白字，不自動換行，項目間以空格隔開 */
-    #specialOutput {
-      display: none;
-      width: 90%;
-      margin: 10px auto;
-      padding: 8px;
-      border: 1px solid white;
-      min-height: 30px;
-      text-align: left;
-      white-space: pre; /* 不自動換行 */
-      color: white;
-    }
     /* 總金額文字 */
     #totalAmount {
       color: white;
@@ -76,7 +63,7 @@
     @media (max-width: 600px) { 
       button { font-size: 18px; } 
     }
-    /* 模態框：編輯訂單項目 */
+    /* 模態框：編輯訂單項目（保持不變） */
     #editModal {
       display: none;
       position: fixed;
@@ -93,9 +80,10 @@
       margin: 10% auto;
       padding: 20px;
       width: 300px;
+      position: relative;
       border-radius: 5px;
     }
-    /* 浮動紅色圓形錄音按鈕 */
+    /* 浮動紅色圓形錄音按鈕（原樣） */
     #voiceButton {
       position: fixed;
       bottom: 50px;
@@ -104,22 +92,38 @@
       width: 70px;
       height: 70px;
       background-color: red;
-      border: 5px solid white; 
+      border: 5px solid white; /* 加上 3px 白邊框 */
       border-radius: 50%;
       cursor: pointer;
       z-index: 3000;
     }
-    /* 取消按鈕按下變深的設定：無 :active 效果 */
-    /* #voiceButton:active { background-color: darkred; } */
-    
+    /* 按下時紅色部分變深 */
+    #voiceButton:active {
+      background-color: darkred;
+    }
+    /* 禁止在浮動按鈕上選取文字 */
     #voiceButton, #voiceButton * {
       user-select: none;
+    }
+
+    /* 新增：specialOutput 區塊，放在總金額上方，白字、空格追加內容 */
+    #specialOutput {
+      display: none;
+      width: 90%;
+      margin: 10px auto;
+      padding: 8px;
+      border: 1px solid white;
+      min-height: 30px;
+      text-align: left;
+      white-space: pre; /* 不自動換行 */
+      color: white;
     }
   </style>
 </head>
 <body>
+  <!-- 重新點餐按鈕，放置在總金額下方 -->
   <br>
-  <img src="3.png" alt="圖片" style="margin-top:10px;">
+  <img src="3.png" alt="圖片">
   
   <!-- 內嵌表格容器 -->
   <div id="tableContainer">
@@ -138,13 +142,15 @@
     </table>
   </div>
   
-  <!-- specialOutput：放在總金額上方 -->
+  <!-- specialOutput 放在總金額上方，用於 price=999 與後續原文 -->
   <div id="specialOutput"></div>
   
   <p id="totalAmount">總金額：0 元</p>
   
+  <!-- 重新點餐按鈕（正常流） -->
   <button id="resetButton" onclick="resetOrder()">重新點餐</button>
   
+  <!-- 模態框：編輯訂單項目 -->
   <div id="editModal">
     <div id="editModalContent">
       <h3 id="modalDishName">編輯品項</h3>
@@ -158,25 +164,26 @@
     </div>
   </div>
   
+  <!-- 浮動紅色圓形錄音按鈕 -->
   <button id="voiceButton"></button>
   
   <script>
-    // ===== 全域變數：保留原狀 + specialMode =====
+    // 全域變數：保留原本可用的版本 + 新增 specialMode
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
     let currentRecognition = null;
     let holdActive = false;
     let orderingComplete = false;
-    // 當遇到 price===999 的商品，啟動 specialMode（特殊模式）
+    // 當遇到 price===999 的商品後，後續都不再解析，直接將語音以空格方式追加
     let specialMode = false;
 
-    // 原本 menu，若要測試 999，可自行加入項目，例如:
-    // { "keywords": ["waidai"], "name": "外帶", "price": 999 }
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
       { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
       { "keywords": ["la"], "name": "辣", "price": 0 }
+      // 若要測試 999，可自行加入：
+      // { "keywords":["waidai"], "name":"外帶", "price":999 }
     ];
     
     function loadTranslationDatabase() {
@@ -215,7 +222,7 @@
     }
     loadMenu();
     
-    // ===== 轉譯函式：保持原狀 =====
+    // 轉譯：保持原狀
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -227,7 +234,7 @@
       return converted;
     }
     
-    // ===== 單次語音錄音函式：保持原狀 =====
+    // 單次語音：保持原狀
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -253,7 +260,7 @@
       });
     }
     
-    // ===== 持續錄音函式 =====
+    // 持續錄音：每次識別完後，若仍按住則重啟
     function continuousRecognition() {
       if (!holdActive) return;
       startVoiceInputSingle().then(transcript => {
@@ -261,15 +268,16 @@
             transcript = transcript.trim();
             if (transcript !== "") {
               if (specialMode) {
-                // 進入 specialMode 後，直接將整段原文以空格追加到 specialOutput
+                // 若 specialMode 為 true，直接將整段原文以空格方式追加到 specialOutput
                 const sp = document.getElementById("specialOutput");
                 sp.style.display = "block";
                 sp.innerText += " " + transcript;
               } else {
+                // 一般情況：解析為訂單
                 let orders = processMultipleVoiceInput(transcript);
                 if (orders.length !== 0) {
                   orders.forEach(order => {
-                    // 當遇到 price===999 的商品，啟動 specialMode，僅輸出品項名稱
+                    // 當偵測到 price===999，啟動 specialMode，輸出品項名稱
                     if (order.dish.price === 999) {
                       specialMode = true;
                       const sp = document.getElementById("specialOutput");
@@ -290,7 +298,7 @@
       });
     }
     
-    // ===== 錄音按鈕事件：保持原狀 =====
+    // 錄音按鈕事件：保持原狀
     const voiceButton = document.getElementById("voiceButton");
     voiceButton.addEventListener("mousedown", function(e) {
       if (navigator.vibrate) navigator.vibrate(50);
@@ -307,17 +315,21 @@
     voiceButton.addEventListener("mouseup", function(e) {
       if (navigator.vibrate) navigator.vibrate(50);
       holdActive = false;
-      if (currentRecognition) currentRecognition.stop();
+      if (currentRecognition) {
+        currentRecognition.stop();
+      }
       e.preventDefault();
     });
     voiceButton.addEventListener("touchend", function(e) {
       if (navigator.vibrate) navigator.vibrate(50);
       holdActive = false;
-      if (currentRecognition) currentRecognition.stop();
+      if (currentRecognition) {
+        currentRecognition.stop();
+      }
       e.preventDefault();
     });
     
-    // ===== 解析語音輸入 =====
+    // 訂單解析：保持原狀
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       let tokens = converted.split('/').filter(token => token.trim() !== "");
@@ -330,11 +342,8 @@
           dishes.push(m[2]);
           if (m[3]) { numbers.push(parseInt(m[3])); }
         } else {
-          if (/^\d+$/.test(token)) {
-            numbers.push(parseInt(token));
-          } else if (/^[a-zA-Z]+$/.test(token)) {
-            dishes.push(token);
-          }
+          if (/^\d+$/.test(token)) { numbers.push(parseInt(token)); }
+          else if (/^[a-zA-Z]+$/.test(token)) { dishes.push(token); }
         }
       });
       let orders = [];
@@ -352,14 +361,14 @@
       return orders.filter(o => o.dish);
     }
     
-    // ===== 更新總金額 =====
+    // 更新總金額：保持原狀
     function updateTotalAmount() {
-      const tbody = document.getElementById("orderTable").querySelector("tbody");
+      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       let total = 0;
       for (let i = 0; i < tbody.rows.length; i++) {
         let qty = parseFloat(tbody.rows[i].cells[1].innerText);
         let price = parseFloat(tbody.rows[i].cells[3].innerText);
-        // price===999 不計入總金額
+        // 如果 price===999，不計入金額
         if (price === 999) continue;
         if (!isNaN(qty) && !isNaN(price)) {
           total += qty * price;
@@ -368,24 +377,25 @@
       document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
     }
     
-    // ===== 新增訂單：增加 999 判斷 =====
+    // 新增訂單：保持原邏輯 + 999 判斷
     function addOrderRow(dish, quantity, remark) {
-      // 若已進入 specialMode → 所有後續商品只輸出品項名稱
+      // 如果已進入 specialMode，則所有商品只輸出品項名稱，不進表格
       if (specialMode) {
         const sp = document.getElementById("specialOutput");
         sp.style.display = "block";
-        sp.innerText += " " + dish.name;
+        sp.innerText += " " + dish.name; // 不顯示數量
         return;
       }
-      // 當遇到 price===999，啟動 specialMode 並只輸出該品項名稱（不顯示數量）
+      // 若 price===999，立刻進入 specialMode + 輸出品項名稱
       if (dish.price === 999) {
         specialMode = true;
         const sp = document.getElementById("specialOutput");
         sp.style.display = "block";
-        sp.innerText += " " + dish.name;
+        sp.innerText += " " + dish.name; // 不顯示數量
         return;
       }
-      // 處理 0 元商品（保持原邏輯）
+
+      // 0元商品：保持原邏輯
       if (dish.price === 0) {
         const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
         if (tbody.rows.length === 0) {
@@ -395,14 +405,14 @@
         let found = false;
         for (let i = tbody.rows.length - 1; i >= 0; i--) {
           let row = tbody.rows[i];
-          let priceVal = parseFloat(row.cells[3].innerText);
-          if (priceVal > 0) {
+          let price = parseFloat(row.cells[3].innerText);
+          if (price > 0) {
             let currentRemark = row.cells[2].innerText;
             if (currentRemark && currentRemark.trim() !== "") {
-              let remarksArr = currentRemark.split(",").map(s => s.trim());
+              let remarksArr = currentRemark.split(',').map(s => s.trim());
               let index = remarksArr.findIndex(entry => entry.startsWith(dish.name + "×"));
               if (index >= 0) {
-                let parts = remarksArr[index].split("×");
+                let parts = remarksArr[index].split('×');
                 let currentQty = parseInt(parts[1]) || 0;
                 let newQty = currentQty + quantity;
                 remarksArr[index] = dish.name + "×" + newQty;
@@ -423,6 +433,7 @@
         updateTotalAmount();
         return;
       }
+
       // 一般商品：加入表格
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
@@ -440,13 +451,14 @@
       document.getElementById("tableContainer").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
       orderingComplete = false;
+      // 重置 specialMode
       specialMode = false;
       const sp = document.getElementById("specialOutput");
       sp.innerText = "";
       sp.style.display = "none";
     }
     
-    // ===== 編輯訂單項目：保持原狀 =====
+    // 編輯訂單項目：保持原邏輯
     let currentEditRow = null;
     function openModal(row) {
       currentEditRow = row;
