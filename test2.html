@@ -161,7 +161,7 @@
   <button id="voiceButton"></button>
 
   <script>
-    // 全域變數與模式設定
+    // 全域變數與模式設定：
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
@@ -275,40 +275,7 @@
       });
     }
 
-    /* ---------- 方向觸發功能（不鎖定方向，只依拖動角度判斷最接近的四個正方向） ---------- */
-    function updateButtonPosition(currentX, currentY) {
-      let deltaX = currentX - startX;
-      let deltaY = currentY - startY;
-      let distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-      if (distance < threshold) return; // 未達閾值則不觸發
-
-      // 計算角度（以度為單位，atan2 的座標系：x 正右，y 正下）
-      let angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
-      // 調整角度區間：
-      // -45°～45°：向右
-      // 45°～135°：向下
-      // 135°～180°及-180°～-135°：向左
-      // -135°～-45°：向上
-      if (angle >= -45 && angle <= 45) {
-        voiceButton.style.transform = "translate(-50%, 0) translate(20px, 0)";
-        triggerRight();
-      } else if (angle > 45 && angle < 135) {
-        voiceButton.style.transform = "translate(-50%, 0) translate(0, 20px)";
-        // 向下：刪除先前向上輸入的內容（清空 voiceOutput 區）
-        triggerDown();
-      } else if (angle >= 135 || angle <= -135) {
-        voiceButton.style.transform = "translate(-50%, 0) translate(-20px, 0)";
-        // 向左：刪除最新的一筆訂單
-        triggerLeft();
-      } else if (angle > -135 && angle < -45) {
-        voiceButton.style.transform = "translate(-50%, 0) translate(0, -20px)";
-        // 向上：保持原功能，刪除最新一筆訂單
-        triggerUp();
-      }
-      swipeToggled = true;
-    }
-
-    /* ---------- 各方向觸發函式 ---------- */
+    /* ---------- 方向觸發功能 ---------- */
     // 向上：刪除最新一筆訂單
     function triggerUp() {
       voiceButton.style.backgroundColor = "darkred";
@@ -363,7 +330,6 @@
       holdActive = true;
       if (navigator.vibrate) { navigator.vibrate(50); }
       voiceButton.style.transform = "translate(-50%, 0)";
-      // 只有在預設 red 模式下才啟動連續辨識
       if (currentMode === "red") {
         continuousRecognition();
       }
