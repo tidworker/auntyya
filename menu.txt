@@ -278,7 +278,6 @@
   {
     "keywords": [
       "bucu",
-      "bujiacu",
       "bujiacu"
     ],
     "name": "不醋",
