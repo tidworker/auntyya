@@ -226,9 +226,9 @@
   },
   {
     "keywords": [
-      "waidai"
+      "neiyonu"
     ],
-    "name": "外帶",
+    "name": "內用",
     "price": 999
   },
   {
