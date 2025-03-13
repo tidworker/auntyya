@@ -536,7 +536,7 @@
               } else {
                 remarksArr.push(dish.name + "×" + quantity);
               }
-              row.cells[2].innerText = remarksArr.join("|");
+              row.cells[2].innerText = remarksArr.join("，");
             } else {
               // 備註原本沒內容
               row.cells[2].innerText = dish.name + "×" + quantity;
