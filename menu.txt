@@ -233,9 +233,9 @@
   },
   {
     "keywords": [
-      "dian"
+      "7dian10"
     ],
-    "name": "：",
-    "price": 0
+    "name": "7：10",
+    "price": 999
   }
 ]
