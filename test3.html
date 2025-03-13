@@ -40,6 +40,7 @@
     /* 表格 */
     table {
       width: 100%;
+      max-width: 100%;
       background-color: black;
       color: white;
       border-collapse: separate;
@@ -58,7 +59,7 @@
       background-color: white;
       color: black;
     }
-    /* 特別輸出區，無邊框 */
+    /* 特別輸出區：無邊框，不換行，以逗號分隔 */
     #specialOutput {
       display: none;
       width: 100%;
@@ -66,10 +67,13 @@
       padding: 8px;
       min-height: 30px;
       text-align: left;
-      white-space: pre-wrap;
       border: none;
     }
-    /* 響應式 */
+    /* 總金額放在頁框外，下方顯示 */
+    #totalAmount {
+      font-size: 18px;
+      margin-top: 10px;
+    }
     @media (max-width: 600px) {
       button { font-size: 18px; }
     }
@@ -139,7 +143,7 @@
       </table>
     </div>
   </div>
-  <!-- 總金額置於頁框外，下方顯示 -->
+  <!-- 總金額放在頁框下方 -->
   <p id="totalAmount">總金額：0 元</p>
   <button id="resetButton" onclick="resetOrder()">重新點餐</button>
   <!-- 模態框：編輯訂單項目 -->
@@ -287,12 +291,17 @@
       e.preventDefault();
     });
     
+    // 特別輸出只以逗號分隔，不換行
     function appendSpecialOrder(dish, quantity) {
       const spOut = document.getElementById("specialOutput");
       if (spOut.style.display === "none") {
         spOut.style.display = "block";
       }
-      spOut.innerText += dish.name + "\n";
+      if (spOut.innerText.length > 0) {
+        spOut.innerText += ", " + dish.name;
+      } else {
+        spOut.innerText = dish.name;
+      }
     }
     
     function processMultipleVoiceInput(inputText) {
