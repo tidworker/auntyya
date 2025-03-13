@@ -166,15 +166,17 @@
   <button id="voiceButton"></button>
   
   <script>
-    // 全域變數（運算邏輯保持不變）
+    // 全域變數
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
     let currentRecognition = null;
-    // hold 狀態旗標：當按住錄音按鈕時為 true
-    let holdActive = false;
+    let holdActive = false;  // 按住錄音時為 true
     // 模式旗標：false 為紅色模式（轉譯），true 為綠色模式（直接輸入）
     let isGreenMode = false;
+    // 記錄起始 X 座標與是否已切換過模式
+    let startX = 0;
+    let swipeToggled = false;
     
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
@@ -230,7 +232,7 @@
       return converted;
     }
     
-    /* ---------- 新語音輸入邏輯：持續錄音 ---------- */
+    /* ---------- 語音輸入邏輯：持續錄音 ---------- */
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
          if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -287,20 +289,56 @@
       });
     }
     
-    // 浮動錄音按鈕事件：按下開始錄音，放開停止錄音
+    // 定義模式切換函式
+    function toggleMode() {
+      isGreenMode = !isGreenMode;
+      if (isGreenMode) {
+        voiceButton.style.backgroundColor = "green";
+      } else {
+        voiceButton.style.backgroundColor = "red";
+      }
+    }
+    
+    // 事件：按下（mousedown / touchstart）時記錄起始位置
     const voiceButton = document.getElementById("voiceButton");
+    
     voiceButton.addEventListener("mousedown", function(e) {
-      if (navigator.vibrate) navigator.vibrate(50);
+      startX = e.pageX;
+      swipeToggled = false;
       holdActive = true;
       continuousRecognition();
       e.preventDefault();
     });
     voiceButton.addEventListener("touchstart", function(e) {
-      if (navigator.vibrate) navigator.vibrate(50);
+      startX = e.touches[0].pageX;
+      swipeToggled = false;
       holdActive = true;
       continuousRecognition();
       e.preventDefault();
     });
+    
+    // 事件：滑動偵測（mousemove 與 touchmove）
+    voiceButton.addEventListener("mousemove", function(e) {
+      if (holdActive && !swipeToggled) {
+        let deltaX = e.pageX - startX;
+        if (Math.abs(deltaX) > 30) {  // 當滑動超過 30 像素時切換模式
+          toggleMode();
+          swipeToggled = true;
+        }
+      }
+    });
+    voiceButton.addEventListener("touchmove", function(e) {
+      if (holdActive && !swipeToggled) {
+        let deltaX = e.touches[0].pageX - startX;
+        if (Math.abs(deltaX) > 30) {
+          toggleMode();
+          swipeToggled = true;
+        }
+      }
+      e.preventDefault();
+    });
+    
+    // 事件：放開（mouseup / touchend）時停止錄音
     voiceButton.addEventListener("mouseup", function(e) {
       if (navigator.vibrate) navigator.vibrate(50);
       holdActive = false;
@@ -314,17 +352,6 @@
       holdActive = false;
       if (currentRecognition) {
         currentRecognition.stop();
-      }
-      e.preventDefault();
-    });
-    
-    // 雙擊按鈕切換模式：紅色模式（轉譯）與綠色模式（直接輸入）互換
-    voiceButton.addEventListener("dblclick", function(e) {
-      isGreenMode = !isGreenMode;
-      if (isGreenMode) {
-        voiceButton.style.backgroundColor = "green";
-      } else {
-        voiceButton.style.backgroundColor = "red";
       }
       e.preventDefault();
     });
