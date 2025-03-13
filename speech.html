@@ -113,11 +113,13 @@
     <button onclick="openMenuModal()">新增菜單</button>
     <button onclick="downloadMenuData()">下載菜單資料</button>
     <button onclick="document.getElementById('uploadMenuFile').click()">上傳菜單資料</button>
+    <!-- 新增排序按鈕 -->
+    <button onclick="sortMenu()">排序菜單</button>
     <input type="file" id="uploadMenuFile" accept=".txt" style="display:none;" onchange="uploadMenuData()">
     <div id="menuList"></div>
   </section>
 
-  <!-- 新增/編輯菜單彈出視窗：包含【餐點名稱】、【中文輸入】（可新增多筆欄位）與【金額】 -->
+  <!-- 新增/編輯菜單彈出視窗（包含【餐點名稱】、【中文輸入】（可新增多筆欄位）與【金額】） -->
   <div id="menuModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeMenuModal()">&times;</span>
@@ -180,11 +182,8 @@
     }
     loadTranslationDatabase();
 
-    // 更新菜單列表：依照價錢排序後，顯示「餐點名稱 - 價錢」
+    // 更新菜單列表：僅顯示「餐點名稱 - 價錢」，保持原有順序
     function updateMenuDisplay() {
-      // 依照價錢（由小到大）排序
-      menu.sort((a, b) => a.price - b.price);
-
       const menuListDiv = document.getElementById("menuList");
       menuListDiv.innerHTML = "";
       const ul = document.createElement("ul");
@@ -198,9 +197,8 @@
 
         // 顯示餐點名稱與價錢
         li.innerHTML = `<span><strong>${item.name}</strong> - ${item.price} 元</span>`;
-        // 點擊菜單項目時，開啟編輯視窗
+        // 點擊菜單項目時，開啟編輯視窗（避免點擊刪除按鈕時觸發編輯）
         li.addEventListener("click", function(e) {
-          // 避免點擊刪除按鈕時觸發編輯
           if (e.target.tagName.toLowerCase() !== "button") {
             openMenuModal(index);
           }
@@ -222,6 +220,12 @@
     }
     updateMenuDisplay();
 
+    // 排序菜單（依照價錢由小到大排序）
+    function sortMenu() {
+      menu.sort((a, b) => a.price - b.price);
+      updateMenuDisplay();
+    }
+
     // 拖曳相關事件
     function dragStart(e) {
       draggedIndex = parseInt(this.getAttribute("data-index"));
@@ -237,7 +241,6 @@
       const targetIndex = parseInt(this.getAttribute("data-index"));
       if (draggedIndex === null || draggedIndex === targetIndex) return;
       const draggedItem = menu.splice(draggedIndex, 1)[0];
-      // 若拖曳來源位於目標之前，則目標索引維持 targetIndex
       let newIndex = targetIndex;
       if (draggedIndex < targetIndex) {
         newIndex = targetIndex;
@@ -273,7 +276,7 @@
         const item = menu[index];
         document.getElementById("menuName").value = item.name;
         document.getElementById("menuPrice").value = item.price;
-        // 依據原有關鍵字建立輸入欄位
+        // 根據原有關鍵字建立輸入欄位
         item.keywords.forEach(keyword => {
           const div = document.createElement("div");
           div.className = "chinese-field";
@@ -297,7 +300,7 @@
       currentEditingIndex = null;
     }
 
-    // 新增或更新菜單項目：利用字庫轉碼生成關鍵字
+    // 新增或更新菜單項目：利用字庫轉碼生成關鍵字，若遇到資料庫中沒有的中文字則跳出提示
     function saveMenuItem() {
       const name = document.getElementById("menuName").value.trim();
       const price = parseFloat(document.getElementById("menuPrice").value.trim());
@@ -313,9 +316,11 @@
           let converted = "";
           for (let i = 0; i < chineseInput.length; i++) {
             const ch = chineseInput.charAt(i);
-            if (charMapping[ch] !== undefined) {
-              converted += charMapping[ch];
+            if (charMapping[ch] === undefined) {
+              alert("字庫中沒有該中文字：" + ch);
+              return;
             }
+            converted += charMapping[ch];
           }
           converted = converted.toLowerCase();
           if (converted) {
@@ -360,7 +365,7 @@
       URL.revokeObjectURL(url);
     }
 
-    // 上傳菜單資料
+    // 上傳菜單資料（保持原有順序）
     function uploadMenuData() {
       const fileInput = document.getElementById("uploadMenuFile");
       if (fileInput.files.length === 0) return;
