@@ -186,6 +186,11 @@
     let startX = 0, startY = 0;
     let swipeToggled = false;
     
+    // 新增：記錄拖曳模式中上一次更新的位置與移動閾值
+    let lastDragX = null;
+    let lastDragY = null;
+    let dragThreshold = 10; // 只有移動超過10px才更新位置
+  
     // 菜單資料 (若有外部 menu.txt，可動態載入)
     let menu = [
       { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
@@ -396,6 +401,9 @@
       startY = e.pageY;
       swipeToggled = false;
       holdActive = true;
+      // 重設拖曳模式的上一個位置
+      lastDragX = null;
+      lastDragY = null;
       longPressTimeout = setTimeout(() => {
         isDraggingMode = true;
         voiceButton.style.backgroundColor = "darkgreen"; // 進入拖曳模式提示
@@ -407,6 +415,8 @@
       startY = e.touches[0].pageY;
       swipeToggled = false;
       holdActive = true;
+      lastDragX = null;
+      lastDragY = null;
       longPressTimeout = setTimeout(() => {
         isDraggingMode = true;
         voiceButton.style.backgroundColor = "darkgreen";
@@ -414,21 +424,54 @@
       e.preventDefault();
     });
 
-    // 移動時：若進入拖曳模式，更新按鈕位置；否則依原有邏輯判斷滑動方向
+    // 移動時：若進入拖曳模式，僅在手指明顯移動後更新位置；否則依原有邏輯判斷滑動方向
     voiceButton.addEventListener("mousemove", function(e) {
       if (holdActive && isDraggingMode) {
-        voiceButton.style.left = e.pageX + "px";
-        voiceButton.style.top = e.pageY + "px";
-        voiceButton.style.transform = "translate(-50%, -50%)";
+        // 判斷與上一次記錄位置的差異
+        if (lastDragX === null || lastDragY === null) {
+          lastDragX = e.pageX;
+          lastDragY = e.pageY;
+          voiceButton.style.left = e.pageX + "px";
+          voiceButton.style.top = e.pageY + "px";
+          voiceButton.style.transform = "translate(-50%, -50%)";
+        } else {
+          let dx = Math.abs(e.pageX - lastDragX);
+          let dy = Math.abs(e.pageY - lastDragY);
+          if (dx >= dragThreshold || dy >= dragThreshold) {
+            lastDragX = e.pageX;
+            lastDragY = e.pageY;
+            voiceButton.style.left = e.pageX + "px";
+            voiceButton.style.top = e.pageY + "px";
+            voiceButton.style.transform = "translate(-50%, -50%)";
+            if (navigator.vibrate) navigator.vibrate(50);
+          }
+        }
       } else if (holdActive) {
         updateButtonPosition(e.pageX, e.pageY);
       }
     });
     voiceButton.addEventListener("touchmove", function(e) {
       if (holdActive && isDraggingMode) {
-        voiceButton.style.left = e.touches[0].pageX + "px";
-        voiceButton.style.top = e.touches[0].pageY + "px";
-        voiceButton.style.transform = "translate(-50%, -50%)";
+        let touchX = e.touches[0].pageX;
+        let touchY = e.touches[0].pageY;
+        if (lastDragX === null || lastDragY === null) {
+          lastDragX = touchX;
+          lastDragY = touchY;
+          voiceButton.style.left = touchX + "px";
+          voiceButton.style.top = touchY + "px";
+          voiceButton.style.transform = "translate(-50%, -50%)";
+        } else {
+          let dx = Math.abs(touchX - lastDragX);
+          let dy = Math.abs(touchY - lastDragY);
+          if (dx >= dragThreshold || dy >= dragThreshold) {
+            lastDragX = touchX;
+            lastDragY = touchY;
+            voiceButton.style.left = touchX + "px";
+            voiceButton.style.top = touchY + "px";
+            voiceButton.style.transform = "translate(-50%, -50%)";
+            if (navigator.vibrate) navigator.vibrate(50);
+          }
+        }
       } else if (holdActive) {
         updateButtonPosition(e.touches[0].pageX, e.touches[0].pageY);
       }
@@ -458,11 +501,13 @@
       e.preventDefault();
     });
     
-    // 當拖曳模式中，點擊按鈕以外區域時確認新位置
+    // 當拖曳模式中，點擊按鈕以外區域時確認新位置，並重置拖曳記錄
     document.addEventListener("click", function(e) {
       if (isDraggingMode && e.target !== voiceButton) {
         isDraggingMode = false;
         voiceButton.style.backgroundColor = "red";
+        lastDragX = null;
+        lastDragY = null;
       }
     });
     
