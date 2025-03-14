@@ -98,22 +98,54 @@
       position: relative;
       border-radius: 5px;
     }
-    /* 浮動錄音按鈕：初始置中，transform: translate(-50%,0) */
+    /* 浮動錄音按鈕：初始置中 */
     #voiceButton {
       position: fixed;
       bottom: 50px;
       left: 50%;
-      transform: translate(-50%, 0);
+      transform: translateX(-50%);
       width: 70px;
       height: 70px;
       background-color: red; /* 初始紅色 */
       border: 5px solid white;
       border-radius: 50%;
       cursor: pointer;
-      z-index: 3000;
+      z-index: 3500;
     }
     #voiceButton:active {
       background-color: red;
+    }
+    /* 新增左右黑色方形按鈕 (高100px、寬150px) */
+    #decreaseButton,
+    #increaseButton {
+      position: fixed;
+      bottom: 50px;
+      width: 150px;
+      height: 100px;
+      background-color: black;
+      border: none;
+      cursor: pointer;
+      z-index: 3000;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    /* 點擊時不變色 */
+    #decreaseButton:active,
+    #increaseButton:active {
+      background-color: black;
+    }
+    /* 移除 focus outline */
+    #decreaseButton:focus,
+    #increaseButton:focus {
+      outline: none;
+    }
+    /* 左側按鈕：位於中心左側 */
+    #decreaseButton {
+      left: calc(50% - 35px - 150px - 10px);
+    }
+    /* 右側按鈕：位於中心右側 */
+    #increaseButton {
+      left: calc(50% + 35px + 10px);
     }
     /* 禁止按鈕上文字選取 */
     #voiceButton, #voiceButton * {
@@ -162,8 +194,11 @@
     </div>
   </div>
 
+  <!-- 新增左右黑色方形按鈕 -->
+  <button id="decreaseButton"></button>
   <!-- 浮動錄音按鈕 -->
   <button id="voiceButton"></button>
+  <button id="increaseButton"></button>
 
   <script>
     // 全域變數與初始模式
@@ -173,7 +208,7 @@
     let currentRecognition = null;
     // 是否正在按住錄音按鈕 (持續錄音狀態)
     let holdActive = false;
-    // 初始模式預設為 "red"（但按下按鈕後不馬上開始點餐，需依滑動方向決定）
+    // 初始模式預設為 "red"
     let currentMode = "red";
     // 記錄按下時的起始座標，以及是否已判斷出滑動方向
     let startX = 0, startY = 0;
@@ -242,6 +277,13 @@
       }
     }
 
+    // 單次震動（例如數量變動時）
+    function vibrateOnce() {
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }
+
     /* ------------------ 語音辨識處理 ------------------ */
     // 啟動一次語音辨識 (回傳 Promise)
     function startVoiceInputSingle() {
@@ -263,7 +305,6 @@
         };
         recognition.onerror = function(event) {
           currentRecognition = null;
-          // 無論何種錯誤，只要使用者仍在按住，就回傳特殊值，讓 continuousRecognition() 重新啟動
           if (holdActive) {
             resolve("_RESTART_");
           } else {
@@ -304,21 +345,6 @@
                 voiceOutputDiv.innerText = text;
               } else {
                 voiceOutputDiv.innerText = currentText + "," + text;
-              }
-              break;
-            case "yellow":
-              // 黃色模式：將內容加入最新訂單的備註欄 (逗號分隔)
-              const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-              if (tbody.rows.length === 0) {
-                alert("無法加入備註，沒有訂單項目");
-              } else {
-                let lastRow = tbody.rows[tbody.rows.length - 1];
-                let currentRemark = lastRow.cells[2].innerText.trim();
-                if (currentRemark === "") {
-                  lastRow.cells[2].innerText = text;
-                } else {
-                  lastRow.cells[2].innerText = currentRemark + "," + text;
-                }
               }
               break;
             default:
@@ -512,19 +538,16 @@
           let row = tbody.rows[i];
           let price = parseFloat(row.cells[3].innerText);
           if (price > 0) {
-            // 取得主商品的份數
             let mainQty = parseInt(row.cells[1].innerText);
             let currentRemark = row.cells[2].innerText.trim();
             let remarksArr = [];
             let index = -1;
             if (currentRemark !== "") {
               remarksArr = currentRemark.split(",").map(s => s.trim());
-              // 嘗試尋找已存在此 0 元品項的備註（可能格式為 "品名" 或 "品名×數量"）
               index = remarksArr.findIndex(entry => entry === dish.name || entry.startsWith(dish.name + "×"));
             }
             let freeQty = 0;
             if (index >= 0) {
-              // 若已存在，解析目前的數量（若為單純品名，則表示數量等於主商品數量）
               let entry = remarksArr[index];
               if (entry === dish.name) {
                 freeQty = mainQty;
@@ -533,7 +556,6 @@
                 freeQty = parseInt(parts[1]) || 0;
               }
               freeQty += quantity;
-              // 若累計數量與主商品數量相同，則只顯示品項名稱
               if (freeQty === mainQty) {
                 remarksArr[index] = dish.name;
               } else {
@@ -605,6 +627,43 @@
       closeModal();
       updateTotalAmount();
     }
+
+    /* ------------------ 新增左右按鈕功能 ------------------ */
+    function increaseCurrentProductQuantity() {
+      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      if (tbody.rows.length === 0) {
+        return;  // 無訂單項目時不做任何動作
+      }
+      let lastRow = tbody.rows[tbody.rows.length - 1];
+      let qty = parseInt(lastRow.cells[1].innerText);
+      qty = qty + 1;
+      lastRow.cells[1].innerText = qty;
+      updateTotalAmount();
+      vibrateOnce();
+    }
+
+    function decreaseCurrentProductQuantity() {
+      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      if (tbody.rows.length === 0) {
+        return;  // 無訂單項目時不做任何動作
+      }
+      let lastRow = tbody.rows[tbody.rows.length - 1];
+      let qty = parseInt(lastRow.cells[1].innerText);
+      if (qty > 1) {
+        qty = qty - 1;
+        lastRow.cells[1].innerText = qty;
+        updateTotalAmount();
+        vibrateOnce();
+      }
+      // 若已為 1 則不作任何動作
+    }
+    // 綁定左右按鈕的雙擊事件
+    document.getElementById("increaseButton").addEventListener("dblclick", function(e) {
+      increaseCurrentProductQuantity();
+    });
+    document.getElementById("decreaseButton").addEventListener("dblclick", function(e) {
+      decreaseCurrentProductQuantity();
+    });
   </script>
 </body>
 </html>
