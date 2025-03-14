@@ -25,6 +25,17 @@
       margin-top: 10px;
       font-weight: bold;
     }
+    /* 模態框內按鈕樣式：採用重新點餐按鈕的設計外觀，但使用黑底白字 */
+    .modal-btn {
+      background-color: black;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+      font-weight: bold;
+    }
     /* 統一內容區：訂單表格與語音輸入區，高度 340px */
     #contentContainer {
       width: 90%;
@@ -192,9 +203,9 @@
         <button onclick="modalIncreaseQuantity()">+</button>
       </div>
       <div style="margin-top:10px;">
-        <button onclick="saveModal()">儲存</button>
-        <button onclick="deleteModal()">刪除</button>
-        <button onclick="closeModal()">取消</button>
+        <button class="modal-btn" onclick="saveModal()">儲存</button>
+        <button class="modal-btn" onclick="deleteModal()">刪除</button>
+        <button class="modal-btn" onclick="closeModal()">取消</button>
       </div>
     </div>
   </div>
