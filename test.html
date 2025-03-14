@@ -145,7 +145,7 @@
     #decreaseButton {
       left: calc(50% - 35px - 150px - 10px);
     }
-    /* 右側按鈕：用於控制備註欄0元商品數量 */
+    /* 右側按鈕：用於控制備註欄免費（0元）商品數量 */
     #increaseButton {
       left: calc(50% + 35px + 10px);
     }
@@ -205,7 +205,7 @@
   <button id="decreaseButton"></button>
   <!-- 浮動錄音按鈕 -->
   <button id="voiceButton"></button>
-  <!-- 右側方形按鈕（控制備註欄0元商品數量） -->
+  <!-- 右側方形按鈕（控制備註欄免費商品數量） -->
   <button id="increaseButton"></button>
 
   <script>
@@ -223,7 +223,9 @@
     let menu = [
       { keywords: ["chonyobin", "bujiadan", "bujia"], name: "蔥油餅", price: 20 },
       { keywords: ["chonyobinjiadan", "danbin", "jiadan", "la"], name: "蔥油餅加蛋", price: 30 },
-      { keywords: ["la"], name: "辣", price: 0 }
+      { keywords: ["la"], name: "辣", price: 0 },
+      // 假設還有其他免費商品
+      { keywords: ["freeDrink"], name: "免費飲料", price: 0 }
     ];
 
     /* ------------------ 載入外部資料 ------------------ */
@@ -510,7 +512,7 @@
       document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
     }
 
-    // 新增訂單列：若是0元商品（例如"辣"），則合併到上一筆非免費訂單的備註欄
+    // 新增訂單列：若是0元商品，則合併至上一筆非免費訂單的備註欄
     function addOrderRow(dish, quantity, remark) {
       if (!dish) return;
       if (dish.price === 0) {
@@ -527,6 +529,7 @@
             let mainQty = parseInt(row.cells[1].innerText);
             let currentRemark = row.cells[2].innerText.trim();
             let remarksArr = currentRemark === "" ? [] : currentRemark.split(",").map(s => s.trim());
+            // 找出此免費品項在備註欄中的位置（依據品項名稱）
             let index = remarksArr.findIndex(entry => entry === dish.name || entry.startsWith(dish.name + "×"));
             let freeQty = 0;
             if (index >= 0) {
@@ -605,7 +608,6 @@
     /* ------------------ 左側按鈕：控制餐點數量 ------------------ */
     function adjustDishQuantity(delta) {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-      // 從最後一筆非免費訂單中取得
       let targetRow = null;
       for (let i = tbody.rows.length - 1; i >= 0; i--) {
         let row = tbody.rows[i];
@@ -626,7 +628,7 @@
       updateTotalAmount();
     }
 
-    /* ------------------ 右側按鈕：控制備註欄0元商品數量 ------------------ */
+    /* ------------------ 右側按鈕：控制備註欄免費（0元）商品數量 ------------------ */
     function adjustFreeQuantity(delta) {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       let targetRow = null;
@@ -645,30 +647,40 @@
       let mainQty = parseInt(targetRow.cells[1].innerText);
       let remarksText = targetRow.cells[2].innerText.trim();
       let remarksArr = remarksText === "" ? [] : remarksText.split(",").map(s => s.trim());
-      let freeIndex = remarksArr.findIndex(entry => entry === "辣" || entry.startsWith("辣×"));
-      let currentFreeQty = 0;
-      if (freeIndex >= 0) {
-        let entry = remarksArr[freeIndex];
-        if (entry === "辣") {
-          currentFreeQty = mainQty;
-        } else {
-          let parts = entry.split("×");
-          currentFreeQty = parseInt(parts[1]) || 0;
+      // 取得所有免費商品品名（價格為0）
+      let freeDishNames = menu.filter(item => item.price === 0).map(item => item.name);
+      // 找出備註中最後一筆符合免費品項的記錄
+      let freeIndex = -1;
+      let freeDishName = "";
+      for (let i = remarksArr.length - 1; i >= 0; i--) {
+        for (let name of freeDishNames) {
+          if (remarksArr[i] === name || remarksArr[i].startsWith(name + "×")) {
+            freeIndex = i;
+            freeDishName = name;
+            break;
+          }
         }
+        if (freeIndex >= 0) break;
+      }
+      if (freeIndex < 0) {
+        alert("此訂單中沒有免費商品可調整");
+        return;
+      }
+      let entry = remarksArr[freeIndex];
+      let currentFreeQty = 0;
+      if (entry === freeDishName) {
+        currentFreeQty = mainQty;
+      } else {
+        let parts = entry.split("×");
+        currentFreeQty = parseInt(parts[1]) || 0;
       }
       let newFreeQty = currentFreeQty + delta;
       if (newFreeQty < 0) newFreeQty = 0;
       if (newFreeQty === 0) {
-        if (freeIndex >= 0) {
-          remarksArr.splice(freeIndex, 1);
-        }
+        remarksArr.splice(freeIndex, 1);
       } else {
-        let newEntry = (newFreeQty === mainQty) ? "辣" : ("辣×" + newFreeQty);
-        if (freeIndex >= 0) {
-          remarksArr[freeIndex] = newEntry;
-        } else {
-          remarksArr.push(newEntry);
-        }
+        let newEntry = (newFreeQty === mainQty) ? freeDishName : (freeDishName + "×" + newFreeQty);
+        remarksArr[freeIndex] = newEntry;
       }
       targetRow.cells[2].innerText = remarksArr.join(",");
       updateTotalAmount();
@@ -676,7 +688,7 @@
 
     /* ------------------ 左、右方形按鈕事件監聽（滑動方向：向上加1，向下減1） ------------------ */
     const leftButton = document.getElementById("decreaseButton");   // 控制餐點數量
-    const rightButton = document.getElementById("increaseButton");  // 控制0元商品數量
+    const rightButton = document.getElementById("increaseButton");  // 控制免費商品數量
 
     let leftStartY = 0;
     leftButton.addEventListener("touchstart", function(e) {
@@ -729,6 +741,20 @@
         adjustFreeQuantity(-1);
       }
     });
+
+    /* ------------------ 模態框內左右按鈕功能 ------------------ */
+    function modalIncreaseQuantity() {
+      const input = document.getElementById("modalQuantity");
+      let current = parseInt(input.value) || 1;
+      input.value = current + 1;
+    }
+    function modalDecreaseQuantity() {
+      const input = document.getElementById("modalQuantity");
+      let current = parseInt(input.value) || 1;
+      if (current > 1) {
+        input.value = current - 1;
+      }
+    }
   </script>
 </body>
 </html>
