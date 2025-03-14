@@ -126,11 +126,18 @@
       border: none;
       cursor: pointer;
       z-index: 3000;
+      outline: none;
+      -webkit-tap-highlight-color: transparent;
     }
     /* 點擊時不變色 */
     #decreaseButton:active,
     #increaseButton:active {
       background-color: black;
+    }
+    /* 移除 focus outline */
+    #decreaseButton:focus,
+    #increaseButton:focus {
+      outline: none;
     }
     /* 左側按鈕：位於中心左側 */
     #decreaseButton {
@@ -201,7 +208,7 @@
     let currentRecognition = null;
     // 是否正在按住錄音按鈕 (持續錄音狀態)
     let holdActive = false;
-    // 初始模式預設為 "red"（但按下按鈕後不馬上開始點餐，需依滑動方向決定）
+    // 初始模式預設為 "red"
     let currentMode = "red";
     // 記錄按下時的起始座標，以及是否已判斷出滑動方向
     let startX = 0, startY = 0;
@@ -625,8 +632,7 @@
     function increaseCurrentProductQuantity() {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       if (tbody.rows.length === 0) {
-        alert("沒有訂單項目");
-        return;
+        return;  // 無訂單項目時不做任何動作
       }
       let lastRow = tbody.rows[tbody.rows.length - 1];
       let qty = parseInt(lastRow.cells[1].innerText);
@@ -639,8 +645,7 @@
     function decreaseCurrentProductQuantity() {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       if (tbody.rows.length === 0) {
-        alert("沒有訂單項目");
-        return;
+        return;  // 無訂單項目時不做任何動作
       }
       let lastRow = tbody.rows[tbody.rows.length - 1];
       let qty = parseInt(lastRow.cells[1].innerText);
@@ -649,9 +654,8 @@
         lastRow.cells[1].innerText = qty;
         updateTotalAmount();
         vibrateOnce();
-      } else {
-        alert("商品數量至少為1");
       }
+      // 若已為 1 則不作任何動作
     }
     // 綁定左右按鈕的雙擊事件
     document.getElementById("increaseButton").addEventListener("dblclick", function(e) {
