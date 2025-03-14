@@ -25,6 +25,17 @@
       margin-top: 10px;
       font-weight: bold;
     }
+    /* 模態框內按鈕樣式：採用重新點餐按鈕的設計外觀，但使用黑底白字 */
+    .modal-btn {
+      background-color: black;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+      font-weight: bold;
+    }
     /* 統一內容區：訂單表格與語音輸入區，高度 340px */
     #contentContainer {
       width: 90%;
@@ -185,11 +196,16 @@
     <div id="editModalContent">
       <h3 id="modalDishName">編輯品項</h3>
       <label for="modalQuantity">份數:</label>
-      <input type="number" id="modalQuantity" min="1" style="width:100%;" />
+      <!-- 使用 flex 排版，將減號按鈕、數量輸入欄與加號按鈕排列在一行 -->
+      <div style="display: flex; justify-content: center; align-items: center; margin: 10px 0;">
+        <button class="modal-btn" onclick="modalDecreaseQuantity()">-</button>
+        <input type="number" id="modalQuantity" min="1" style="width:60px; text-align:center; margin: 0 10px;" value="1"/>
+        <button class="modal-btn" onclick="modalIncreaseQuantity()">+</button>
+      </div>
       <div style="margin-top:10px;">
-        <button onclick="saveModal()">儲存</button>
-        <button onclick="deleteModal()">刪除</button>
-        <button onclick="closeModal()">取消</button>
+        <button class="modal-btn" onclick="saveModal()">儲存</button>
+        <button class="modal-btn" onclick="deleteModal()">刪除</button>
+        <button class="modal-btn" onclick="closeModal()">取消</button>
       </div>
     </div>
   </div>
@@ -664,6 +680,21 @@
     document.getElementById("decreaseButton").addEventListener("dblclick", function(e) {
       decreaseCurrentProductQuantity();
     });
+
+    /* ------------------ 模態框內左右按鈕功能 ------------------ */
+    function modalIncreaseQuantity() {
+      const input = document.getElementById("modalQuantity");
+      let current = parseInt(input.value) || 1;
+      input.value = current + 1;
+    }
+
+    function modalDecreaseQuantity() {
+      const input = document.getElementById("modalQuantity");
+      let current = parseInt(input.value) || 1;
+      if (current > 1) {
+        input.value = current - 1;
+      }
+    }
   </script>
 </body>
 </html>
