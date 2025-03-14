@@ -340,21 +340,6 @@
                 voiceOutputDiv.innerText = currentText + "," + text;
               }
               break;
-            case "yellow":
-              // 黃色模式：將內容加入最新訂單的備註欄 (逗號分隔)
-              const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-              if (tbody.rows.length === 0) {
-                alert("無法加入備註，沒有訂單項目");
-              } else {
-                let lastRow = tbody.rows[tbody.rows.length - 1];
-                let currentRemark = lastRow.cells[2].innerText.trim();
-                if (currentRemark === "") {
-                  lastRow.cells[2].innerText = text;
-                } else {
-                  lastRow.cells[2].innerText = currentRemark + "," + text;
-                }
-              }
-              break;
             default:
               break;
           }
