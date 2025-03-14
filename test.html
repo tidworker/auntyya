@@ -626,6 +626,7 @@
       if (qty < 1) qty = 1;
       targetRow.cells[1].innerText = qty;
       updateTotalAmount();
+      vibrateOnce();
     }
 
     /* ------------------ 右側按鈕：控制備註欄免費（0元）商品數量 ------------------ */
@@ -684,6 +685,7 @@
       }
       targetRow.cells[2].innerText = remarksArr.join(",");
       updateTotalAmount();
+      vibrateOnce();
     }
 
     /* ------------------ 左、右方形按鈕事件監聽（滑動方向：向上加1，向下減1） ------------------ */
@@ -696,6 +698,10 @@
     });
     leftButton.addEventListener("mousedown", function(e) {
       leftStartY = e.clientY;
+    });
+    // 防止觸發手機下拉刷新
+    leftButton.addEventListener("touchmove", function(e) {
+      e.preventDefault();
     });
     leftButton.addEventListener("touchend", function(e) {
       let endY = e.changedTouches[0].clientY;
@@ -722,6 +728,10 @@
     });
     rightButton.addEventListener("mousedown", function(e) {
       rightStartY = e.clientY;
+    });
+    // 防止觸發手機下拉刷新
+    rightButton.addEventListener("touchmove", function(e) {
+      e.preventDefault();
     });
     rightButton.addEventListener("touchend", function(e) {
       let endY = e.changedTouches[0].clientY;
