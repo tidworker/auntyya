@@ -198,9 +198,9 @@
       <label for="modalQuantity">份數:</label>
       <!-- 使用 flex 排版，將減號按鈕、數量輸入欄與加號按鈕排列在一行 -->
       <div style="display: flex; justify-content: center; align-items: center; margin: 10px 0;">
-        <button onclick="modalDecreaseQuantity()">-</button>
+        <button class="modal-btn" onclick="modalDecreaseQuantity()">-</button>
         <input type="number" id="modalQuantity" min="1" style="width:60px; text-align:center; margin: 0 10px;" value="1"/>
-        <button onclick="modalIncreaseQuantity()">+</button>
+        <button class="modal-btn" onclick="modalIncreaseQuantity()">+</button>
       </div>
       <div style="margin-top:10px;">
         <button class="modal-btn" onclick="saveModal()">儲存</button>
