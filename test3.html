@@ -1,20 +1,20 @@
 <!DOCTYPE html>
 <html lang="zh">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>中文點餐系統</title>
   <style>
     /* 黑底白字 */
-    body { 
-      font-family: Arial, sans-serif; 
-      margin: 10px; 
-      padding: 0; 
-      background-color: black; 
+    body {
+      font-family: Arial, sans-serif;
+      margin: 10px;
+      padding: 0;
+      background-color: black;
       color: white;
       text-align: center;
     }
-    /* 重新點餐按鈕（文字加粗） */
+    /* 重新點餐按鈕（文字為粗體） */
     #resetButton {
       background-color: orange;
       color: black;
@@ -23,34 +23,51 @@
       border-radius: 4px;
       cursor: pointer;
       margin-top: 10px;
-      font-weight: bold;
+      font-weight: bold; /* 文字加粗 */
     }
-    /* 統一內容區：訂單表格與語音輸入，高度 340px */
+    /* 統一內容區，包含訂單表格與語音輸入區，高度 340px */
     #contentContainer {
       width: 90%;
       height: 340px;
       margin: 20px auto;
-      border: 0;
+      border: 0px solid black;
       overflow-y: auto;
       background-color: black;
     }
     /* 訂單表格樣式 */
-    table { 
+    table {
       width: 100%;
       background-color: black;
       color: white;
       border-collapse: separate;
       border-spacing: 0;
-      border: 0;
+      border: 0px solid black;
       border-radius: 3px;
     }
-    table, th, td { border: 0; }
-    th, td { padding: 8px; text-align: left; }
-    /* 表頭：橘色背景、3px 圓角 */
-    table th { background-color: orange; color: black; }
-    thead tr th:first-child { border-top-left-radius: 3px; }
-    thead tr th:last-child { border-top-right-radius: 3px; }
-    /* 語音輸入區（綠色模式下使用） */
+    table,
+    th,
+    td {
+      border: 0px solid black;
+    }
+    th,
+    td {
+      padding: 8px;
+      text-align: left;
+    }
+    /* 表頭：橘色背景 + 3px圓角 */
+    table th {
+      background-color: orange;
+      color: black;
+    }
+    /* 只針對第一列(表頭)左右兩角做3px圓角 */
+    thead tr th:first-child {
+      border-top-left-radius: 3px;
+    }
+    thead tr th:last-child {
+      border-top-right-radius: 3px;
+    }
+
+    /* 語音輸入區 (綠色模式) */
     #voiceOutput {
       margin-top: 10px;
       text-align: left;
@@ -63,14 +80,20 @@
       font-size: 18px;
       margin-top: 10px;
     }
-    @media (max-width: 600px) { button { font-size: 18px; } }
+    @media (max-width: 600px) {
+      button {
+        font-size: 18px;
+      }
+    }
     /* 模態框：編輯訂單項目 */
     #editModal {
       display: none;
       position: fixed;
-      left: 0; top: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
       z-index: 2000;
     }
     #editModalContent {
@@ -82,7 +105,7 @@
       position: relative;
       border-radius: 5px;
     }
-    /* 浮動錄音按鈕：初始置中，transform 為 translate(-50%, 0) */
+    /* 浮動錄音按鈕：初始置中，transform為translate(-50%,0) */
     #voiceButton {
       position: fixed;
       bottom: 50px;
@@ -90,22 +113,27 @@
       transform: translate(-50%, 0);
       width: 70px;
       height: 70px;
-      background-color: red;
+      background-color: red; /* 初始為紅色 */
       border: 5px solid white;
       border-radius: 50%;
       cursor: pointer;
       z-index: 3000;
     }
-    #voiceButton:active { background-color: red; }
+    #voiceButton:active {
+      background-color: red;
+    }
     /* 禁止在按鈕上選取文字 */
-    #voiceButton, #voiceButton * { user-select: none; }
+    #voiceButton,
+    #voiceButton * {
+      user-select: none;
+    }
   </style>
 </head>
 <body>
-  <br>
-  <img src="3.png" alt="圖片">
-  
-  <!-- 統一容器：訂單表格與語音輸入區 -->
+  <br />
+  <img src="3.png" alt="圖片" />
+
+  <!-- 統一容器：包含訂單表格與語音輸入區 -->
   <div id="contentContainer">
     <table id="orderTable">
       <thead>
@@ -117,23 +145,23 @@
         </tr>
       </thead>
       <tbody>
-        <!-- 動態加入訂單項目 -->
+        <!-- 訂單項目將動態加入 -->
       </tbody>
     </table>
-    <!-- 語音輸入區（綠色模式下） -->
+    <!-- 語音輸入區（向右滑動後顯示文字） -->
     <div id="voiceOutput"></div>
   </div>
-  
+
   <p id="totalAmount">總金額：0 元</p>
-  
+
   <button id="resetButton" onclick="resetOrder()">重新點餐</button>
-  
+
   <!-- 模態框：編輯訂單項目 -->
   <div id="editModal">
     <div id="editModalContent">
       <h3 id="modalDishName">編輯品項</h3>
       <label for="modalQuantity">份數:</label>
-      <input type="number" id="modalQuantity" min="1" style="width:100%;">
+      <input type="number" id="modalQuantity" min="1" style="width:100%;" />
       <div style="margin-top:10px;">
         <button onclick="saveModal()">儲存</button>
         <button onclick="deleteModal()">刪除</button>
@@ -141,72 +169,72 @@
       </div>
     </div>
   </div>
-  
+
   <!-- 浮動錄音按鈕 -->
   <button id="voiceButton"></button>
-  
+
   <script>
     // 全域變數與初始模式
     let charMapping = {};
     let groupMapping = {};
     let currentEditRow = null;
     let currentRecognition = null;
-    
-    // 語音錄製/拖曳相關變數
+
+    // 是否按住錄音按鈕中
     let holdActive = false;
-    let currentMode = "red";  // 預設紅色模式
-    
-    // 長按檢測與拖曳模式變數
-    let longPressTimeout = null;
-    let isDraggingMode = false;
-    
-    // 記錄按下時的初始位置（用於紅色模式下觸發判定）
-    let startX = 0, startY = 0;
+    // 預設模式為 "red"(但不馬上開始點餐)
+    let currentMode = "red";
+
+    // 記錄起始位置 & 是否已滑動出方向
+    let startX = 0,
+      startY = 0;
     let swipeToggled = false;
-    
-    // 紅色模式下更新按鈕位置時，僅當移動超過 5px 才更新 transform
-    let lastTransformX = null;
-    let lastTransformY = null;
-    const moveUpdateThreshold = 5;  // 5px 以上才更新位置
-    
-    // 菜單資料（若有外部 menu.txt 可動態載入）
+
+    // 範例菜單資料(可外部載入)
     let menu = [
-      { "keywords": ["chonyobin", "bujiadan", "bujia"], "name": "蔥油餅", "price": 20 },
-      { "keywords": ["chonyobinjiadan", "danbin", "jiadan", "la"], "name": "蔥油餅加蛋", "price": 30 },
-      { "keywords": ["la"], "name": "辣", "price": 0 }
+      { keywords: ["chonyobin", "bujiadan", "bujia"], name: "蔥油餅", price: 20 },
+      { keywords: ["chonyobinjiadan", "danbin", "jiadan", "la"], name: "蔥油餅加蛋", price: 30 },
+      { keywords: ["la"], name: "辣", price: 0 }
     ];
-    
-    // 讀取字庫資料（若有 database.txt）
+
+    /* ------------------- 載入外部字庫 & 菜單 ------------------- */
     function loadTranslationDatabase() {
       fetch("database.txt")
-        .then(response => {
+        .then((response) => {
           if (!response.ok) throw new Error("無法讀取 database.txt");
           return response.text();
         })
-        .then(text => {
+        .then((text) => {
           const db = JSON.parse(text);
           if (db.charMapping) {
             charMapping = db.charMapping;
-            if (db.groupMapping) groupMapping = db.groupMapping;
+            if (db.groupMapping) {
+              groupMapping = db.groupMapping;
+            }
           }
         })
-        .catch(err => { console.error("載入字庫資料失敗：" + err.message); });
+        .catch((err) => {
+          console.error("載入字庫資料失敗：" + err.message);
+        });
     }
     loadTranslationDatabase();
-    
-    // 讀取菜單資料（若有 menu.txt）
+
     function loadMenu() {
       fetch("menu.txt")
-        .then(response => {
+        .then((response) => {
           if (!response.ok) throw new Error("無法讀取 menu.txt");
           return response.text();
         })
-        .then(text => { menu = JSON.parse(text); })
-        .catch(err => { console.error("載入菜單資料失敗：" + err.message); });
+        .then((text) => {
+          menu = JSON.parse(text);
+        })
+        .catch((err) => {
+          console.error("載入菜單資料失敗：" + err.message);
+        });
     }
     loadMenu();
-    
-    // 轉譯邏輯
+
+    // 轉譯邏輯：僅輸出 database.txt 中有對應的字元
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -217,18 +245,19 @@
       }
       return converted;
     }
-    
-    // 雙震動函式
+
+    // 雙震動函式 (向下/向左使用的地方保留)
     function vibrateTwice() {
       if (navigator.vibrate) {
+        // [50, 100, 50] => 震動 50ms → 停 100ms → 震動 50ms
         navigator.vibrate([50, 100, 50]);
       }
     }
-    
-    /* ---------- 語音輸入機制 ---------- */
+
+    /* ------------------- 語音辨識處理 ------------------- */
     function startVoiceInputSingle() {
       return new Promise((resolve) => {
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
           alert("您的瀏覽器不支援語音輸入功能。");
           resolve(null);
           return;
@@ -236,82 +265,105 @@
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
         currentRecognition = recognition;
-        recognition.lang = 'zh-TW';
+        recognition.lang = "zh-TW";
         recognition.interimResults = false;
         recognition.maxAlternatives = 1;
-        
-        recognition.onresult = function(event) {
+
+        recognition.onresult = function (event) {
           currentRecognition = null;
           resolve(event.results[0][0].transcript);
         };
-        recognition.onerror = function(event) {
+        recognition.onerror = function (event) {
           currentRecognition = null;
           resolve(null);
         };
         recognition.start();
       });
     }
-    
+
+    // 持續錄音：若 holdActive=true，錄完一段再次啟動
     function continuousRecognition() {
       if (!holdActive) return;
-      startVoiceInputSingle().then(transcript => {
+      startVoiceInputSingle().then((transcript) => {
         if (transcript) {
           let text = transcript.trim();
           if (text !== "") {
-            if (currentMode === "green") {
-              let voiceOutputDiv = document.getElementById("voiceOutput");
-              let p = document.createElement("p");
-              p.innerText = text;
-              voiceOutputDiv.appendChild(p);
-            } else if (currentMode === "red") {
-              let orders = processMultipleVoiceInput(text);
-              if (orders.length !== 0) {
-                orders.forEach(order => { addOrderRow(order.dish, order.quantity, ""); });
-                updateTotalAmount();
-              }
-            } else if (currentMode === "yellow") {
-              const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-              if (tbody.rows.length === 0) {
-                alert("無法加入備註，沒有訂單項目");
-              } else {
-                let lastRow = tbody.rows[tbody.rows.length - 1];
-                let currentRemark = lastRow.cells[2].innerText;
-                lastRow.cells[2].innerText = currentRemark.trim() === "" ? text : currentRemark + "，" + text;
-              }
+            switch (currentMode) {
+              case "red":
+                // 紅色模式：直接加入訂單
+                let orders = processMultipleVoiceInput(text);
+                if (orders.length > 0) {
+                  orders.forEach((order) => {
+                    addOrderRow(order.dish, order.quantity, "");
+                  });
+                  updateTotalAmount();
+                }
+                break;
+              case "green":
+                // 綠色模式：把文字加在 #voiceOutput 的同一行，逗號分隔
+                let voiceOutputDiv = document.getElementById("voiceOutput");
+                let currentText = voiceOutputDiv.innerText.trim();
+                if (currentText === "") {
+                  // 第一次
+                  voiceOutputDiv.innerText = text;
+                } else {
+                  // 後續
+                  voiceOutputDiv.innerText = currentText + "," + text;
+                }
+                break;
+              case "yellow":
+                // 黃色模式：備註欄用逗號分隔
+                const tbody = document
+                  .getElementById("orderTable")
+                  .getElementsByTagName("tbody")[0];
+                if (tbody.rows.length === 0) {
+                  alert("無法加入備註，沒有訂單項目");
+                } else {
+                  let lastRow = tbody.rows[tbody.rows.length - 1];
+                  let currentRemark = lastRow.cells[2].innerText.trim();
+                  if (currentRemark === "") {
+                    lastRow.cells[2].innerText = text;
+                  } else {
+                    lastRow.cells[2].innerText = currentRemark + "," + text;
+                  }
+                }
+                break;
+              default:
+                break;
             }
           }
         }
+        // 若仍 holdActive，繼續錄音
         if (holdActive) continuousRecognition();
       });
     }
-    
-    /* ---------- 模式切換函式 ---------- */
-    // 紅色模式（點餐）
+
+    /* ------------------- 核心：四個方向動作 ------------------- */
+
+    // 向下：開始點餐 => 紅色模式
     function startOrdering() {
       currentMode = "red";
       voiceButton.style.backgroundColor = "darkred";
+      if (navigator.vibrate) navigator.vibrate(50);
+      // 只有這時才開始錄音
       continuousRecognition();
     }
-    
-    // 綠色模式（語音輸出）
-    function startGreenMode() {
-      currentMode = "green";
-      voiceButton.style.backgroundColor = "darkred";
-      continuousRecognition();
-    }
-    
-    // 刪除最新訂單（向上滑動觸發）
+
+    // 向上：刪除最新的一筆訂單
     function deleteLatestOrder() {
-      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      const tbody = document
+        .getElementById("orderTable")
+        .getElementsByTagName("tbody")[0];
       if (tbody.rows.length > 0) {
         tbody.deleteRow(tbody.rows.length - 1);
         updateTotalAmount();
       }
+      // 震動兩次
       vibrateTwice();
       voiceButton.style.backgroundColor = "darkred";
     }
-    
-    // 刪除語音輸入區最後一行（向左滑動觸發）
+
+    // 向左：刪除語音輸入區最後一行
     function deleteCurrentVoiceLine() {
       const voiceOutputDiv = document.getElementById("voiceOutput");
       if (voiceOutputDiv.lastChild) {
@@ -320,178 +372,181 @@
       vibrateTwice();
       voiceButton.style.backgroundColor = "darkred";
     }
-    
-    /* ---------- 紅色模式下移動判定函式 ---------- */
+
+    // 向右：改為綠色模式 (文字都加到 #voiceOutput 內，同一行以逗號分隔)
+    function startGreenMode() {
+      currentMode = "green";
+      voiceButton.style.backgroundColor = "darkred";
+      if (navigator.vibrate) navigator.vibrate(50);
+      continuousRecognition();
+    }
+
+    // 判斷滑動方向
     function updateButtonPosition(currentX, currentY) {
-      // 計算從按下起始點累計的位移
-      let totalDeltaX = currentX - startX;
-      let totalDeltaY = currentY - startY;
-      
-      // 當移動超過 30px 時，觸發一次相應功能（例如刪除、切換模式），然後不再更新紅色按鈕的位置
-      if (!swipeToggled && (Math.abs(totalDeltaX) >= 30 || Math.abs(totalDeltaY) >= 30)) {
-        if (Math.abs(totalDeltaX) > Math.abs(totalDeltaY)) {
-          totalDeltaX < 0 ? deleteCurrentVoiceLine() : startGreenMode();
+      let deltaX = currentX - startX;
+      let deltaY = currentY - startY;
+
+      // 尚未執行過滑動動作，且位移 > 30px
+      if (!swipeToggled && (Math.abs(deltaX) > 30 || Math.abs(deltaY) > 30)) {
+        if (Math.abs(deltaX) > Math.abs(deltaY)) {
+          // 左右
+          if (deltaX < 0) {
+            // 向左：刪除語音輸入區最後一行
+            deleteCurrentVoiceLine();
+          } else {
+            // 向右：綠色模式
+            startGreenMode();
+          }
         } else {
-          totalDeltaY < 0 ? deleteLatestOrder() : startOrdering();
-        }
-        swipeToggled = true;
-        return;
-      }
-      
-      // 紅色模式下僅在移動超過 5px 時更新按鈕 transform，
-      // 若已觸發 30px 的動作則不再更新（保持當前位置）
-      if (!swipeToggled) {
-        if (lastTransformX === null || lastTransformY === null) {
-          lastTransformX = currentX;
-          lastTransformY = currentY;
-          const angle = Math.atan2(totalDeltaY, totalDeltaX);
-          voiceButton.style.transform = `translate(-50%, 0) translate(${20 * Math.cos(angle)}px, ${20 * Math.sin(angle)}px)`;
-        } else {
-          if (Math.abs(currentX - lastTransformX) >= moveUpdateThreshold ||
-              Math.abs(currentY - lastTransformY) >= moveUpdateThreshold) {
-            lastTransformX = currentX;
-            lastTransformY = currentY;
-            const angle = Math.atan2(totalDeltaY, totalDeltaX);
-            voiceButton.style.transform = `translate(-50%, 0) translate(${20 * Math.cos(angle)}px, ${20 * Math.sin(angle)}px)`;
+          // 上下
+          if (deltaY < 0) {
+            // 向上：刪除最新的訂單
+            deleteLatestOrder();
+          } else {
+            // 向下：開始點餐 (紅色模式)
+            startOrdering();
           }
         }
+        swipeToggled = true;
+      }
+
+      // 讓按鈕做微小位移
+      if (deltaX !== 0 || deltaY !== 0) {
+        const angle = Math.atan2(deltaY, deltaX);
+        voiceButton.style.transform = `translate(-50%, 0) translate(${
+          20 * Math.cos(angle)
+        }px, ${20 * Math.sin(angle)}px)`;
       }
     }
-    
-    /* ---------- 事件監聽：按下、移動、放開 ---------- */
+
+    /* ------------------- 按下 / 移動 / 放開 事件 ------------------- */
     const voiceButton = document.getElementById("voiceButton");
-    
-    // 按下時：記錄起始位置，初始化更新記錄，啟動長按檢測（2秒後進入拖曳模式）
-    voiceButton.addEventListener("mousedown", function(e) {
+
+    // 按下時 => 只是記錄起始點，不馬上開始錄音
+    voiceButton.addEventListener("mousedown", function (e) {
       startX = e.pageX;
       startY = e.pageY;
       swipeToggled = false;
       holdActive = true;
-      lastTransformX = startX;
-      lastTransformY = startY;
-      longPressTimeout = setTimeout(() => {
-        isDraggingMode = true;
-        // 進入拖曳模式時變綠色，並震動提示
-        voiceButton.style.backgroundColor = "darkgreen";
-        if (navigator.vibrate) navigator.vibrate(50);
-      }, 2000);
       e.preventDefault();
     });
-    voiceButton.addEventListener("touchstart", function(e) {
+    voiceButton.addEventListener("touchstart", function (e) {
       startX = e.touches[0].pageX;
       startY = e.touches[0].pageY;
       swipeToggled = false;
       holdActive = true;
-      lastTransformX = startX;
-      lastTransformY = startY;
-      longPressTimeout = setTimeout(() => {
-        isDraggingMode = true;
-        voiceButton.style.backgroundColor = "darkgreen";
-        if (navigator.vibrate) navigator.vibrate(50);
-      }, 2000);
       e.preventDefault();
     });
-    
-    // 移動時：
-    // 若處於拖曳模式（綠色），則直接讓按鈕跟隨手指；
-    // 否則（紅色模式）呼叫 updateButtonPosition 來依據位移判定是否更新 transform 與觸發事件
-    voiceButton.addEventListener("mousemove", function(e) {
-      if (holdActive && isDraggingMode) {
-        voiceButton.style.left = e.pageX + "px";
-        voiceButton.style.top = e.pageY + "px";
-        voiceButton.style.transform = "translate(-50%, -50%)";
-      } else if (holdActive) {
+
+    // 拖動 => 判斷滑動方向
+    voiceButton.addEventListener("mousemove", function (e) {
+      if (holdActive) {
         updateButtonPosition(e.pageX, e.pageY);
       }
     });
-    voiceButton.addEventListener("touchmove", function(e) {
-      if (holdActive && isDraggingMode) {
-        let touchX = e.touches[0].pageX;
-        let touchY = e.touches[0].pageY;
-        voiceButton.style.left = touchX + "px";
-        voiceButton.style.top = touchY + "px";
-        voiceButton.style.transform = "translate(-50%, -50%)";
-      } else if (holdActive) {
+    voiceButton.addEventListener("touchmove", function (e) {
+      if (holdActive) {
         updateButtonPosition(e.touches[0].pageX, e.touches[0].pageY);
       }
       e.preventDefault();
     });
-    
-    // 放開時：若未進入拖曳模式則恢復原狀；若在拖曳模式則保持新位置等待確認
-    function endDrag(e) {
-      clearTimeout(longPressTimeout);
+
+    // 放開 => 結束錄音 & 恢復初始狀態
+    function endDrag() {
+      if (navigator.vibrate) {
+        navigator.vibrate(50); // 放開時單次震動
+      }
       holdActive = false;
-      if (currentRecognition) { currentRecognition.stop(); }
-      if (!isDraggingMode) {
-        voiceButton.style.transform = "translate(-50%, 0)";
-        currentMode = "red";
-        voiceButton.style.backgroundColor = "red";
+      if (currentRecognition) {
+        currentRecognition.stop();
       }
+      voiceButton.style.transform = "translate(-50%, 0)";
+      currentMode = "red"; // 預設回到紅色模式
+      voiceButton.style.backgroundColor = "red";
     }
-    voiceButton.addEventListener("mouseup", function(e) {
-      endDrag(e);
+    voiceButton.addEventListener("mouseup", function (e) {
+      endDrag();
       e.preventDefault();
     });
-    voiceButton.addEventListener("touchend", function(e) {
-      endDrag(e);
+    voiceButton.addEventListener("touchend", function (e) {
+      endDrag();
       e.preventDefault();
     });
-    
-    // 拖曳模式下，點擊按鈕以外區域確認新位置，並重置拖曳狀態
-    document.addEventListener("click", function(e) {
-      if (isDraggingMode && e.target !== voiceButton) {
-        isDraggingMode = false;
-        voiceButton.style.backgroundColor = "red";
-      }
-    });
-    
-    /* ---------- 以下為訂單處理邏輯 ---------- */
+
+    /* ------------------- 以下為訂單處理邏輯 ------------------- */
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
-      let tokens = converted.split('/').filter(token => token.trim() !== "");
+      let tokens = converted.split("/").filter((token) => token.trim() !== "");
       let numbers = [];
       let dishes = [];
-      tokens.forEach(token => {
+      tokens.forEach((token) => {
         let m = token.match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
         if (m) {
-          if (m[1]) numbers.push(parseInt(m[1]));
+          if (m[1]) {
+            numbers.push(parseInt(m[1]));
+          }
           dishes.push(m[2]);
-          if (m[3]) numbers.push(parseInt(m[3]));
+          if (m[3]) {
+            numbers.push(parseInt(m[3]));
+          }
         } else {
-          if (/^\d+$/.test(token)) { numbers.push(parseInt(token)); }
-          else if (/^[a-zA-Z]+$/.test(token)) { dishes.push(token); }
+          // 純數字 or 純英文
+          if (/^\d+$/.test(token)) {
+            numbers.push(parseInt(token));
+          } else if (/^[a-zA-Z]+$/.test(token)) {
+            dishes.push(token);
+          }
         }
       });
       let orders = [];
       if (dishes.length === 0) return [];
       if (numbers.length === 0) {
-        orders = dishes.map(d => ({ dish: menu.find(item => item.keywords.includes(d)), quantity: 1 }));
+        // 若沒數字 => 全部 1 份
+        orders = dishes.map((d) => ({
+          dish: menu.find((item) => item.keywords.includes(d)),
+          quantity: 1
+        }));
       } else if (numbers.length === 1) {
-        orders = dishes.map(d => ({ dish: menu.find(item => item.keywords.includes(d)), quantity: numbers[0] }));
+        // 只有一個數字 => 全部使用該數量
+        orders = dishes.map((d) => ({
+          dish: menu.find((item) => item.keywords.includes(d)),
+          quantity: numbers[0]
+        }));
       } else {
+        // 多個數字 => 依序配給每道菜
         orders = dishes.map((d, i) => ({
-          dish: menu.find(item => item.keywords.includes(d)),
+          dish: menu.find((item) => item.keywords.includes(d)),
           quantity: i < numbers.length ? numbers[i] : 1
         }));
       }
-      return orders.filter(o => o.dish);
+      // 過濾找不到的關鍵字
+      return orders.filter((o) => o.dish);
     }
-    
+
     function updateTotalAmount() {
-      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      const tbody = document
+        .getElementById("orderTable")
+        .getElementsByTagName("tbody")[0];
       let total = 0;
       for (let i = 0; i < tbody.rows.length; i++) {
         let qty = parseFloat(tbody.rows[i].cells[1].innerText);
         let price = parseFloat(tbody.rows[i].cells[3].innerText);
-        if (!isNaN(qty) && !isNaN(price)) total += qty * price;
+        if (!isNaN(qty) && !isNaN(price)) {
+          total += qty * price;
+        }
       }
-      document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
+      document.getElementById("totalAmount").innerText =
+        "總金額：" + total + " 元";
     }
-    
+
+    // 新增訂單列
     function addOrderRow(dish, quantity, remark) {
       if (!dish) return;
+      // 若商品價格==0(例如 "辣") => 加入上一筆的備註(以逗號分隔)
       if (dish.price === 0) {
-        const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+        const tbody = document
+          .getElementById("orderTable")
+          .getElementsByTagName("tbody")[0];
         if (tbody.rows.length === 0) {
           alert("無法加入0元商品，因為沒有上一筆訂單");
           return;
@@ -503,17 +558,21 @@
           if (price > 0) {
             let currentRemark = row.cells[2].innerText.trim();
             if (currentRemark !== "") {
-              let remarksArr = currentRemark.split('|').map(s => s.trim());
-              let index = remarksArr.findIndex(entry => entry.startsWith(dish.name + "×"));
+              let remarksArr = currentRemark.split(",").map((s) => s.trim());
+              // 若已有「辣×N」，就數量+1
+              let index = remarksArr.findIndex((entry) =>
+                entry.startsWith(dish.name + "×")
+              );
               if (index >= 0) {
-                let parts = remarksArr[index].split('×');
+                let parts = remarksArr[index].split("×");
                 let currentQty = parseInt(parts[1]) || 0;
                 remarksArr[index] = dish.name + "×" + (currentQty + quantity);
               } else {
                 remarksArr.push(dish.name + "×" + quantity);
               }
-              row.cells[2].innerText = remarksArr.join("，");
+              row.cells[2].innerText = remarksArr.join(",");
             } else {
+              // 原備註無內容
               row.cells[2].innerText = dish.name + "×" + quantity;
             }
             found = true;
@@ -526,27 +585,34 @@
         updateTotalAmount();
         return;
       }
-      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      // 一般商品 => 直接插入一行
+      const tbody = document
+        .getElementById("orderTable")
+        .getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
-      
+
       const nameCell = row.insertCell();
       nameCell.innerText = dish.name;
-      nameCell.style.cursor = 'pointer';
-      nameCell.onclick = function() { openModal(row); };
-      
-      row.insertCell().innerText = quantity;
-      row.insertCell().innerText = remark;
-      row.insertCell().innerText = dish.price;
-      
+      nameCell.style.cursor = "pointer";
+      nameCell.onclick = function () {
+        openModal(row);
+      };
+
+      row.insertCell().innerText = quantity; // 份數
+      row.insertCell().innerText = remark; // 備註 (預設空或自訂)
+      row.insertCell().innerText = dish.price; // 單價
       updateTotalAmount();
     }
-    
+
     function resetOrder() {
-      document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
+      document
+        .getElementById("orderTable")
+        .getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
       document.getElementById("voiceOutput").innerHTML = "";
     }
-    
+
+    /* ------------------- 模態框：編輯或刪除 ------------------- */
     function openModal(row) {
       currentEditRow = row;
       document.getElementById("modalDishName").innerText = row.cells[0].innerText;
@@ -559,7 +625,9 @@
     }
     function saveModal() {
       if (!currentEditRow) return;
-      let newQuantity = parseInt(document.getElementById("modalQuantity").value);
+      let newQuantity = parseInt(
+        document.getElementById("modalQuantity").value
+      );
       if (isNaN(newQuantity) || newQuantity < 1) {
         alert("份數必須大於或等於1");
         return;
