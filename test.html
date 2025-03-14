@@ -30,7 +30,6 @@
       width: 90%;
       height: 340px;
       margin: 20px auto;
-      border: 0px solid black;
       overflow-y: auto;
       background-color: black;
     }
@@ -41,17 +40,17 @@
       color: white;
       border-collapse: separate;
       border-spacing: 0;
-      border: 0px solid black;
+      border: 0;
       border-radius: 3px;
     }
     table, th, td {
-      border: 0px solid black;
+      border: 0;
     }
     th, td {
       padding: 8px;
       text-align: left;
     }
-    /* 表頭：橘色背景，且第一列左右角 3px 圓角 */
+    /* 表頭：橘色背景 */
     table th {
       background-color: orange;
       color: black;
@@ -62,7 +61,7 @@
     thead tr th:last-child {
       border-top-right-radius: 3px;
     }
-    /* 語音輸入區 (綠色模式下使用)：文字顏色橘色 */
+    /* 語音輸入區：文字顏色橘色 */
     #voiceOutput {
       margin-top: 10px;
       text-align: left;
@@ -78,7 +77,7 @@
     @media (max-width: 600px) {
       button { font-size: 18px; }
     }
-    /* 浮動錄音按鈕：初始置中 */
+    /* 浮動紅色錄音按鈕，z-index 調高 */
     #voiceButton {
       position: fixed;
       bottom: 50px;
@@ -90,12 +89,12 @@
       border: 5px solid white;
       border-radius: 50%;
       cursor: pointer;
-      z-index: 3000;
+      z-index: 5000; /* 高於左右按鈕 */
     }
     #voiceButton:active {
       background-color: red;
     }
-    /* 新增左右黑色方形按鈕 (高100px、寬150px) */
+    /* 左右黑色方形按鈕 (高100px、寬150px) */
     #decreaseButton,
     #increaseButton {
       position: fixed;
@@ -113,11 +112,6 @@
     #decreaseButton:active,
     #increaseButton:active {
       background-color: black;
-    }
-    /* 移除 focus outline */
-    #decreaseButton:focus,
-    #increaseButton:focus {
-      outline: none;
     }
     /* 左側按鈕：位於中心左側 */
     #decreaseButton {
@@ -152,7 +146,6 @@
         <!-- 訂單項目將動態加入 -->
       </tbody>
     </table>
-    <!-- 語音輸入區 (綠色模式下用，同一行以逗號分隔) -->
     <div id="voiceOutput"></div>
   </div>
 
@@ -160,9 +153,9 @@
 
   <button id="resetButton" onclick="resetOrder()">重新點餐</button>
 
-  <!-- 浮動錄音按鈕 -->
+  <!-- 浮動紅色錄音按鈕 -->
   <button id="voiceButton"></button>
-  <!-- 新增左右黑色方形按鈕 -->
+  <!-- 左右黑色方形按鈕 -->
   <button id="decreaseButton"></button>
   <button id="increaseButton"></button>
 
@@ -175,7 +168,7 @@
     let currentMode = "red";
     let startX = 0, startY = 0;
     let swipeToggled = false;
-    // 新增全域變數：目前被選取的訂單列
+    // 全域變數：目前被選取的訂單列
     let selectedRow = null;
 
     // 菜單資料 (可外部載入 menu.txt)
@@ -224,11 +217,10 @@
       return converted;
     }
 
-    // 雙震動函式 (用於向下或向左動作)
+    // 震動函式
     function vibrateTwice() {
       if (navigator.vibrate) { navigator.vibrate([50, 100, 50]); }
     }
-    // 單次震動（例如數量變動時）
     function vibrateOnce() {
       if (navigator.vibrate) { navigator.vibrate(50); }
     }
@@ -259,7 +251,6 @@
         recognition.start();
       });
     }
-
     function continuousRecognition() {
       if (!holdActive) return;
       startVoiceInputSingle().then((transcript) => {
@@ -298,11 +289,15 @@
       if (navigator.vibrate) { navigator.vibrate(50); }
       continuousRecognition();
     }
-    // 向上：若有選取列則刪除該筆，否則不作動作
+    // 向上：刪除訂單列
     function deleteLatestOrder() {
-      if (selectedRow) {
-        selectedRow.parentNode.removeChild(selectedRow);
-        selectedRow = null;
+      let row;
+      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      if (selectedRow) { row = selectedRow; }
+      else if (tbody.rows.length > 0) { row = tbody.rows[tbody.rows.length - 1]; }
+      if (row) {
+        row.parentNode.removeChild(row);
+        if (selectedRow === row) { selectedRow = null; }
         updateTotalAmount();
       }
       vibrateTwice();
@@ -322,17 +317,14 @@
       if (navigator.vibrate) { navigator.vibrate(50); }
       continuousRecognition();
     }
-
     function updateButtonPosition(currentX, currentY) {
       let deltaX = currentX - startX;
       let deltaY = currentY - startY;
       if (!swipeToggled && (Math.abs(deltaX) > 30 || Math.abs(deltaY) > 30)) {
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
-          if (deltaX < 0) { deleteCurrentVoiceLine(); }
-          else { startGreenMode(); }
+          deltaX < 0 ? deleteCurrentVoiceLine() : startGreenMode();
         } else {
-          if (deltaY < 0) { deleteLatestOrder(); }
-          else { startOrdering(); }
+          deltaY < 0 ? deleteLatestOrder() : startOrdering();
         }
         swipeToggled = true;
       }
@@ -350,8 +342,8 @@
     voiceButton.addEventListener("touchstart", function(e) {
       startX = e.touches[0].pageX; startY = e.touches[0].pageY; swipeToggled = false; holdActive = true; e.preventDefault();
     });
-    voiceButton.addEventListener("mousemove", function(e) { if (holdActive) { updateButtonPosition(e.pageX, e.pageY); } });
-    voiceButton.addEventListener("touchmove", function(e) { if (holdActive) { updateButtonPosition(e.touches[0].pageX, e.touches[0].pageY); } e.preventDefault(); });
+    voiceButton.addEventListener("mousemove", function(e) { if (holdActive) updateButtonPosition(e.pageX, e.pageY); });
+    voiceButton.addEventListener("touchmove", function(e) { if (holdActive) updateButtonPosition(e.touches[0].pageX, e.touches[0].pageY); e.preventDefault(); });
     function endDrag() {
       if (navigator.vibrate) { navigator.vibrate(50); }
       holdActive = false;
@@ -364,43 +356,23 @@
     voiceButton.addEventListener("touchend", function(e) { endDrag(); e.preventDefault(); });
 
     /* ------------------ 訂單處理邏輯 ------------------ */
-    function processMultipleVoiceInput(inputText) {
-      let converted = translateDishName(inputText);
-      let tokens = converted.split("/").filter(token => token.trim() !== "");
-      let numbers = [];
-      let dishes = [];
-      tokens.forEach(token => {
-        let m = token.match(/^(\d+)?([a-zA-Z]+)(\d+)?$/);
-        if (m) {
-          if (m[1]) { numbers.push(parseInt(m[1])); }
-          dishes.push(m[2]);
-          if (m[3]) { numbers.push(parseInt(m[3])); }
-        } else {
-          if (/^\d+$/.test(token)) { numbers.push(parseInt(token)); }
-          else if (/^[a-zA-Z]+$/.test(token)) { dishes.push(token); }
-        }
-      });
-      let orders = [];
-      if (dishes.length === 0) return [];
-      if (numbers.length === 0) {
-        orders = dishes.map(d => ({
-          dish: menu.find(item => item.keywords.includes(d)),
-          quantity: 1
-        }));
-      } else if (numbers.length === 1) {
-        orders = dishes.map(d => ({
-          dish: menu.find(item => item.keywords.includes(d)),
-          quantity: numbers[0]
-        }));
-      } else {
-        orders = dishes.map((d, i) => ({
-          dish: menu.find(item => item.keywords.includes(d)),
-          quantity: i < numbers.length ? numbers[i] : 1
-        }));
-      }
-      return orders.filter(o => o.dish);
+    // 新增訂單列，不論價格是否為0，都直接新增一筆
+    function addOrderRow(dish, quantity, remark) {
+      if (!dish) return;
+      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      const row = tbody.insertRow();
+      const nameCell = row.insertCell();
+      nameCell.innerText = dish.name;
+      nameCell.style.cursor = "pointer";
+      nameCell.onclick = function(e) { 
+        selectRow(row);
+        e.stopPropagation();
+      };
+      row.insertCell().innerText = quantity;
+      row.insertCell().innerText = remark;
+      row.insertCell().innerText = dish.price;
+      updateTotalAmount();
     }
-
     function updateTotalAmount() {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       let total = 0;
@@ -411,58 +383,6 @@
       }
       document.getElementById("totalAmount").innerText = "總金額：" + total + " 元";
     }
-
-    // 當新增一筆訂單時，點選餐點名稱則變紅（選取狀態），取消模態框功能
-    function addOrderRow(dish, quantity, remark) {
-      if (!dish) return;
-      // 若商品價格為 0，則處理備註邏輯（維持原有處理）
-      if (dish.price === 0) {
-        const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-        if (tbody.rows.length === 0) { alert("無法加入0元商品，因為沒有上一筆訂單"); return; }
-        let found = false;
-        for (let i = tbody.rows.length - 1; i >= 0; i--) {
-          let row = tbody.rows[i];
-          let price = parseFloat(row.cells[3].innerText);
-          if (price > 0) {
-            let mainQty = parseInt(row.cells[1].innerText);
-            let currentRemark = row.cells[2].innerText.trim();
-            let remarksArr = currentRemark ? currentRemark.split(",").map(s => s.trim()) : [];
-            let index = remarksArr.findIndex(entry => entry === dish.name || entry.startsWith(dish.name + "×"));
-            let freeQty = 0;
-            if (index >= 0) {
-              let entry = remarksArr[index];
-              freeQty = (entry === dish.name) ? mainQty : (parseInt(entry.split("×")[1]) || 0);
-              freeQty += quantity;
-              remarksArr[index] = (freeQty === mainQty) ? dish.name : dish.name + "×" + freeQty;
-            } else {
-              freeQty = quantity;
-              remarksArr.push((freeQty === mainQty) ? dish.name : dish.name + "×" + freeQty);
-            }
-            row.cells[2].innerText = remarksArr.join(",");
-            found = true;
-            break;
-          }
-        }
-        if (!found) { alert("無法加入0元商品，因為沒有上一筆非免費訂單"); }
-        updateTotalAmount();
-        return;
-      }
-      // 一般商品：新增一列並綁定點選事件（選取後餐點名稱變紅）
-      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
-      const row = tbody.insertRow();
-      const nameCell = row.insertCell();
-      nameCell.innerText = dish.name;
-      nameCell.style.cursor = "pointer";
-      nameCell.onclick = function(e) { 
-        selectRow(row);
-        e.stopPropagation(); 
-      };
-      row.insertCell().innerText = quantity;
-      row.insertCell().innerText = remark;
-      row.insertCell().innerText = dish.price;
-      updateTotalAmount();
-    }
-
     function resetOrder() {
       document.getElementById("orderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("totalAmount").innerText = "總金額：0 元";
@@ -472,24 +392,22 @@
 
     /* ------------------ 選取與取消選取功能 ------------------ */
     function selectRow(row) {
+      // 若有先前選取，先取消其紅色顯示
       if (selectedRow && selectedRow !== row) {
-        // 取消先前選取：將餐點名稱顏色設回白色
         selectedRow.cells[0].style.color = "white";
       }
       selectedRow = row;
       row.cells[0].style.color = "red";
     }
-
     function deselectRow() {
       if (selectedRow) {
         selectedRow.cells[0].style.color = "white";
         selectedRow = null;
       }
     }
-
-    // 點擊螢幕其他部分（非控制按鈕與非選取列）則取消選取
+    // 點擊非左右按鈕、非紅色按鈕區域時取消選取
     document.addEventListener("click", function(e) {
-      if (selectedRow && 
+      if (selectedRow &&
           e.target.id !== "increaseButton" &&
           e.target.id !== "decreaseButton" &&
           e.target.id !== "voiceButton" &&
@@ -499,28 +417,34 @@
     });
 
     /* ------------------ 左右按鈕功能 ------------------ */
+    function getTargetRow() {
+      const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+      if (selectedRow) return selectedRow;
+      else if (tbody.rows.length > 0) return tbody.rows[tbody.rows.length - 1];
+      else return null;
+    }
     function increaseCurrentProductQuantity() {
-      if (!selectedRow) return;
-      let qty = parseInt(selectedRow.cells[1].innerText);
+      let row = getTargetRow();
+      if (!row) return;
+      let qty = parseInt(row.cells[1].innerText);
       qty = qty + 1;
-      selectedRow.cells[1].innerText = qty;
+      row.cells[1].innerText = qty;
       updateTotalAmount();
       vibrateOnce();
     }
-
     function decreaseCurrentProductQuantity() {
-      if (!selectedRow) return;
-      let qty = parseInt(selectedRow.cells[1].innerText);
+      let row = getTargetRow();
+      if (!row) return;
+      let qty = parseInt(row.cells[1].innerText);
       if (qty > 1) {
         qty = qty - 1;
-        selectedRow.cells[1].innerText = qty;
+        row.cells[1].innerText = qty;
         updateTotalAmount();
         vibrateOnce();
       }
-      // 當數量已為 1 則不做任何動作
+      // 若數量已為1則不作動作
     }
-
-    // 綁定左右按鈕的雙擊事件
+    // 綁定左右方塊的雙擊事件
     document.getElementById("increaseButton").addEventListener("dblclick", function(e) {
       increaseCurrentProductQuantity();
     });
