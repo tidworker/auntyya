@@ -518,7 +518,6 @@
       if (dish.price === 0) {
         const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
         if (tbody.rows.length === 0) {
-          alert("無法加入0元商品，因為沒有上一筆訂單");
           return;
         }
         let found = false;
@@ -552,7 +551,7 @@
           }
         }
         if (!found) {
-          alert("無法加入0元商品，因為沒有上一筆非免費訂單");
+          return;
         }
         updateTotalAmount();
         return;
@@ -591,7 +590,6 @@
       if (!currentEditRow) return;
       let newQuantity = parseInt(document.getElementById("modalQuantity").value);
       if (isNaN(newQuantity) || newQuantity < 1) {
-        alert("份數必須大於或等於1");
         return;
       }
       currentEditRow.cells[1].innerText = newQuantity;
@@ -618,7 +616,6 @@
         }
       }
       if (!targetRow) {
-        alert("找不到可調整的餐點數量");
         return;
       }
       let qty = parseInt(targetRow.cells[1].innerText);
@@ -642,7 +639,6 @@
         }
       }
       if (!targetRow) {
-        alert("找不到非免費訂單以調整免費商品數量");
         return;
       }
       let mainQty = parseInt(targetRow.cells[1].innerText);
@@ -664,7 +660,6 @@
         if (freeIndex >= 0) break;
       }
       if (freeIndex < 0) {
-        alert("此訂單中沒有免費商品可調整");
         return;
       }
       let entry = remarksArr[freeIndex];
