@@ -62,7 +62,7 @@
     thead tr th:last-child {
       border-top-right-radius: 3px;
     }
-    /* 語音輸入區（綠色模式下使用）：文字顏色橘色 */
+    /* 語音輸入區 (綠色模式下使用)：文字顏色橘色 */
     #voiceOutput {
       margin-top: 10px;
       text-align: left;
@@ -115,7 +115,7 @@
     #voiceButton:active {
       background-color: red;
     }
-    /* 禁止按鈕內文字選取 */
+    /* 禁止按鈕上文字選取 */
     #voiceButton, #voiceButton * {
       user-select: none;
     }
@@ -125,7 +125,7 @@
   <br />
   <img src="3.png" alt="圖片" />
 
-  <!-- 統一容器：訂單表格與語音輸入區 -->
+  <!-- 統一內容區：訂單表格與語音輸入區 -->
   <div id="contentContainer">
     <table id="orderTable">
       <thead>
@@ -171,22 +171,22 @@
     let groupMapping = {};
     let currentEditRow = null;
     let currentRecognition = null;
-    // 當使用者持續按下按鈕時 (保持錄音狀態)
+    // 是否正在按住錄音按鈕 (持續錄音狀態)
     let holdActive = false;
-    // 初始模式為 "red"（但按下按鈕後不會馬上開始點餐，要根據滑動方向決定）
+    // 初始模式預設為 "red"（但按下按鈕後不馬上開始點餐，需依滑動方向決定）
     let currentMode = "red";
-    // 記錄起始 X 與 Y 座標，以及是否已滑動出方向
+    // 記錄按下時的起始座標，以及是否已判斷出滑動方向
     let startX = 0, startY = 0;
     let swipeToggled = false;
 
-    // 菜單資料 (若有外部 menu.txt 可載入)
+    // 菜單資料 (可外部載入 menu.txt)
     let menu = [
       { keywords: ["chonyobin", "bujiadan", "bujia"], name: "蔥油餅", price: 20 },
       { keywords: ["chonyobinjiadan", "danbin", "jiadan", "la"], name: "蔥油餅加蛋", price: 30 },
       { keywords: ["la"], name: "辣", price: 0 }
     ];
 
-    /* 讀取外部資料 (database.txt 與 menu.txt) */
+    /* ------------------ 載入外部資料 ------------------ */
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -263,7 +263,7 @@
         };
         recognition.onerror = function(event) {
           currentRecognition = null;
-          // 若仍在按住，回傳特殊值表示要重啟辨識
+          // 無論何種錯誤，只要使用者仍在按住，就回傳特殊值，讓 continuousRecognition() 重新啟動
           if (holdActive) {
             resolve("_RESTART_");
           } else {
@@ -274,7 +274,7 @@
       });
     }
 
-    // 持續辨識：只要 holdActive 為 true 就不斷重新啟動辨識
+    // 持續辨識：只要 holdActive 為 true，就持續呼叫 startVoiceInputSingle()
     function continuousRecognition() {
       if (!holdActive) return;
       startVoiceInputSingle().then((transcript) => {
@@ -297,7 +297,7 @@
               }
               break;
             case "green":
-              // 綠色模式：將內容加在 #voiceOutput 同一行，以逗號分隔
+              // 綠色模式：將內容加在 #voiceOutput 同一行，逗號分隔
               let voiceOutputDiv = document.getElementById("voiceOutput");
               let currentText = voiceOutputDiv.innerText.trim();
               if (currentText === "") {
@@ -356,7 +356,7 @@
       vibrateTwice();
       voiceButton.style.backgroundColor = "darkred";
     }
-    // 向右：進入綠色模式 (語音內容加到 #voiceOutput 同一行)
+    // 向右：進入綠色模式 (將語音內容加到 #voiceOutput 同一行，以逗號分隔)
     function startGreenMode() {
       currentMode = "green";
       voiceButton.style.backgroundColor = "darkred";
@@ -370,7 +370,7 @@
       let deltaY = currentY - startY;
       if (!swipeToggled && (Math.abs(deltaX) > 30 || Math.abs(deltaY) > 30)) {
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
-          // 左右滑
+          // 左右滑動
           if (deltaX < 0) {
             // 向左：刪除語音輸入區最後一行
             deleteCurrentVoiceLine();
@@ -379,7 +379,7 @@
             startGreenMode();
           }
         } else {
-          // 上下滑
+          // 上下滑動
           if (deltaY < 0) {
             // 向上：刪除最新訂單
             deleteLatestOrder();
@@ -398,7 +398,7 @@
 
     /* ------------------ 事件監聽 ------------------ */
     const voiceButton = document.getElementById("voiceButton");
-    // 按下時：只記錄起始點，不馬上啟動錄音
+    // 按下時：只記錄起始點，不馬上開始錄音
     voiceButton.addEventListener("mousedown", function(e) {
       startX = e.pageX;
       startY = e.pageY;
@@ -413,7 +413,7 @@
       holdActive = true;
       e.preventDefault();
     });
-    // 拖動時：判斷方向
+    // 拖動時：判斷滑動方向
     voiceButton.addEventListener("mousemove", function(e) {
       if (holdActive) {
         updateButtonPosition(e.pageX, e.pageY);
@@ -425,7 +425,7 @@
       }
       e.preventDefault();
     });
-    // 放開時：停止錄音、恢復按鈕位置與初始紅色
+    // 放開時：停止錄音，恢復初始位置與紅色
     function endDrag() {
       if (navigator.vibrate) {
         navigator.vibrate(50);
@@ -500,7 +500,7 @@
 
     function addOrderRow(dish, quantity, remark) {
       if (!dish) return;
-      // 若商品價格為 0 (例如 "辣")，加入上一筆非免費品項的備註，以逗號分隔
+      // 若商品價格為 0 (例如 "辣")，則將其加入上一筆非免費品項的備註，使用逗號分隔
       if (dish.price === 0) {
         const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
         if (tbody.rows.length === 0) {
@@ -537,7 +537,7 @@
         updateTotalAmount();
         return;
       }
-      // 一般商品 => 直接新增一行
+      // 一般商品直接新增一行
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       const row = tbody.insertRow();
       const nameCell = row.insertCell();
