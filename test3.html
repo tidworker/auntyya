@@ -160,14 +160,14 @@
     let longPressTimeout = null;
     let isDraggingMode = false;
     
-    // 記錄按下時的初始位置（用於非拖曳模式下的觸發判定）
+    // 記錄按下時的初始位置（用於紅色模式下觸發判定）
     let startX = 0, startY = 0;
     let swipeToggled = false;
     
-    // 新增：記錄上次更新 transform 的位置（僅用於紅色模式下的移動更新）
+    // 紅色模式下更新按鈕位置時，僅當移動超過 5px 才更新 transform
     let lastTransformX = null;
     let lastTransformY = null;
-    const moveUpdateThreshold = 5;  // 僅當移動超過 5px 才更新按鈕位置
+    const moveUpdateThreshold = 5;  // 5px 以上才更新位置
     
     // 菜單資料（若有外部 menu.txt 可動態載入）
     let menu = [
@@ -321,34 +321,39 @@
       voiceButton.style.backgroundColor = "darkred";
     }
     
-    /* ---------- 非拖曳模式下的移動判定（紅色模式） ---------- */
+    /* ---------- 紅色模式下移動判定函式 ---------- */
     function updateButtonPosition(currentX, currentY) {
-      let deltaX = currentX - startX;
-      let deltaY = currentY - startY;
+      // 計算從按下起始點累計的位移
+      let totalDeltaX = currentX - startX;
+      let totalDeltaY = currentY - startY;
       
-      // 30px 為觸發動作的門檻
-      if (!swipeToggled && (Math.abs(deltaX) > 30 || Math.abs(deltaY) > 30)) {
-        if (Math.abs(deltaX) > Math.abs(deltaY)) {
-          deltaX < 0 ? deleteCurrentVoiceLine() : startGreenMode();
+      // 當移動超過 30px 時，觸發一次相應功能（例如刪除、切換模式），然後不再更新紅色按鈕的位置
+      if (!swipeToggled && (Math.abs(totalDeltaX) >= 30 || Math.abs(totalDeltaY) >= 30)) {
+        if (Math.abs(totalDeltaX) > Math.abs(totalDeltaY)) {
+          totalDeltaX < 0 ? deleteCurrentVoiceLine() : startGreenMode();
         } else {
-          deltaY < 0 ? deleteLatestOrder() : startOrdering();
+          totalDeltaY < 0 ? deleteLatestOrder() : startOrdering();
         }
         swipeToggled = true;
+        return;
       }
       
-      // 只有當與上次更新位置的差距大於 5px 時才更新 transform，以降低細微抖動
-      if (lastTransformX === null || lastTransformY === null) {
-        lastTransformX = currentX;
-        lastTransformY = currentY;
-        const angle = Math.atan2(deltaY, deltaX);
-        voiceButton.style.transform = `translate(-50%, 0) translate(${20 * Math.cos(angle)}px, ${20 * Math.sin(angle)}px)`;
-      } else {
-        if (Math.abs(currentX - lastTransformX) >= moveUpdateThreshold ||
-            Math.abs(currentY - lastTransformY) >= moveUpdateThreshold) {
+      // 紅色模式下僅在移動超過 5px 時更新按鈕 transform，
+      // 若已觸發 30px 的動作則不再更新（保持當前位置）
+      if (!swipeToggled) {
+        if (lastTransformX === null || lastTransformY === null) {
           lastTransformX = currentX;
           lastTransformY = currentY;
-          const angle = Math.atan2(deltaY, deltaX);
+          const angle = Math.atan2(totalDeltaY, totalDeltaX);
           voiceButton.style.transform = `translate(-50%, 0) translate(${20 * Math.cos(angle)}px, ${20 * Math.sin(angle)}px)`;
+        } else {
+          if (Math.abs(currentX - lastTransformX) >= moveUpdateThreshold ||
+              Math.abs(currentY - lastTransformY) >= moveUpdateThreshold) {
+            lastTransformX = currentX;
+            lastTransformY = currentY;
+            const angle = Math.atan2(totalDeltaY, totalDeltaX);
+            voiceButton.style.transform = `translate(-50%, 0) translate(${20 * Math.cos(angle)}px, ${20 * Math.sin(angle)}px)`;
+          }
         }
       }
     }
@@ -356,7 +361,7 @@
     /* ---------- 事件監聽：按下、移動、放開 ---------- */
     const voiceButton = document.getElementById("voiceButton");
     
-    // 按下時：啟動長按檢測（2秒後進入拖曳模式），同時記錄起始與更新位置
+    // 按下時：記錄起始位置，初始化更新記錄，啟動長按檢測（2秒後進入拖曳模式）
     voiceButton.addEventListener("mousedown", function(e) {
       startX = e.pageX;
       startY = e.pageY;
@@ -367,7 +372,7 @@
       longPressTimeout = setTimeout(() => {
         isDraggingMode = true;
         // 進入拖曳模式時變綠色，並震動提示
-        voiceButton.style.backgroundColor = "orange";
+        voiceButton.style.backgroundColor = "darkgreen";
         if (navigator.vibrate) navigator.vibrate(50);
       }, 2000);
       e.preventDefault();
@@ -387,7 +392,9 @@
       e.preventDefault();
     });
     
-    // 移動時：若進入拖曳模式則直接根據手指位置更新，否則呼叫 updateButtonPosition（紅色模式）
+    // 移動時：
+    // 若處於拖曳模式（綠色），則直接讓按鈕跟隨手指；
+    // 否則（紅色模式）呼叫 updateButtonPosition 來依據位移判定是否更新 transform 與觸發事件
     voiceButton.addEventListener("mousemove", function(e) {
       if (holdActive && isDraggingMode) {
         voiceButton.style.left = e.pageX + "px";
