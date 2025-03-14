@@ -512,21 +512,42 @@
           let row = tbody.rows[i];
           let price = parseFloat(row.cells[3].innerText);
           if (price > 0) {
+            // 取得主商品的份數
+            let mainQty = parseInt(row.cells[1].innerText);
             let currentRemark = row.cells[2].innerText.trim();
+            let remarksArr = [];
+            let index = -1;
             if (currentRemark !== "") {
-              let remarksArr = currentRemark.split(",").map(s => s.trim());
-              let index = remarksArr.findIndex(entry => entry.startsWith(dish.name + "×"));
-              if (index >= 0) {
-                let parts = remarksArr[index].split("×");
-                let currentQty = parseInt(parts[1]) || 0;
-                remarksArr[index] = dish.name + "×" + (currentQty + quantity);
-              } else {
-                remarksArr.push(dish.name + "×" + quantity);
-              }
-              row.cells[2].innerText = remarksArr.join(",");
-            } else {
-              row.cells[2].innerText = dish.name + "×" + quantity;
+              remarksArr = currentRemark.split(",").map(s => s.trim());
+              // 嘗試尋找已存在此 0 元品項的備註（可能格式為 "品名" 或 "品名×數量"）
+              index = remarksArr.findIndex(entry => entry === dish.name || entry.startsWith(dish.name + "×"));
             }
+            let freeQty = 0;
+            if (index >= 0) {
+              // 若已存在，解析目前的數量（若為單純品名，則表示數量等於主商品數量）
+              let entry = remarksArr[index];
+              if (entry === dish.name) {
+                freeQty = mainQty;
+              } else {
+                let parts = entry.split("×");
+                freeQty = parseInt(parts[1]) || 0;
+              }
+              freeQty += quantity;
+              // 若累計數量與主商品數量相同，則只顯示品項名稱
+              if (freeQty === mainQty) {
+                remarksArr[index] = dish.name;
+              } else {
+                remarksArr[index] = dish.name + "×" + freeQty;
+              }
+            } else {
+              freeQty = quantity;
+              if (freeQty === mainQty) {
+                remarksArr.push(dish.name);
+              } else {
+                remarksArr.push(dish.name + "×" + freeQty);
+              }
+            }
+            row.cells[2].innerText = remarksArr.join(",");
             found = true;
             break;
           }
