@@ -115,7 +115,7 @@
     #voiceButton:active {
       background-color: red;
     }
-    /* 新增左右白色方形按鈕 */
+    /* 新增左右黑色方形按鈕 (高100px、寬150px) */
     #decreaseButton,
     #increaseButton {
       position: fixed;
@@ -126,6 +126,11 @@
       border: none;
       cursor: pointer;
       z-index: 3000;
+    }
+    /* 點擊時不變色 */
+    #decreaseButton:active,
+    #increaseButton:active {
+      background-color: black;
     }
     /* 左側按鈕：位於中心左側 */
     #decreaseButton {
@@ -182,7 +187,7 @@
     </div>
   </div>
 
-  <!-- 新增左右白色按鈕 -->
+  <!-- 新增左右黑色方形按鈕 -->
   <button id="decreaseButton"></button>
   <!-- 浮動錄音按鈕 -->
   <button id="voiceButton"></button>
@@ -631,7 +636,7 @@
       updateTotalAmount();
     }
 
-    /* ------------------ 新增左右白色按鈕功能 ------------------ */
+    /* ------------------ 新增左右按鈕功能 ------------------ */
     function increaseCurrentProductQuantity() {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       if (tbody.rows.length === 0) {
@@ -663,7 +668,7 @@
         alert("商品數量至少為1");
       }
     }
-    // 綁定左右白色按鈕的雙擊事件
+    // 綁定左右按鈕的雙擊事件
     document.getElementById("increaseButton").addEventListener("dblclick", function(e) {
       increaseCurrentProductQuantity();
     });
