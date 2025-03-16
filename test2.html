@@ -36,8 +36,8 @@
       margin-top: 10px;
       font-weight: bold;
     }
-    /* 菜單表格容器 */
-    #menuContainer {
+    /* 點單紀錄表格容器 */
+    #orderGroupsContainer {
       width: 90%;
       margin: 20px auto;
       background-color: black;
@@ -45,7 +45,7 @@
       text-align: center;
       overflow-x: auto;
     }
-    #menuContainer h2 {
+    #orderGroupsContainer h2 {
       margin-bottom: 10px;
     }
     /* 統一內容區：訂單表格與語音輸入區，高度 340px */
@@ -57,7 +57,7 @@
       overflow-y: auto;
       background-color: black;
     }
-    /* 訂單表格、菜單表格共用樣式 */
+    /* 訂單表格與點單紀錄表格共用樣式 */
     table {
       width: 100%;
       background-color: black;
@@ -171,23 +171,6 @@
   <br />
   <img src="3.png" alt="圖片" />
 
-  <!-- 新增菜單表格 -->
-  <div id="menuContainer">
-    <h2>菜單</h2>
-    <table id="menuTable">
-      <thead>
-        <tr>
-          <th>品項</th>
-          <th>單價</th>
-          <th>關鍵字</th>
-        </tr>
-      </thead>
-      <tbody>
-        <!-- 菜單項目將動態加入 -->
-      </tbody>
-    </table>
-  </div>
-
   <!-- 統一內容區：訂單表格與語音輸入區 -->
   <div id="contentContainer">
     <table id="orderTable">
@@ -210,6 +193,22 @@
   <p id="totalAmount">總金額：0 元</p>
 
   <button id="resetButton" onclick="resetOrder()">重新點餐</button>
+
+  <!-- 新增點單紀錄表格 -->
+  <div id="orderGroupsContainer">
+    <h2>點單紀錄</h2>
+    <table id="orderGroupsTable">
+      <thead>
+        <tr>
+          <th>序號</th>
+          <th>點單內容</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 點單群組將動態加入 -->
+      </tbody>
+    </table>
+  </div>
 
   <!-- 模態框：編輯訂單項目 -->
   <div id="editModal">
@@ -293,30 +292,12 @@
         })
         .then(text => {
           menu = JSON.parse(text);
-          populateMenuTable();
         })
         .catch(err => {
           console.error("載入菜單資料失敗：" + err.message);
-          // 載入失敗時依舊以內建資料呈現
-          populateMenuTable();
         });
     }
     loadMenu();
-
-    // 新增函式：填充菜單表格
-    function populateMenuTable() {
-      const menuTableBody = document.getElementById("menuTable").getElementsByTagName("tbody")[0];
-      menuTableBody.innerHTML = "";
-      menu.forEach(item => {
-        const row = menuTableBody.insertRow();
-        const cellName = row.insertCell();
-        cellName.innerText = item.name;
-        const cellPrice = row.insertCell();
-        cellPrice.innerText = item.price;
-        const cellKeywords = row.insertCell();
-        cellKeywords.innerText = item.keywords.join(", ");
-      });
-    }
 
     // 轉譯：僅取出 database.txt 中對應字元
     function translateDishName(dishChinese) {
@@ -483,10 +464,61 @@
         });
       }
       orderGroups.push(orderGroup);
+      // 更新點單紀錄表格
+      updateOrderGroupsTable();
       // 清空訂單，新增一組新的訂單
       resetOrder();
       vibrateOnce();
       // 可依需求加入提示訊息，例如：alert("訂單已記錄，請開始新的訂單");
+    }
+
+    // 新增函式：更新點單紀錄表格
+    function updateOrderGroupsTable() {
+      const tableBody = document.getElementById("orderGroupsTable").getElementsByTagName("tbody")[0];
+      tableBody.innerHTML = "";
+      orderGroups.forEach((group, index) => {
+        const row = tableBody.insertRow();
+        // 第一欄：序號
+        const cellIndex = row.insertCell();
+        cellIndex.innerText = index + 1;
+        // 第二欄：點單內容
+        const cellContent = row.insertCell();
+        let contentStr = "";
+        group.forEach(order => {
+          contentStr += `品項: ${order.dish} 份數: ${order.quantity} 備註: ${order.remark} 單價: ${order.price} 元<br>`;
+        });
+        cellContent.innerHTML = contentStr;
+
+        // 為該列新增按住後向右滑的事件監聽（以觸控與滑鼠皆適用）
+        let startX = 0;
+        row.addEventListener("touchstart", function(e) {
+          startX = e.touches[0].clientX;
+        });
+        row.addEventListener("touchend", function(e) {
+          let endX = e.changedTouches[0].clientX;
+          let deltaX = endX - startX;
+          if(deltaX > 50) {
+            if(confirm("確定刪除此筆點單紀錄？")) {
+              orderGroups.splice(index, 1);
+              updateOrderGroupsTable();
+            }
+          }
+        });
+        // 加入滑鼠版（拖曳）：按下、放開判斷右滑
+        row.addEventListener("mousedown", function(e) {
+          startX = e.clientX;
+        });
+        row.addEventListener("mouseup", function(e) {
+          let endX = e.clientX;
+          let deltaX = endX - startX;
+          if(deltaX > 50) {
+            if(confirm("確定刪除此筆點單紀錄？")) {
+              orderGroups.splice(index, 1);
+              updateOrderGroupsTable();
+            }
+          }
+        });
+      });
     }
 
     /* ------------------ 錄音按鈕事件監聽 ------------------ */
@@ -831,7 +863,7 @@
       if (navigator.vibrate) navigator.vibrate(50);
       continuousRecognition();
     }
-    // 刪除最新訂單項目
+    // 刪除最新訂單項目（目前僅用於語音操作）
     function deleteLatestOrder() {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       if (tbody.rows.length > 0) {
