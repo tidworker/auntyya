@@ -36,7 +36,7 @@
       margin-top: 10px;
       font-weight: bold;
     }
-    /* 內容區：頁框，固定高度 */
+    /* 內容區（頁框）：固定高度 */
     #contentContainer {
       width: 90%;
       height: 340px;
@@ -46,13 +46,13 @@
       background-color: black;
       position: relative;
     }
-    /* 訂單顯示區，佔滿頁框 */
+    /* 訂單顯示區：佔滿頁框 */
     #orderDisplay {
       width: 100%;
       height: 100%;
       overflow-y: auto;
     }
-    /* 共用訂單表格樣式 */
+    /* 訂單表格共用樣式 */
     table {
       width: 100%;
       background-color: black;
@@ -65,7 +65,7 @@
     }
     table, th, td { border: 0; }
     th, td { padding: 8px; text-align: left; }
-    /* 表頭：橘色背景，圓角 */
+    /* 表頭 */
     table th {
       background-color: orange;
       color: black;
@@ -79,19 +79,16 @@
       color: orange;
       padding: 10px;
     }
-    /* 總金額與頁數顯示 */
+    /* 總金額與頁數 */
     #totalAmount {
       color: white;
       font-size: 18px;
       margin-top: 10px;
     }
-    #pageIndicator {
-      font-size: 16px;
-      margin-left: 10px;
-      color: orange;
-    }
+    /* 用 span 顯示頁數 */
+    #pageIndicator { font-size: 16px; margin-left: 10px; color: orange; }
     @media (max-width: 600px) { button { font-size: 18px; } }
-    /* 模態框：編輯訂單項目 */
+    /* 模態框 */
     #editModal {
       display: none;
       position: fixed;
@@ -111,7 +108,7 @@
       border-radius: 5px;
       position: relative;
     }
-    /* 浮動錄音按鈕 */
+    /* 浮動語音按鈕 */
     #voiceButton {
       position: fixed;
       bottom: 50px;
@@ -143,7 +140,7 @@
     }
     #decreaseButton { left: calc(50% - 35px - 150px - 10px); }
     #increaseButton { left: calc(50% + 35px + 10px); }
-    /* 禁止按鈕文字選取 */
+    /* 禁止文字選取 */
     #voiceButton, #voiceButton * { user-select: none; }
   </style>
 </head>
@@ -151,11 +148,10 @@
   <br />
   <img src="3.png" alt="圖片" />
 
-  <!-- 內容區：頁框，只顯示一筆訂單 -->
+  <!-- 內容區：頁框，內含訂單顯示區 -->
   <div id="contentContainer">
-    <!-- 訂單顯示區 -->
     <div id="orderDisplay">
-      <!-- 若無記錄，預設顯示目前訂單表格 -->
+      <!-- 初始若無訂單記錄，顯示目前訂單表格 -->
       <table id="currentOrderTable">
         <thead>
           <tr>
@@ -166,17 +162,17 @@
           </tr>
         </thead>
         <tbody>
-          <!-- 訂單項目由語音輸入或其他方式動態加入 -->
+          <!-- 訂單項目將動態加入 -->
         </tbody>
       </table>
       <div id="voiceOutput"></div>
     </div>
   </div>
 
-  <!-- 總金額與頁數顯示 -->
+  <!-- 總金額與頁數指示 -->
   <p id="totalAmount">總金額：0 元 <span id="pageIndicator"></span></p>
 
-  <!-- 重新點餐按鈕：清空所有記錄 -->
+  <!-- 重新點餐按鈕：清空所有訂單記錄 -->
   <button id="resetButton" onclick="resetAll()">重新點餐</button>
 
   <!-- 模態框：編輯訂單項目 -->
@@ -197,7 +193,7 @@
     </div>
   </div>
 
-  <!-- 左側、右側按鈕（控制餐點數量與免費品項） -->
+  <!-- 左側、右側按鈕與語音按鈕 -->
   <button id="decreaseButton"></button>
   <button id="voiceButton"></button>
   <button id="increaseButton"></button>
@@ -208,20 +204,19 @@
     let groupMapping = {};
     let currentEditRow = null;
     let currentRecognition = null;
-    let holdActive = false;  // 錄音按鈕狀態
-    let currentMode = "red"; // "red"：語音訂餐模式；"green"：語音輸入模式
+    let holdActive = false;
+    let currentMode = "red";
     let startX = 0, startY = 0;
     let swipeToggled = false;
     let gestureDirection = "";
     let gestureStartTime = 0;
     
-    // 用來存儲已記錄的訂單（每筆為一個物件 { html, total }）
+    // 訂單記錄：orderGroups 為陣列，每筆記錄為 { html, total }
     let orderGroups = [];
-    // 當前顯示的訂單記錄索引（從 0 開始）
-    let currentOrderGroupIndex = 0;
+    // 當前顯示頁索引（0 ~ orderGroups.length 表示目前訂單表格）
+    let currentOrderIndex = orderGroups.length; // 初始為 0（無記錄時顯示目前訂單）
     
-    // 當無已記錄訂單時，使用目前訂單表格作為新訂單（#currentOrderTable）
-    // 菜單資料（可從外部檔案讀取）
+    // 菜單資料
     let menu = [
       { keywords: ["chonyobin", "bujiadan", "bujia"], name: "蔥油餅", price: 20 },
       { keywords: ["chonyobinjiadan", "danbin", "jiadan", "la"], name: "蔥油餅加蛋", price: 30 },
@@ -229,7 +224,7 @@
       { keywords: ["freeDrink"], name: "免費飲料", price: 0 }
     ];
     
-    /* ------------------ 載入外部資料 ------------------ */
+    /* 載入外部資料 */
     function loadTranslationDatabase() {
       fetch("database.txt")
         .then(response => {
@@ -258,7 +253,7 @@
     }
     loadMenu();
     
-    // 轉譯函式：根據字庫轉換字元
+    // 轉譯函式
     function translateDishName(dishChinese) {
       let converted = "";
       for (let i = 0; i < dishChinese.length; i++) {
@@ -269,7 +264,7 @@
     }
     
     // 震動函式
-    function vibrateTwice() { if (navigator.vibrate) navigator.vibrate([50,100,50]); }
+    function vibrateTwice() { if (navigator.vibrate) navigator.vibrate([50, 100, 50]); }
     function vibrateOnce() { if (navigator.vibrate) navigator.vibrate(50); }
     
     /* ------------------ 語音辨識處理 ------------------ */
@@ -277,8 +272,7 @@
       return new Promise((resolve) => {
         if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
           alert("您的瀏覽器不支援語音輸入功能。");
-          resolve(null);
-          return;
+          resolve(null); return;
         }
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
@@ -302,7 +296,7 @@
           if (currentMode === "red") {
             let orders = processMultipleVoiceInput(text);
             orders.forEach(order => { addOrderRow(order.dish, order.quantity, ""); });
-            updateTotalAmount();
+            updateDisplay();
           } else if (currentMode === "green") {
             let voiceOutputDiv = document.getElementById("voiceOutput");
             let currentText = voiceOutputDiv.innerText.trim();
@@ -313,7 +307,7 @@
       });
     }
     
-    /* ------------------ 手勢處理（錄音按鈕） ------------------ */
+    /* ------------------ 手勢處理（語音按鈕） ------------------ */
     function updateButtonPosition(currentX, currentY) {
       let deltaX = currentX - startX, deltaY = currentY - startY;
       if (!swipeToggled && (Math.abs(deltaX) > 30 || Math.abs(deltaY) > 30)) {
@@ -370,7 +364,7 @@
       return orders.filter(o => o.dish);
     }
     
-    // 計算總金額：根據顯示的訂單表格
+    // 計算總金額：傳入訂單表格元素
     function computeTotal(tableElement) {
       let total = 0;
       const rows = tableElement.querySelector("tbody").rows;
@@ -382,29 +376,29 @@
       return total;
     }
     
-    // 更新顯示：若有記錄則顯示 orderGroups[currentOrderGroupIndex]，否則顯示目前訂單表格
+    /* 更新頁框顯示：
+       若 currentOrderIndex < orderGroups.length，則顯示已儲存訂單；
+       若 currentOrderIndex 等於 orderGroups.length，則顯示目前訂單表格 */
     function updateDisplay() {
       const orderDisplayDiv = document.getElementById("orderDisplay");
-      const totalAmountP = document.getElementById("totalAmount");
       const pageIndicatorSpan = document.getElementById("pageIndicator");
-      if (orderGroups.length > 0) {
-        orderDisplayDiv.innerHTML = orderGroups[currentOrderGroupIndex].html;
-        totalAmountP.firstChild.textContent = "總金額：" + orderGroups[currentOrderGroupIndex].total + " 元";
-        pageIndicatorSpan.innerText = currentOrderGroupIndex + 1 + " / " + orderGroups.length;
+      let totalPages = orderGroups.length + 1;  // 已儲存訂單 + 目前訂單
+      if (currentOrderIndex < orderGroups.length) {
+        orderDisplayDiv.innerHTML = orderGroups[currentOrderIndex].html;
+        document.getElementById("totalAmount").innerText = "總金額：" + orderGroups[currentOrderIndex].total + " 元";
       } else {
-        // 若無記錄，則顯示目前訂單表格（#currentOrderTable）
         const currentTable = document.getElementById("currentOrderTable");
         orderDisplayDiv.innerHTML = currentTable.outerHTML + document.getElementById("voiceOutput").outerHTML;
-        totalAmountP.firstChild.textContent = "總金額：" + computeTotal(currentTable) + " 元";
-        pageIndicatorSpan.innerText = "";
+        document.getElementById("totalAmount").innerText = "總金額：" + computeTotal(currentTable) + " 元";
       }
+      pageIndicatorSpan.innerText = (currentOrderIndex + 1) + " / " + totalPages;
     }
     
     // 新增訂單列到目前訂單表格（#currentOrderTable）
     function addOrderRow(dish, quantity, remark) {
       if (!dish) return;
       const tbody = document.getElementById("currentOrderTable").getElementsByTagName("tbody")[0];
-      // 若為免費商品，合併到上一筆非免費訂單備註中
+      // 若為免費商品，則合併到上一筆非免費訂單備註中
       if (dish.price === 0) {
         if (tbody.rows.length === 0) return;
         let found = false;
@@ -446,7 +440,7 @@
       row.insertCell().innerText = dish.price;
       updateDisplay();
       
-      // 為該列加入向右滑動刪除事件（觸控與滑鼠）
+      // 為此列加入向右滑動刪除事件（觸控與滑鼠）
       row.addEventListener("touchstart", e => { row.startX = e.touches[0].clientX; });
       row.addEventListener("touchend", e => {
         let endX = e.changedTouches[0].clientX;
@@ -465,21 +459,23 @@
       });
     }
     
-    // 重置目前訂單表格（清空 #currentOrderTable 的內容）
+    // 重置目前訂單表格（清空 #currentOrderTable 內容）
     function resetOrder() {
       document.getElementById("currentOrderTable").getElementsByTagName("tbody")[0].innerHTML = "";
       document.getElementById("voiceOutput").innerHTML = "";
       updateDisplay();
     }
     
-    // 清空所有訂單記錄
-    function clearOrderGroups() {
+    // 清空所有訂單記錄（重新點餐用）
+    function resetAll() {
       orderGroups = [];
-      currentOrderGroupIndex = 0;
+      currentOrderIndex = 0;
+      resetOrder();
       updateDisplay();
     }
     
-    // 當往下手勢確認時，將目前訂單表格複製並記錄，並生成新的目前訂單表格
+    // 當往下手勢確認時，將目前訂單複製為一筆訂單記錄，
+    // 並清空目前訂單表格；記錄後顯示儲存的訂單（頁數顯示 1/2）
     function recordOrderGroup() {
       const currentTable = document.getElementById("currentOrderTable");
       const tbody = currentTable.getElementsByTagName("tbody")[0];
@@ -487,7 +483,8 @@
       let total = computeTotal(currentTable);
       let cloneHTML = currentTable.outerHTML;
       orderGroups.push({ html: cloneHTML, total: total });
-      currentOrderGroupIndex = orderGroups.length - 1;
+      // 儲存後顯示第一筆已儲存訂單
+      currentOrderIndex = 0;
       resetOrder();
       updateDisplay();
       vibrateOnce();
@@ -677,7 +674,7 @@
     voiceButton.addEventListener("mouseup", function(e) { endDrag(); e.preventDefault(); });
     voiceButton.addEventListener("touchend", function(e) { endDrag(); e.preventDefault(); });
     
-    /* ------------------ 內容區（頁框）滑動事件 ------------------ */
+    /* ------------------ 內容區（頁框）滑動事件：上下切換訂單、向右刪除 ------------------ */
     const orderDisplayDiv = document.getElementById("orderDisplay");
     let displayStartY = 0, displayStartX = 0;
     orderDisplayDiv.addEventListener("touchstart", function(e) {
@@ -689,32 +686,28 @@
       let endX = e.changedTouches[0].clientX;
       let deltaY = endY - displayStartY;
       let deltaX = endX - displayStartX;
+      // 優先判斷垂直滑動
       if (Math.abs(deltaY) > Math.abs(deltaX)) {
-        // 垂直滑動
-        if (deltaY > 50 && orderGroups.length > 0 && currentOrderGroupIndex < orderGroups.length - 1) {
-          // 往下滑：下一筆訂單
-          currentOrderGroupIndex++;
+        if (deltaY > 50 && currentOrderIndex < orderGroups.length) {
+          // 往下滑：切換到下一筆訂單
+          currentOrderIndex++;
           updateDisplay();
-        } else if (deltaY < -50 && orderGroups.length > 0 && currentOrderGroupIndex > 0) {
-          // 往上滑：上一筆訂單
-          currentOrderGroupIndex--;
+        } else if (deltaY < -50 && currentOrderIndex > 0) {
+          // 往上滑：切換到上一筆訂單
+          currentOrderIndex--;
           updateDisplay();
         }
       } else {
-        // 水平滑動：往右滑刪除
-        if (deltaX > 50 && orderGroups.length > 0 && confirm("確定刪除此筆訂單？")) {
-          orderGroups.splice(currentOrderGroupIndex, 1);
-          if (orderGroups.length === 0) {
-            currentOrderGroupIndex = 0;
-          } else if (currentOrderGroupIndex >= orderGroups.length) {
-            currentOrderGroupIndex = orderGroups.length - 1;
-          }
+        // 水平滑動：往右滑刪除（僅對已儲存訂單適用）
+        if (deltaX > 50 && currentOrderIndex < orderGroups.length && confirm("確定刪除此筆訂單？")) {
+          orderGroups.splice(currentOrderIndex, 1);
+          if (currentOrderIndex >= orderGroups.length) currentOrderIndex = orderGroups.length;
           updateDisplay();
         }
       }
     });
     
-    // 初始化顯示（若無記錄則顯示目前訂單表格）
+    // 初始顯示：若無已儲存訂單則顯示目前訂單
     updateDisplay();
     
   </script>
