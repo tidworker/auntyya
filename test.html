@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>中文點餐系統</title>
   <style>
+    /* 禁止下拉刷新 */
+    html, body {
+      overscroll-behavior: none;
+    }
     /* 黑底白字風格 */
     body {
       font-family: Arial, sans-serif;
@@ -109,27 +113,6 @@
       margin-top: 10px;
       font-weight: bold;
     }
-    /* 左右方形按鈕 */
-    #decreaseButton,
-    #increaseButton {
-      position: fixed;
-      bottom: 50px;
-      width: 150px;
-      height: 100px;
-      background-color: black;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-      z-index: -1000;
-    }
-    #decreaseButton {
-      left: calc(50% - 35px - 150px - 10px);
-    }
-    #increaseButton {
-      left: calc(50% + 35px + 10px);
-    }
     /* 浮動錄音按鈕 */
     #voiceButton {
       position: fixed;
@@ -194,10 +177,8 @@
       </div>
     </div>
   </div>
-  <!-- 左、右、浮動按鈕 -->
-  <button id="decreaseButton"></button>
+  <!-- 浮動錄音按鈕 -->
   <button id="voiceButton"></button>
-  <button id="increaseButton"></button>
 
   <script>
     // 全域變數與初始設定
@@ -347,9 +328,10 @@
       let deltaY = currentY - startY;
       if (!swipeToggled && (Math.abs(deltaX) > 30 || Math.abs(deltaY) > 30)) {
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
-          // 修改為全域左滑切換到 orders.html（deltaX 小於 -30）
+          // 左滑或右滑：根據 deltaX 判斷執行 deleteCurrentVoiceLine 或 startGreenMode
           deltaX < 0 ? deleteCurrentVoiceLine() : startGreenMode();
         } else {
+          // 上滑或下滑：根據 deltaY 判斷執行 deleteLatestOrder 或 startOrdering
           deltaY < 0 ? deleteLatestOrder() : startOrdering();
         }
         swipeToggled = true;
@@ -559,7 +541,7 @@
       if (current > 1) input.value = current - 1;
     }
 
-    // 以下為暫存當前訂單內容之功能
+    // 暫存與載入當前訂單內容
     function saveCurrentOrder() {
       const tbody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
       let currentOrderItems = [];
@@ -602,9 +584,61 @@
     window.addEventListener("beforeunload", function(e) {
       saveCurrentOrder();
     });
-
     // 當頁面載入時讀取未完成訂單內容
     loadCurrentOrder();
+
+    // ------------------ 訂單列上下滑動調整數量的功能 ------------------
+    const orderTableBody = document.getElementById("orderTable").getElementsByTagName("tbody")[0];
+    orderTableBody.addEventListener("touchstart", function(e) {
+      e.preventDefault();  // 防止瀏覽器預設行為（如下拉刷新）
+      const tr = e.target.closest("tr");
+      if (!tr) return;
+      tr.dataset.startX = e.touches[0].clientX;
+      tr.dataset.startY = e.touches[0].clientY;
+    }, { passive: false });
+
+    orderTableBody.addEventListener("touchend", function(e) {
+      e.preventDefault();
+      const tr = e.target.closest("tr");
+      if (!tr) return;
+      const startX = parseFloat(tr.dataset.startX) || 0;
+      const startY = parseFloat(tr.dataset.startY) || 0;
+      const endX = e.changedTouches[0].clientX;
+      const endY = e.changedTouches[0].clientY;
+      const deltaY = endY - startY;
+      const threshold = 30;
+      if (Math.abs(deltaY) < threshold) return;
+      const rect = tr.getBoundingClientRect();
+      const startRelativeX = startX - rect.left;
+      if (startRelativeX < rect.width / 2) {
+        // 左側：調整訂單的品項份數（cell[1]）
+        let qtyCell = tr.cells[1];
+        let currentQty = parseInt(qtyCell.innerText) || 1;
+        if (deltaY < 0) { // 上滑：增加份數
+          currentQty++;
+        } else { // 下滑：減少份數，但最少為1
+          if (currentQty > 1) currentQty--;
+        }
+        qtyCell.innerText = currentQty;
+      } else {
+        // 右側：調整備註內免費品項數量（cell[2]）
+        let remarkCell = tr.cells[2];
+        let remarkText = remarkCell.innerText.trim();
+        if (remarkText === "") return;
+        let baseName = remarkText.split("×")[0].trim();
+        let currentRemarkQty = remarkText.includes("×") ? (parseInt(remarkText.split("×")[1]) || 1) : 1;
+        if (deltaY < 0) { // 上滑：增加
+          currentRemarkQty++;
+        } else { // 下滑：減少，但至少為1
+          if (currentRemarkQty > 1) currentRemarkQty--;
+        }
+        let dishQty = parseInt(tr.cells[1].innerText) || 1;
+        remarkCell.innerText = (currentRemarkQty === dishQty) ? baseName : (baseName + "×" + currentRemarkQty);
+      }
+      updateTotalAmount();
+      delete tr.dataset.startX;
+      delete tr.dataset.startY;
+    }, { passive: false });
 
     // ------------------ 主頁面左滑僅在 #contentContainer 區域觸發換頁至 orders.html ------------------
     let globalStartX = null, globalStartY = null;
