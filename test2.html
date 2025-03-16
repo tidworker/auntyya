@@ -36,6 +36,18 @@
       margin-top: 10px;
       font-weight: bold;
     }
+    /* 菜單表格容器 */
+    #menuContainer {
+      width: 90%;
+      margin: 20px auto;
+      background-color: black;
+      color: white;
+      text-align: center;
+      overflow-x: auto;
+    }
+    #menuContainer h2 {
+      margin-bottom: 10px;
+    }
     /* 統一內容區：訂單表格與語音輸入區，高度 340px */
     #contentContainer {
       width: 90%;
@@ -45,7 +57,7 @@
       overflow-y: auto;
       background-color: black;
     }
-    /* 訂單表格 */
+    /* 訂單表格、菜單表格共用樣式 */
     table {
       width: 100%;
       background-color: black;
@@ -159,6 +171,23 @@
   <br />
   <img src="3.png" alt="圖片" />
 
+  <!-- 新增菜單表格 -->
+  <div id="menuContainer">
+    <h2>菜單</h2>
+    <table id="menuTable">
+      <thead>
+        <tr>
+          <th>品項</th>
+          <th>單價</th>
+          <th>關鍵字</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- 菜單項目將動態加入 -->
+      </tbody>
+    </table>
+  </div>
+
   <!-- 統一內容區：訂單表格與語音輸入區 -->
   <div id="contentContainer">
     <table id="orderTable">
@@ -264,12 +293,30 @@
         })
         .then(text => {
           menu = JSON.parse(text);
+          populateMenuTable();
         })
         .catch(err => {
           console.error("載入菜單資料失敗：" + err.message);
+          // 載入失敗時依舊以內建資料呈現
+          populateMenuTable();
         });
     }
     loadMenu();
+
+    // 新增函式：填充菜單表格
+    function populateMenuTable() {
+      const menuTableBody = document.getElementById("menuTable").getElementsByTagName("tbody")[0];
+      menuTableBody.innerHTML = "";
+      menu.forEach(item => {
+        const row = menuTableBody.insertRow();
+        const cellName = row.insertCell();
+        cellName.innerText = item.name;
+        const cellPrice = row.insertCell();
+        cellPrice.innerText = item.price;
+        const cellKeywords = row.insertCell();
+        cellKeywords.innerText = item.keywords.join(", ");
+      });
+    }
 
     // 轉譯：僅取出 database.txt 中對應字元
     function translateDishName(dishChinese) {
