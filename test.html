@@ -328,10 +328,8 @@
       let deltaY = currentY - startY;
       if (!swipeToggled && (Math.abs(deltaX) > 30 || Math.abs(deltaY) > 30)) {
         if (Math.abs(deltaX) > Math.abs(deltaY)) {
-          // 左滑或右滑：根據 deltaX 判斷執行 deleteCurrentVoiceLine 或 startGreenMode
           deltaX < 0 ? deleteCurrentVoiceLine() : startGreenMode();
         } else {
-          // 上滑或下滑：根據 deltaY 判斷執行 deleteLatestOrder 或 startOrdering
           deltaY < 0 ? deleteLatestOrder() : startOrdering();
         }
         swipeToggled = true;
@@ -606,30 +604,32 @@
       const endX = e.changedTouches[0].clientX;
       const endY = e.changedTouches[0].clientY;
       const deltaY = endY - startY;
-      const threshold = 30;
+      const threshold = 30; // 必須超過此距離才觸發
       if (Math.abs(deltaY) < threshold) return;
       const rect = tr.getBoundingClientRect();
       const startRelativeX = startX - rect.left;
       if (startRelativeX < rect.width / 2) {
-        // 左側：調整訂單的品項份數（cell[1]）
+        // 左側觸碰：調整品項數量
         let qtyCell = tr.cells[1];
         let currentQty = parseInt(qtyCell.innerText) || 1;
-        if (deltaY < 0) { // 上滑：增加份數
+        if (deltaY < 0) {
+          // 向上滑：數量加1
           currentQty++;
-        } else { // 下滑：減少份數，但最少為1
+        } else {
+          // 向下滑：數量減1，但最少為1
           if (currentQty > 1) currentQty--;
         }
         qtyCell.innerText = currentQty;
       } else {
-        // 右側：調整備註內免費品項數量（cell[2]）
+        // 右側觸碰：調整備註內免費品項數量
         let remarkCell = tr.cells[2];
         let remarkText = remarkCell.innerText.trim();
         if (remarkText === "") return;
         let baseName = remarkText.split("×")[0].trim();
         let currentRemarkQty = remarkText.includes("×") ? (parseInt(remarkText.split("×")[1]) || 1) : 1;
-        if (deltaY < 0) { // 上滑：增加
+        if (deltaY < 0) {
           currentRemarkQty++;
-        } else { // 下滑：減少，但至少為1
+        } else {
           if (currentRemarkQty > 1) currentRemarkQty--;
         }
         let dishQty = parseInt(tr.cells[1].innerText) || 1;
