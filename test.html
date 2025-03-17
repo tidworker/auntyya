@@ -5,6 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
   <title>中文點餐系統</title>
   <style>
+    /* 防止下滑刷新頁面 */
+    html, body {
+      overscroll-behavior: none;
+    }
     /* 黑底白字風格 */
     body {
       font-family: Arial, sans-serif;
@@ -77,9 +81,7 @@
       margin-top: 5px;
       font-weight: bold;
     }
-    #resetButton {
-      /* 點擊此按鈕可清空訂單 */
-    }
+    #resetButton { }
     #ordersLinkButton {
       margin-left: 12px;
     }
@@ -381,7 +383,7 @@
     
     loadCurrentOrder();
     
-    // 編輯訂單模態框功能
+    // ------------------ 編輯訂單模態框功能 ------------------
     function openModal(row, editType) {
       currentEditRow = row;
       currentEditType = editType;
@@ -537,14 +539,12 @@
         if (!holdActive) return;
         if (transcript && transcript.trim() !== "") {
           if (currentMode === "red") {
-            // 語音點餐：解析語音後加入訂單
             let orders = processMultipleVoiceInput(transcript.trim());
             if (orders.length > 0) {
               orders.forEach(order => { addOrderRow(order.dish, order.quantity, ""); });
               updateTotalAmount();
             }
           } else if (currentMode === "green") {
-            // 語音備忘錄：將文字加入備忘錄區
             let voiceOutputDiv = document.getElementById("voiceOutput");
             let currentText = voiceOutputDiv.innerText.trim();
             voiceOutputDiv.innerText = currentText === "" ? transcript.trim() : currentText + "," + transcript.trim();
@@ -578,7 +578,6 @@
       if (currentRecognition) { currentRecognition.stop(); }
     }
     
-    // ------------------ 處理語音輸入字串 ------------------
     function processMultipleVoiceInput(inputText) {
       let converted = translateDishName(inputText);
       let tokens = converted.split("/").filter(token => token.trim() !== "");
@@ -619,7 +618,7 @@
     // ------------------ 全頁手勢偵測 ------------------
     let gestureStartX = null, gestureStartY = null, gestureStartTime = null;
     let verticalSwipeDirection = null; // "down" 或 "up"
-    let verticalSwipeTriggered = false;  // 是否已透過計時器啟動持續語音功能
+    let verticalSwipeTriggered = false;
     let verticalSwipeTimer = null;
     
     document.body.addEventListener("touchstart", function(e) {
@@ -639,10 +638,8 @@
       let currentY = e.touches[0].clientY;
       let deltaX = currentX - gestureStartX;
       let deltaY = currentY - gestureStartY;
-      // 若尚未判定為垂直手勢，且垂直移動大於水平且超過 30px
       if (!verticalSwipeDirection && Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 30) {
         verticalSwipeDirection = (deltaY > 0) ? "down" : "up";
-        // 設定 500ms 計時器，若持續按住則啟動語音功能
         verticalSwipeTimer = setTimeout(() => {
           if (verticalSwipeDirection === "down") {
             startVoiceOrdering();
@@ -665,11 +662,9 @@
       let endY = e.changedTouches[0].clientY;
       let deltaX = endX - gestureStartX;
       let deltaY = endY - gestureStartY;
-      // 若為垂直手勢
       if (Math.abs(deltaY) > Math.abs(deltaX)) {
         if (verticalSwipeDirection === "down") {
           if (!verticalSwipeTriggered && duration < 500) {
-            // 快速下滑：若尚未語音點餐則啟動，否則結束
             if (!holdActive || currentMode !== "red") {
               startVoiceOrdering();
             } else {
@@ -680,7 +675,6 @@
           }
         } else if (verticalSwipeDirection === "up") {
           if (!verticalSwipeTriggered && duration < 500) {
-            // 快速上滑：若尚未語音備忘錄則啟動，否則結束
             if (!holdActive || currentMode !== "green") {
               startVoiceMemo();
             } else {
@@ -691,27 +685,21 @@
           }
         }
       }
-      // 若為水平手勢（以水平移動距離超過 30px 為準）
       else if (Math.abs(deltaX) > 30) {
-        if (deltaX < 0) { // 左滑
+        if (deltaX < 0) {
           if (duration < 1000) {
-            // 左滑且放開時間小於 1 秒 → 換頁
             window.location.href = "orders.html";
           } else {
-            // 左滑長按超過 1 秒 → 重新點餐
             resetOrder();
           }
-        } else { // 右滑
+        } else {
           if (duration < 1000) {
-            // 右滑且放開時間小於 1 秒 → 完成訂單
             completeOrder();
           } else {
-            // 右滑長按超過 1 秒 → 重新點餐
             resetOrder();
           }
         }
       }
-      // 重置手勢參數
       gestureStartX = null;
       gestureStartY = null;
       gestureStartTime = null;
