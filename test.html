@@ -57,12 +57,13 @@
     thead tr th:last-child {
       border-top-right-radius: 3px;
     }
-    /* 語音備忘錄顯示區：文字呈橘色 */
+    /* 語音備忘錄顯示區：文字呈橘色，點擊時開啟編輯模態框 */
     #voiceOutput {
       margin-top: 10px;
       text-align: left;
       color: orange;
       padding: 10px;
+      cursor: pointer;
     }
     /* 總金額 */
     #totalAmount {
@@ -88,7 +89,7 @@
     #completeOrderButton {
       margin-left: 12px;
     }
-    /* 模態框 */
+    /* 編輯訂單模態框 */
     #editModal {
       display: none;
       position: fixed;
@@ -122,6 +123,30 @@
       display: none;
       margin: 10px 0;
     }
+    /* 手動輸入備忘錄模態框 */
+    #memoModal {
+      display: none;
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 4000;
+    }
+    #memoModalContent {
+      background: #fff;
+      color: black;
+      margin: 20% auto;
+      padding: 20px;
+      width: 80%;
+      max-width: 400px;
+      border-radius: 5px;
+    }
+    #memoInput {
+      width: 100%;
+      height: 100px;
+    }
   </style>
 </head>
 <body>
@@ -142,7 +167,8 @@
         <!-- 訂單項目將動態加入 -->
       </tbody>
     </table>
-    <div id="voiceOutput"></div>
+    <!-- 點擊此區域可開啟手動編輯備忘錄模態框 -->
+    <div id="voiceOutput" onclick="openMemoModal()"></div>
   </div>
   <p id="totalAmount">總金額：0 元</p>
   <button id="resetButton" onclick="resetOrder()"><img src="re.png" width="50" height="50"></button>
@@ -169,6 +195,18 @@
         <button class="modal-btn" onclick="deleteModal()">刪除</button>
         <button class="modal-btn" onclick="closeModal()">取消</button>
       </div>
+    </div>
+  </div>
+
+  <!-- 手動輸入備忘錄模態框 -->
+  <div id="memoModal">
+    <div id="memoModalContent">
+      <h3>編輯備忘錄</h3>
+      <textarea id="memoInput"></textarea>
+      <br>
+      <button class="modal-btn" onclick="saveMemo()">儲存</button>
+      <button class="modal-btn" onclick="clearMemo()">清除</button>
+      <button class="modal-btn" onclick="closeMemoModal()">取消</button>
     </div>
   </div>
 
@@ -620,7 +658,7 @@
     let verticalSwipeDirection = null; // "down" 或 "up"
     let verticalSwipeTriggered = false;
     let verticalSwipeTimer = null;
-    let horizontalLongTriggered = false; // 新增：記錄是否已觸發水平長按動作
+    let horizontalLongTriggered = false; // 記錄是否已觸發水平長按動作
     
     document.body.addEventListener("touchstart", function(e) {
       if (e.touches.length === 1) {
@@ -641,8 +679,8 @@
       let deltaX = currentX - gestureStartX;
       let deltaY = currentY - gestureStartY;
       
-      // 判定垂直手勢
-      if (!verticalSwipeDirection && Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 30) {
+      // 判定垂直手勢（檢查距離門檻改為 50px）
+      if (!verticalSwipeDirection && Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 50) {
         verticalSwipeDirection = (deltaY > 0) ? "down" : "up";
         verticalSwipeTimer = setTimeout(() => {
           if (verticalSwipeDirection === "down") {
@@ -654,15 +692,14 @@
         }, 500);
       }
       
-      // 若為水平手勢，且已超過 30px 水平移動
-      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
-        // 檢查是否達到長按 1 秒，若尚未觸發則立即觸發對應動作
+      // 若為水平手勢且移動超過 50px
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
         if (!horizontalLongTriggered && (Date.now() - gestureStartTime) >= 1000) {
           if (deltaX < 0) { 
-            // 左滑長按 1 秒 → 重新點餐（resetOrder）
+            // 左滑長按 1 秒 → 重新點餐
             resetOrder();
           } else {
-            // 右滑長按 1 秒 → 完成訂單（completeOrder）
+            // 右滑長按 1 秒 → 完成訂單
             completeOrder();
           }
           horizontalLongTriggered = true;
@@ -682,24 +719,18 @@
       let deltaX = endX - gestureStartX;
       let deltaY = endY - gestureStartY;
       
-      // 若水平手勢且已觸發長按動作則不再處理
+      // 若水平手勢且已觸發長按則不再處理
       if (Math.abs(deltaX) > Math.abs(deltaY)) {
         if (!horizontalLongTriggered) {
-          if (deltaX < 0) {
-            // 左滑短速：轉頁到 orders.html
-            if (duration < 1000) {
-              window.location.href = "orders.html";
-            }
-          } else {
-            // 右滑短速：完成訂單
-            if (duration < 1000) {
-              completeOrder();
-            }
+          if (deltaX < 0 && duration < 1000) {
+            window.location.href = "orders.html";
+          } else if (deltaX > 0 && duration < 1000) {
+            completeOrder();
           }
         }
       }
-      // 處理垂直手勢
-      else if (Math.abs(deltaY) > 30) {
+      // 處理垂直手勢（距離門檻改為 50px）
+      else if (Math.abs(deltaY) > 50) {
         if (verticalSwipeDirection === "down") {
           if (!verticalSwipeTriggered && duration < 500) {
             if (!holdActive || currentMode !== "red") {
@@ -728,6 +759,42 @@
       verticalSwipeDirection = null;
       verticalSwipeTriggered = false;
       horizontalLongTriggered = false;
+    });
+    
+    // ------------------ 備忘錄手動編輯模態框功能 ------------------
+    function openMemoModal() {
+      const memoModal = document.getElementById("memoModal");
+      const memoInput = document.getElementById("memoInput");
+      memoInput.value = document.getElementById("voiceOutput").innerText;
+      memoModal.style.display = "block";
+    }
+    function closeMemoModal() {
+      document.getElementById("memoModal").style.display = "none";
+    }
+    function saveMemo() {
+      const newMemo = document.getElementById("memoInput").value;
+      document.getElementById("voiceOutput").innerText = newMemo;
+      closeMemoModal();
+    }
+    function clearMemo() {
+      document.getElementById("memoInput").value = "";
+      document.getElementById("voiceOutput").innerText = "";
+    }
+    
+    // ------------------ 連點三下重新整理頁面 ------------------
+    let tapCount = 0;
+    let lastTapTime = 0;
+    document.addEventListener("click", function(e) {
+      let now = Date.now();
+      if (now - lastTapTime < 1000) {
+        tapCount++;
+      } else {
+        tapCount = 1;
+      }
+      lastTapTime = now;
+      if (tapCount >= 3) {
+        location.reload();
+      }
     });
     
   </script>
