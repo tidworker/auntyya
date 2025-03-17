@@ -620,6 +620,7 @@
     let verticalSwipeDirection = null; // "down" 或 "up"
     let verticalSwipeTriggered = false;
     let verticalSwipeTimer = null;
+    let horizontalLongTriggered = false; // 新增：記錄是否已觸發水平長按動作
     
     document.body.addEventListener("touchstart", function(e) {
       if (e.touches.length === 1) {
@@ -628,6 +629,7 @@
         gestureStartTime = Date.now();
         verticalSwipeDirection = null;
         verticalSwipeTriggered = false;
+        horizontalLongTriggered = false;
         if (verticalSwipeTimer) { clearTimeout(verticalSwipeTimer); verticalSwipeTimer = null; }
       }
     });
@@ -638,6 +640,8 @@
       let currentY = e.touches[0].clientY;
       let deltaX = currentX - gestureStartX;
       let deltaY = currentY - gestureStartY;
+      
+      // 判定垂直手勢
       if (!verticalSwipeDirection && Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 30) {
         verticalSwipeDirection = (deltaY > 0) ? "down" : "up";
         verticalSwipeTimer = setTimeout(() => {
@@ -648,6 +652,21 @@
           }
           verticalSwipeTriggered = true;
         }, 500);
+      }
+      
+      // 若為水平手勢，且已超過 30px 水平移動
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
+        // 檢查是否達到長按 1 秒，若尚未觸發則立即觸發對應動作
+        if (!horizontalLongTriggered && (Date.now() - gestureStartTime) >= 1000) {
+          if (deltaX < 0) { 
+            // 左滑長按 1 秒 → 重新點餐（resetOrder）
+            resetOrder();
+          } else {
+            // 右滑長按 1 秒 → 完成訂單（completeOrder）
+            completeOrder();
+          }
+          horizontalLongTriggered = true;
+        }
       }
     });
     
@@ -662,7 +681,25 @@
       let endY = e.changedTouches[0].clientY;
       let deltaX = endX - gestureStartX;
       let deltaY = endY - gestureStartY;
-      if (Math.abs(deltaY) > Math.abs(deltaX)) {
+      
+      // 若水平手勢且已觸發長按動作則不再處理
+      if (Math.abs(deltaX) > Math.abs(deltaY)) {
+        if (!horizontalLongTriggered) {
+          if (deltaX < 0) {
+            // 左滑短速：轉頁到 orders.html
+            if (duration < 1000) {
+              window.location.href = "orders.html";
+            }
+          } else {
+            // 右滑短速：完成訂單
+            if (duration < 1000) {
+              completeOrder();
+            }
+          }
+        }
+      }
+      // 處理垂直手勢
+      else if (Math.abs(deltaY) > 30) {
         if (verticalSwipeDirection === "down") {
           if (!verticalSwipeTriggered && duration < 500) {
             if (!holdActive || currentMode !== "red") {
@@ -685,26 +722,12 @@
           }
         }
       }
-      else if (Math.abs(deltaX) > 30) {
-        if (deltaX < 0) {
-          if (duration < 1000) {
-            window.location.href = "orders.html";
-          } else {
-            resetOrder();
-          }
-        } else {
-          if (duration < 1000) {
-            completeOrder();
-          } else {
-            resetOrder();
-          }
-        }
-      }
       gestureStartX = null;
       gestureStartY = null;
       gestureStartTime = null;
       verticalSwipeDirection = null;
       verticalSwipeTriggered = false;
+      horizontalLongTriggered = false;
     });
     
   </script>
