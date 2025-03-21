@@ -131,6 +131,436 @@
   </div>
   
   <!-- 以下保留其他原本的 modal 與 JavaScript 程式碼 -->
-  
+  <div id="mainModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <div id="stepSubType">
+        <h3 id="stepSubTypeTitle"></h3>
+        <div id="subTypeButtons"></div>
+      </div>
+      <div id="stepSecond" class="hidden">
+        <div id="generalQuantityBlock" class="hidden">
+          <h3>選擇數量</h3>
+          <div class="counter">
+            <button onclick="changeValue('generalQuantityInput', -1, 'allSpicy')">-</button>
+            <input type="number" id="generalQuantityInput" min="1" value="1">
+            <button onclick="changeValue('generalQuantityInput', 1, 'allSpicy')">+</button>
+          </div>
+          <button class="menu-button-sm" onclick="gotoPreviousStep()">上一頁</button>
+          <button class="menu-button-sm" onclick="nextStep()">下一步</button>
+        </div>
+        <div id="drinkTotalBlock" class="hidden">
+          <h3>選擇總杯數</h3>
+          <div class="counter">
+            <button onclick="changeValue('drinkTotalInput', -1, 'allIce')">-</button>
+            <input type="number" id="drinkTotalInput" min="1" value="1">
+            <button onclick="changeValue('drinkTotalInput', 1, 'allIce')">+</button>
+          </div>
+          <button class="menu-button-sm" onclick="gotoPreviousStep()">上一頁</button>
+          <button class="menu-button-sm" onclick="nextStep()">下一步</button>
+        </div>
+      </div>
+      <div id="stepThird" class="hidden">
+        <div id="spicyBlock" class="hidden">
+          <h3>選擇辣數量</h3>
+          <div class="switch">
+            <input type="checkbox" id="allSpicy" onchange="toggleAllSpicy()">
+            <label for="allSpicy">全部辣</label>
+          </div>
+          <div class="counter">
+            <button onclick="changeValue('spicyInput', -1)">-</button>
+            <input type="number" id="spicyInput" min="0" value="0">
+            <button onclick="changeValue('spicyInput', 1)">+</button>
+          </div>
+        </div>
+        <div id="eggBlock" class="hidden">
+          <h3>選擇荷包蛋數量</h3>
+          <div class="counter">
+            <button onclick="changeValue('eggInput', -1)">-</button>
+            <input type="number" id="eggInput" min="0" value="0">
+            <button onclick="changeValue('eggInput', 1)">+</button>
+          </div>
+        </div>
+        <div id="drinkIceBlock" class="hidden">
+          <h3>選擇冰的杯數</h3>
+          <div class="switch">
+            <input type="checkbox" id="allIce" onchange="toggleAllIce()">
+            <label for="allIce">全數冰</label>
+          </div>
+          <div class="counter">
+            <button onclick="changeValue('drinkIceInput', -1)">-</button>
+            <input type="number" id="drinkIceInput" min="0" value="0">
+            <button onclick="changeValue('drinkIceInput', 1)">+</button>
+          </div>
+        </div>
+        <div id="soupQuantityBlock" class="hidden">
+          <h3>選擇數量</h3>
+          <div class="counter">
+            <button onclick="changeValue('soupQuantityInput', -1)">-</button>
+            <input type="number" id="soupQuantityInput" min="1" value="1">
+            <button onclick="changeValue('soupQuantityInput', 1)">+</button>
+          </div>
+        </div>
+        <div id="confirmContainer"></div>
+      </div>
+    </div>
+  </div>
+  <div id="customModal" class="modal-cust">
+    <div class="modal-content-cust">
+      <span class="close-cust" onclick="closeCustomModal()">&times;</span>
+      <h3>快速客製</h3>
+      <div id="remarkArea"></div>
+      <div class="key-section">
+        <div class="key-row">
+          <button class="key-btn" onclick="appendRemark('不')">不</button>
+          <button class="key-btn" onclick="appendRemark('多')">多</button>
+          <button class="key-btn" onclick="appendRemark('少')">少</button>
+          <button class="key-btn" onclick="appendRemark('辣')">辣</button>
+        </div>
+        <div class="key-row">
+          <button class="key-btn" onclick="appendRemark('菜')">菜</button>
+          <button class="key-btn" onclick="appendRemark('蒜')">蒜</button>
+          <button class="key-btn" onclick="appendRemark('醋')">醋</button>
+          <button class="key-btn" onclick="appendRemark('粉')">粉</button>
+        </div>
+        <div class="key-row">
+          <button class="key-btn" onclick="appendRemark('油膏')">油膏</button>
+          <button class="key-btn" onclick="appendRemark('辣油')">辣油</button>
+          <button class="key-btn" onclick="appendRemark('豆瓣')">豆瓣</button>
+          <button class="key-btn" onclick="appendRemark('×')">×</button>
+        </div>
+      </div>
+      <div class="key-section">
+        <div class="key-row">
+          <button class="key-btn" onclick="appendRemark('1')">1</button>
+          <button class="key-btn" onclick="appendRemark('2')">2</button>
+          <button class="key-btn" onclick="appendRemark('3')">3</button>
+          <button class="key-btn" onclick="appendRemark('4')">4</button>
+          <button class="key-btn" onclick="appendRemark('5')">5</button>
+        </div>
+        <div class="key-row">
+          <button class="key-btn" onclick="appendRemark('6')">6</button>
+          <button class="key-btn" onclick="appendRemark('7')">7</button>
+          <button class="key-btn" onclick="appendRemark('8')">8</button>
+          <button class="key-btn" onclick="appendRemark('9')">9</button>
+          <button class="key-btn" onclick="appendRemark('0')">0</button>
+        </div>
+      </div>
+      <div style="margin-top:10px;">
+        <button class="menu-button-sm" onclick="clearRemark()">清除</button>
+        <button class="menu-button-sm" onclick="backspaceRemark()">退格</button>
+        <button class="menu-button-sm" onclick="confirmRemark()">確定</button>
+        <button class="menu-button-sm" style="background-color:#900; color:white;" onclick="deleteItemInCustom()">刪除品項</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    const subTypes = {
+      "蔥油餅": { "加蛋": 30, "不加蛋": 20 },
+      "麵線": { "大腸麵線": 50, "肉羹麵線": 50, "綜合麵線": 50, "清麵線": 40 },
+      "炒麵": { "大炒麵": 40, "小炒麵": 30, "荷包蛋": 15 },
+      "飲料": { "豆漿": 15, "米漿": 15, "紅茶": 10, "奶茶": 15 },
+      "熱湯": { "貢丸湯": 35, "肉羹湯": 35, "綜合湯": 35 }
+    };
+    let flows = {
+      "蔥油餅": ["SUB_TYPE", "QUANTITY", "SPICY"],
+      "麵線": ["SUB_TYPE", "QUANTITY", "SPICY"],
+      "炒麵": ["SUB_TYPE", "QUANTITY", "SPICY"],
+      "飲料": ["SUB_TYPE", "DRINK_TOTAL", "DRINK_ICE"],
+      "熱湯": ["SUB_TYPE", "SOUP_QTY"]
+    };
+    let orders = {};
+    let currentCategory = "";
+    let currentFlowSteps = [];
+    let currentStepIndex = 0;
+    let selectedSubType = "";
+    let selectedPrice = 0;
+    let generalQuantity = 1;
+    let spicyQty = 0;
+    let eggQty = 0;
+    let drinkTotal = 1;
+    let drinkIce = 0;
+    let soupQty = 1;
+    function openModal(category) {
+      currentCategory = category;
+      currentFlowSteps = flows[category];
+      currentStepIndex = 0;
+      resetInputs();
+      document.getElementById("mainModal").style.display = "block";
+      document.getElementById("stepSubType").style.display = "block";
+      document.getElementById("stepSecond").classList.add("hidden");
+      document.getElementById("stepThird").classList.add("hidden");
+      var confirmContainer = document.getElementById("confirmContainer");
+      if (confirmContainer) { confirmContainer.remove(); }
+      loadSubTypeButtons(category);
+    }
+    function resetInputs() {
+      selectedSubType = "";
+      selectedPrice = 0;
+      generalQuantity = 1;
+      spicyQty = 0;
+      eggQty = 0;
+      drinkTotal = 1;
+      drinkIce = 0;
+      soupQty = 1;
+      let gQ = document.getElementById("generalQuantityInput");
+      if(gQ) gQ.value = 1;
+      let spI = document.getElementById("spicyInput");
+      if(spI) { spI.value = 0; spI.disabled = false; }
+      let allSp = document.getElementById("allSpicy");
+      if(allSp) allSp.checked = false;
+      let eI = document.getElementById("eggInput");
+      if(eI) eI.value = 0;
+      let dT = document.getElementById("drinkTotalInput");
+      if(dT) dT.value = 1;
+      let dI = document.getElementById("drinkIceInput");
+      if(dI) { dI.value = 0; dI.disabled = false; }
+      let allIc = document.getElementById("allIce");
+      if(allIc) allIc.checked = false;
+      let sQ = document.getElementById("soupQuantityInput");
+      if(sQ) sQ.value = 1;
+    }
+    function closeModal() { document.getElementById("mainModal").style.display = "none"; }
+    function loadSubTypeButtons(category) {
+      let title = document.getElementById("stepSubTypeTitle");
+      let container = document.getElementById("subTypeButtons");
+      container.innerHTML = "";
+      title.innerText = "選擇 " + category + " 種類";
+      let items = subTypes[category];
+      for(let name in items) {
+        let price = items[name];
+        let btn = document.createElement("button");
+        btn.className = "menu-button-sm";
+        btn.innerText = `${name} ($${price})`;
+        btn.onclick = function() { selectedSubType = name; selectedPrice = price; gotoNextStep(); };
+        container.appendChild(btn);
+      }
+    }
+    function gotoNextStep() { currentStepIndex++; renderStep(); }
+    function nextStep() { gotoNextStep(); }
+    function gotoPreviousStep() { if(currentStepIndex > 0) { currentStepIndex--; renderStep(); } }
+    function renderStep() {
+      if(currentStepIndex === 0) {
+        document.getElementById("stepSubType").style.display = "block";
+        document.getElementById("stepSecond").classList.add("hidden");
+        document.getElementById("stepThird").classList.add("hidden");
+        return;
+      }
+      document.getElementById("stepSubType").style.display = "none";
+      document.getElementById("stepSecond").classList.add("hidden");
+      document.getElementById("stepThird").classList.add("hidden");
+      document.getElementById("generalQuantityBlock").classList.add("hidden");
+      document.getElementById("drinkTotalBlock").classList.add("hidden");
+      document.getElementById("spicyBlock").classList.add("hidden");
+      document.getElementById("drinkIceBlock").classList.add("hidden");
+      document.getElementById("soupQuantityBlock").classList.add("hidden");
+      document.getElementById("eggBlock").classList.add("hidden");
+      var confirmContainer = document.getElementById("confirmContainer");
+      if (confirmContainer) { confirmContainer.remove(); }
+      let stepKey = currentFlowSteps[currentStepIndex];
+      switch(stepKey) {
+        case "QUANTITY":
+          document.getElementById("stepSecond").classList.remove("hidden");
+          document.getElementById("generalQuantityBlock").classList.remove("hidden");
+          break;
+        case "SPICY":
+          document.getElementById("stepThird").classList.remove("hidden");
+          document.getElementById("spicyBlock").classList.remove("hidden");
+          if(["蔥油餅", "麵線", "炒麵"].includes(currentCategory)) { document.getElementById("eggBlock").classList.remove("hidden"); }
+          appendConfirmButton();
+          break;
+        case "DRINK_TOTAL":
+          document.getElementById("stepSecond").classList.remove("hidden");
+          document.getElementById("drinkTotalBlock").classList.remove("hidden");
+          break;
+        case "DRINK_ICE":
+          document.getElementById("stepThird").classList.remove("hidden");
+          document.getElementById("drinkIceBlock").classList.remove("hidden");
+          appendConfirmButton();
+          break;
+        case "SOUP_QTY":
+          document.getElementById("stepThird").classList.remove("hidden");
+          document.getElementById("soupQuantityBlock").classList.remove("hidden");
+          appendConfirmButton();
+          break;
+      }
+    }
+    function appendConfirmButton() {
+      if(document.getElementById("confirmContainer")) return;
+      var confirmContainer = document.createElement("div");
+      confirmContainer.id = "confirmContainer";
+      confirmContainer.innerHTML = "<br><button class='menu-button-sm' onclick='gotoPreviousStep()'>上一頁</button> <button class='menu-button-sm' onclick='confirmOrder()'>確認點餐</button>";
+      document.getElementById("stepThird").appendChild(confirmContainer);
+    }
+    function changeValue(inputId, amount, extraCheck="") {
+      let input = document.getElementById(inputId);
+      if(!input) return;
+      let val = parseInt(input.value) || 0;
+      let minVal = parseInt(input.min) || 0;
+      let newVal = val + amount;
+      if(newVal < minVal) newVal = minVal;
+      input.value = newVal;
+      if(extraCheck === "allSpicy") {
+        let allSp = document.getElementById("allSpicy");
+        if(allSp && allSp.checked) { let qty = parseInt(document.getElementById("generalQuantityInput").value) || 1; document.getElementById("spicyInput").value = qty; }
+      }
+      if(extraCheck === "allIce") {
+        let allIc = document.getElementById("allIce");
+        if(allIc && allIc.checked) { let total = parseInt(document.getElementById("drinkTotalInput").value) || 1; document.getElementById("drinkIceInput").value = total; }
+      }
+    }
+    function toggleAllSpicy() {
+      let allSp = document.getElementById("allSpicy").checked;
+      let spI = document.getElementById("spicyInput");
+      if(spI) {
+        if(allSp) { let qty = parseInt(document.getElementById("generalQuantityInput").value) || 1; spI.value = qty; spI.disabled = true; }
+        else { spI.disabled = false; }
+      }
+    }
+    function toggleAllIce() {
+      let allIc = document.getElementById("allIce").checked;
+      let dI = document.getElementById("drinkIceInput");
+      if(dI) {
+        if(allIc) { let total = parseInt(document.getElementById("drinkTotalInput").value) || 1; dI.value = total; dI.disabled = true; }
+        else { dI.disabled = false; }
+      }
+    }
+    function confirmOrder() {
+      let gQ = document.getElementById("generalQuantityInput");
+      if(gQ) generalQuantity = parseInt(gQ.value) || 1;
+      let spI = document.getElementById("spicyInput");
+      if(spI) spicyQty = parseInt(spI.value) || 0;
+      let eI = document.getElementById("eggInput");
+      if(eI) eggQty = parseInt(eI.value) || 0;
+      let dT = document.getElementById("drinkTotalInput");
+      if(dT) drinkTotal = parseInt(dT.value) || 1;
+      let dI = document.getElementById("drinkIceInput");
+      if(dI) drinkIce = parseInt(dI.value) || 0;
+      let sQ = document.getElementById("soupQuantityInput");
+      if(sQ) soupQty = parseInt(sQ.value) || 1;
+      let finalItemName = "";
+      let finalQuantity = 1;
+      let remark = "";
+      let eggCost = 0;
+      switch(currentCategory) {
+        case "蔥油餅":
+          finalItemName = (selectedSubType === "加蛋") ? "蔥油餅加蛋" : "蔥油餅";
+          finalQuantity = generalQuantity;
+          if(spicyQty > 0) remark += `加辣x${spicyQty} `;
+          if(eggQty > 0) remark += `荷包蛋x${eggQty}`;
+          eggCost = eggQty > 0 ? eggQty * 15 : 0;
+          addToOrder(finalItemName, selectedPrice, finalQuantity, eggCost, remark.trim());
+          break;
+        case "麵線":
+          finalItemName = selectedSubType;
+          finalQuantity = generalQuantity;
+          if(spicyQty > 0) remark += `加辣x${spicyQty} `;
+          if(eggQty > 0) remark += `荷包蛋x${eggQty}`;
+          eggCost = eggQty > 0 ? eggQty * 15 : 0;
+          addToOrder(finalItemName, selectedPrice, finalQuantity, eggCost, remark.trim());
+          break;
+        case "炒麵":
+          finalItemName = selectedSubType;
+          finalQuantity = generalQuantity;
+          if(spicyQty > 0) remark += `加辣x${spicyQty} `;
+          if(eggQty > 0) remark += `荷包蛋x${eggQty}`;
+          eggCost = eggQty > 0 ? eggQty * 15 : 0;
+          addToOrder(finalItemName, selectedPrice, finalQuantity, eggCost, remark.trim());
+          break;
+        case "飲料":
+          finalItemName = selectedSubType;
+          finalQuantity = drinkTotal;
+          let warmCount = drinkTotal - drinkIce;
+          if(warmCount > 0) remark += `溫×${warmCount} `;
+          if(drinkIce > 0) remark += `冰×${drinkIce}`;
+          addToOrder(finalItemName, selectedPrice, finalQuantity, 0, remark.trim());
+          break;
+        case "熱湯":
+          finalItemName = selectedSubType;
+          finalQuantity = soupQty;
+          addToOrder(finalItemName, selectedPrice, finalQuantity, 0, "");
+          break;
+      }
+      closeModal();
+    }
+    function addToOrder(itemName, unitPrice, quantity, eggCost = 0, remark = "") {
+      if(!itemName || !unitPrice) return;
+      if(orders[itemName]) {
+        orders[itemName].quantity += quantity;
+        if(eggCost > 0 && !orders[itemName].eggCost) { orders[itemName].eggCost = eggCost; }
+        if(remark) { orders[itemName].remark = orders[itemName].remark ? orders[itemName].remark + " " + remark : remark; }
+      } else {
+        orders[itemName] = { price: unitPrice, quantity: quantity, eggCost: eggCost, remark: remark };
+      }
+      updateOrderList();
+    }
+    function updateOrderList() {
+      let orderTable = document.getElementById("orderTable");
+      orderTable.innerHTML = "";
+      let total = 0;
+      for(let item in orders) {
+        let { price, quantity, eggCost, remark } = orders[item];
+        total += price * quantity;
+        if(eggCost) total += eggCost;
+        let row = `<tr><td onclick="openCustomModal('${item}')" style="cursor: pointer;">${item}</td><td>${quantity}</td><td>${remark || ""}</td></tr>`;
+        orderTable.innerHTML += row;
+      }
+      document.getElementById("totalAmount").innerText = "總金額: $" + total;
+      localStorage.setItem("currentOrder", JSON.stringify(orders));
+    }
+    function getNextOrderNumber() {
+      let counter = localStorage.getItem("orderNumberCounter");
+      if(!counter) { counter = 1; } else { counter = parseInt(counter); }
+      let orderNumber = String(counter).padStart(3, "0");
+      counter++;
+      localStorage.setItem("orderNumberCounter", counter);
+      return orderNumber;
+    }
+    function completeOrder() {
+      let orderNumber = getNextOrderNumber();
+      let newOrder = { orderId: orderNumber, items: orders };
+      let allOrders = JSON.parse(localStorage.getItem("allOrders")) || [];
+      allOrders.push(newOrder);
+      localStorage.setItem("allOrders", JSON.stringify(allOrders));
+      orders = {};
+      updateOrderList();
+      window.location.href = "out.html";
+    }
+    function goToOrderPage() { window.location.href = "out.html"; }
+    let currentItemForCust = null;
+    function openCustomModal(item) {
+      currentItemForCust = item;
+      let remark = orders[item]?.remark || "";
+      document.getElementById("remarkArea").textContent = remark;
+      document.getElementById("customModal").style.display = "block";
+    }
+    function closeCustomModal() { document.getElementById("customModal").style.display = "none"; }
+    function appendRemark(str) { let remarkDiv = document.getElementById("remarkArea"); remarkDiv.textContent += str; }
+    function clearRemark() { document.getElementById("remarkArea").textContent = ""; }
+    function backspaceRemark() {
+      let remarkDiv = document.getElementById("remarkArea");
+      let currText = remarkDiv.textContent;
+      if(currText.length > 0) { remarkDiv.textContent = currText.slice(0, -1); }
+    }
+    function confirmRemark() {
+      let remarkDiv = document.getElementById("remarkArea");
+      let newText = remarkDiv.textContent;
+      if(currentItemForCust && orders[currentItemForCust]) { orders[currentItemForCust].remark = newText; updateOrderList(); }
+      closeCustomModal();
+    }
+    function deleteItemInCustom() {
+      if(currentItemForCust && orders[currentItemForCust]) { delete orders[currentItemForCust]; updateOrderList(); }
+      closeCustomModal();
+    }
+    function recordInHouseOrder() {
+      let currentOrder = localStorage.getItem("currentOrder");
+      if(currentOrder) {
+         localStorage.setItem("inHouseOrderRecord", currentOrder);
+         window.location.href = "in.html";
+      } else {
+         alert("目前沒有訂單可以記錄！");
+      }
+    }
+  </script>
 </body>
-</html>
+</html>>
