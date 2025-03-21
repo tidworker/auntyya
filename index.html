@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>葉阿姨點餐系統</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
+    /* 基本樣式 */
     body { 
       font-family: Arial, sans-serif; 
       margin: 0; 
@@ -22,31 +23,34 @@
       margin: 0; 
       font-size: 24px; 
     }
+    
+    /* 主選單區 */
     .menu-container { 
       margin: 20px auto; 
       max-width: 600px; 
     }
-    .menu-row {
-      display: flex;
-      justify-content: center;
-      margin-bottom: 10px;
+    .menu-row { 
+      display: flex; 
+      justify-content: center; 
+      margin-bottom: 10px; 
     }
     .menu-button { 
-      flex: 1;
-      font-size: 24px;            /* 文字加大 */
-      font-weight: bold;          /* 文字粗體 */
-      padding: 30px;              /* 按鍵加高 */
-      margin: 5px;
-      cursor: pointer;
-      border: none;
-      background-color: #555;
-      color: #fff;
-      transition: background-color 0.2s;
+      flex: 1; 
+      font-size: 24px;           /* 文字加大 */
+      font-weight: bold;         /* 文字粗體 */
+      padding: 30px;             /* 按鍵加高 */
+      margin: 5px; 
+      cursor: pointer; 
+      border: none; 
+      background-color: #555; 
+      color: #fff; 
+      transition: background-color 0.2s; 
     }
     .menu-button:hover { 
       background-color: #333; 
     }
-    /* 其他原有的 CSS 保持不變 */
+    
+    /* 訂單列表及操作按鈕 */
     .order-list { 
       margin: 20px auto; 
       width: 90%; 
@@ -88,30 +92,145 @@
     .menu-button-action:hover { 
       background-color: #333; 
     }
+    
+    /* Modal 彈出框樣式 (請勿移除 display:none ) */
+    .modal, .modal-cust { 
+      display: none; 
+      position: fixed; 
+      z-index: 9999; 
+      left: 0; 
+      top: 0; 
+      width: 100%; 
+      height: 100%; 
+      background-color: rgba(0,0,0,0.5); 
+      overflow-y: auto; 
+    }
+    .modal-content, .modal-content-cust { 
+      background-color: #f9f9f9; 
+      margin: 10% auto; 
+      padding: 20px; 
+      width: 400px; 
+      max-width: 90%; 
+      text-align: center; 
+      position: relative; 
+      box-shadow: 0 0 10px rgba(0,0,0,0.3); 
+    }
+    .close, .close-cust { 
+      position: absolute; 
+      right: 15px; 
+      top: 10px; 
+      font-size: 24px; 
+      color: #f00; 
+      cursor: pointer; 
+    }
+    
+    /* 以下為其他原有樣式 */
+    .menu-button-sm { 
+      font-size: 18px; 
+      padding: 10px 20px; 
+      margin: 5px; 
+      border: none; 
+      background-color: #666; 
+      color: #fff; 
+      cursor: pointer; 
+      transition: background-color 0.2s; 
+    }
+    .menu-button-sm:hover { 
+      background-color: #444; 
+    }
+    .counter { 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      margin: 12px 0; 
+    }
+    .counter button { 
+      font-size: 22px; 
+      padding: 8px 18px; 
+      margin: 0 12px; 
+      cursor: pointer; 
+      background-color: #888; 
+      color: #fff; 
+      border: none; 
+    }
+    .counter button:hover { 
+      background-color: #666; 
+    }
+    .counter input { 
+      font-size: 22px; 
+      width: 60px; 
+      text-align: center; 
+      margin: 0 5px; 
+    }
+    .switch { 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      margin: 12px 0; 
+    }
+    .switch label { 
+      margin-left: 10px; 
+      font-size: 18px; 
+      cursor: pointer; 
+    }
+    .hidden { 
+      display: none; 
+    }
+    .key-section { 
+      margin: 12px 0; 
+    }
+    .key-row { 
+      display: flex; 
+      justify-content: center; 
+      margin: 8px 0; 
+    }
+    .key-btn { 
+      width: 70px; 
+      height: 50px; 
+      margin: 5px; 
+      font-size: 20px; 
+      cursor: pointer; 
+      border: none; 
+      background-color: #ccc; 
+      color: #333; 
+      transition: background-color 0.2s; 
+    }
+    .key-btn:hover { 
+      background-color: #aaa; 
+    }
+    #remarkArea { 
+      width: 90%; 
+      margin: 12px auto 0; 
+      font-size: 20px; 
+      text-align: center; 
+      height: 40px; 
+      line-height: 40px; 
+      border: 1px solid #999; 
+      padding: 0 10px; 
+      background-color: #fff; 
+    }
   </style>
 </head>
 <body>
   <header>
     <h2>葉阿姨點餐系統</h2>
   </header>
+  
   <div class="menu-container">
-    <!-- 第一排：只有蔥油餅 -->
+    <!-- 調整後的按鈕佈局 -->
     <div class="menu-row">
       <button class="menu-button" onclick="openModal('蔥油餅')">蔥油餅</button>
     </div>
-    <!-- 第二排：麵線與炒麵 -->
     <div class="menu-row">
       <button class="menu-button" onclick="openModal('麵線')">麵線</button>
       <button class="menu-button" onclick="openModal('炒麵')">炒麵</button>
     </div>
-    <!-- 第三排：熱湯與飲料 -->
     <div class="menu-row">
       <button class="menu-button" onclick="openModal('熱湯')">熱湯</button>
       <button class="menu-button" onclick="openModal('飲料')">飲料</button>
     </div>
   </div>
   
-  <!-- 其餘訂單列表及功能區塊維持原本設定 -->
   <h3>訂單列表</h3>
   <table class="order-list">
     <thead>
@@ -124,13 +243,14 @@
     <tbody id="orderTable"></tbody>
   </table>
   <div id="totalAmount">總金額: $0</div>
+  
   <div class="actions">
     <button class="menu-button-action" onclick="goToOrderPage()">目前訂單</button>
     <button class="menu-button-action" onclick="completeOrder()">完成訂單</button>
     <button class="menu-button-action" onclick="recordInHouseOrder()">內用</button>
   </div>
   
-  <!-- 以下保留其他原本的 modal 與 JavaScript 程式碼 -->
+  <!-- Modal 相關 HTML (保持原有結構) -->
   <div id="mainModal" class="modal">
     <div class="modal-content">
       <span class="close" onclick="closeModal()">&times;</span>
@@ -205,6 +325,7 @@
       </div>
     </div>
   </div>
+  
   <div id="customModal" class="modal-cust">
     <div class="modal-content-cust">
       <span class="close-cust" onclick="closeCustomModal()">&times;</span>
@@ -254,7 +375,9 @@
       </div>
     </div>
   </div>
+  
   <script>
+    // 以下為原有的 JavaScript 程式碼 (請勿更動)
     const subTypes = {
       "蔥油餅": { "加蛋": 30, "不加蛋": 20 },
       "麵線": { "大腸麵線": 50, "肉羹麵線": 50, "綜合麵線": 50, "清麵線": 40 },
@@ -563,4 +686,4 @@
     }
   </script>
 </body>
-</html>>
+</html>
