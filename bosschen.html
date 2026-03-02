@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>訂單報表產生器 (LINE貼上版)</title>
+  <title>訂單報表產生器 (PDF解析版)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -28,7 +28,7 @@
     }
     input[type="date"],
     input[type="number"],
-    textarea {
+    input[type="file"] {
       padding: 6px;
       font-size: 1rem;
       width: 100%;
@@ -50,10 +50,10 @@
     .btn:hover {
       background-color: #45a049;
     }
-    .btn-paste {
+    .btn-parse {
       background-color: #FF9800;
     }
-    .btn-paste:hover {
+    .btn-parse:hover {
       background-color: #F57C00;
     }
     #downloadBtn {
@@ -120,7 +120,15 @@
       padding: 10px;
       font-size: 1rem;
     }
+    #loadingMsg {
+      display: none;
+      color: #D32F2F;
+      font-weight: bold;
+      text-align: center;
+      margin-top: 10px;
+    }
   </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </head>
 <body>
   <h1>訂單報表產生器</h1>
@@ -142,23 +150,17 @@
       <input type="number" id="advanceInput" placeholder="無">
     </div>
     
-    <button type="button" class="btn btn-paste" onclick="openPasteModal()">📝 貼上 LINE 對話並解析</button>
+    <div style="background: #fff3e0; padding: 10px; border-radius: 5px; margin-top: 15px; border: 1px solid #ffcc80;">
+      <label for="pdfFile">📄 上傳 LINE 對話紀錄 (.pdf):</label>
+      <input type="file" id="pdfFile" accept=".pdf">
+      <small style="color: #666;">※ 系統會自動解析 PDF 內的日期、產品與最新餘額。</small>
+      <button type="button" class="btn btn-parse" onclick="processPDF()">解析 PDF 並生成報表</button>
+      <div id="loadingMsg">⏳ 正在解析 PDF 文字，請稍候...</div>
+    </div>
   </form>
 
   <div id="report"></div>
   <button id="downloadBtn" type="button" class="btn" style="display:none;" onclick="downloadReport()">下載表格 JPG</button>
-
-  <div id="pasteModalOverlay" class="modal-overlay">
-    <div class="modal-content" style="max-width: 500px;">
-      <h2 style="text-align: center; margin-top: 0;">貼上對話紀錄</h2>
-      <p style="font-size: 0.85rem; color: #555; margin-bottom: 10px;">請直接貼上 LINE 的對話文字。系統會自動解析商品數量，並幫你尋找設定日期前的最新一筆「餘額」。</p>
-      <textarea id="pasteArea" rows="10" placeholder="在此貼上 LINE 對話..."></textarea>
-      <div class="modal-btns">
-        <button type="button" style="background:#4CAF50; color:white; border:none;" onclick="processPastedText()">確認解析</button>
-        <button type="button" onclick="closePasteModal()">取消</button>
-      </div>
-    </div>
-  </div>
 
   <div id="modalOverlay" class="modal-overlay">
     <div id="modal" class="modal-content">
@@ -210,12 +212,10 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
-    const prices = {
-      noodles: 50,
-      eggPancake: 30,
-      friedNoodles: 30
-    };
+    // 設定 PDF.js 的 Worker 來源
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
+    const prices = { noodles: 50, eggPancake: 30, friedNoodles: 30 };
     let orders = {}; 
     const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     let currentEditDate = null;
@@ -234,19 +234,9 @@
       document.getElementById("startDate").value = getLocalDateString(firstDay);
     });
 
-    // --- Modal 操作區 (貼上文字) ---
-    function openPasteModal() {
-      document.getElementById("pasteArea").value = "";
-      document.getElementById("pasteModalOverlay").style.display = "flex";
-    }
-
-    function closePasteModal() {
-      document.getElementById("pasteModalOverlay").style.display = "none";
-    }
-
-    // 解析貼上的文字
-    function processPastedText() {
-      const text = document.getElementById("pasteArea").value;
+    // --- 讀取並解析 PDF 檔案 ---
+    async function processPDF() {
+      const fileInput = document.getElementById('pdfFile');
       const startDateVal = document.getElementById("startDate").value;
       const endDateVal = document.getElementById("endDate").value;
 
@@ -255,56 +245,96 @@
         return;
       }
 
-      const lines = text.split('\n');
-      orders = {}; 
-      let currentDate = null;
-      let balancesFound = []; // 用來存取找到的所有餘額紀錄
+      if (!fileInput.files || fileInput.files.length === 0) {
+        alert("請先選擇 PDF 檔案！");
+        return;
+      }
 
-      lines.forEach(line => {
-        line = line.trim();
-        if (!line) return;
+      document.getElementById("loadingMsg").style.display = "block";
+      const file = fileInput.files[0];
+      const fileReader = new FileReader();
 
-        // 匹配日期格式 例如: 2026/1/13(週二)
-        const dateMatch = line.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
-        if (dateMatch) {
-          const y = dateMatch[1];
-          const m = dateMatch[2].padStart(2, '0');
-          const d = dateMatch[3].padStart(2, '0');
-          currentDate = `${y}-${m}-${d}`;
+      fileReader.onload = async function() {
+        const typedarray = new Uint8Array(this.result);
+        try {
+          const pdf = await pdfjsLib.getDocument(typedarray).promise;
+          let fullText = "";
           
-          if (!orders[currentDate]) {
-            orders[currentDate] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0 };
+          // 迴圈讀取每一頁的文字
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            // 直接將每一頁的文字串接起來
+            const pageText = textContent.items.map(item => item.str).join('');
+            fullText += pageText;
           }
-          return; 
+          
+          parseTextData(fullText);
+        } catch (error) {
+          console.error("PDF 解析失敗:", error);
+          alert("PDF 讀取失敗，請確認檔案是否損毀或加密。");
+        } finally {
+          document.getElementById("loadingMsg").style.display = "none";
+        }
+      };
+
+      fileReader.readAsArrayBuffer(file);
+    }
+
+    // --- 強悍的文字分析邏輯 ---
+    function parseTextData(text) {
+      // 1. 去除所有的空白、換行字元，無視 PDF 版面走位問題
+      const cleanText = text.replace(/\s+/g, '');
+
+      // 2. 用「日期」作為刀子，把整串文字切成一塊一塊的區段
+      // 匹配類似 2026/1/13 的格式
+      const parts = cleanText.split(/(\d{4}\/\d{1,2}\/\d{1,2})/);
+
+      orders = {}; 
+      let balancesFound = []; 
+
+      // parts 陣列結構會變成: [ "雜訊", "日期1", "對話內容1", "日期2", "對話內容2", ... ]
+      for (let i = 1; i < parts.length; i += 2) {
+        const dateStr = parts[i];
+        const contentStr = parts[i+1] || "";
+
+        // 解析出標準的 YYYY-MM-DD
+        const dateMatch = dateStr.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+        if (!dateMatch) continue;
+        
+        const y = dateMatch[1];
+        const m = dateMatch[2].padStart(2, '0');
+        const d = dateMatch[3].padStart(2, '0');
+        const currentDate = `${y}-${m}-${d}`;
+        
+        if (!orders[currentDate]) {
+          orders[currentDate] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0 };
         }
 
-        if (currentDate) {
-          // 匹配商品與數量
-          let nM = line.match(/麵線\s*(\d+)/);
-          if (nM) orders[currentDate].noodles += parseInt(nM[1], 10);
+        // 解析商品數量 (利用 matchAll 避免同一天點兩次的情況，完美略過前面的贅字)
+        const noodlesMatch = [...contentStr.matchAll(/麵線(\d+)/g)];
+        noodlesMatch.forEach(m => orders[currentDate].noodles += parseInt(m[1], 10));
 
-          let eM = line.match(/蛋餅\s*(\d+)/);
-          if (eM) orders[currentDate].eggPancake += parseInt(eM[1], 10);
+        const eggPancakeMatch = [...contentStr.matchAll(/蛋餅(\d+)/g)];
+        eggPancakeMatch.forEach(m => orders[currentDate].eggPancake += parseInt(m[1], 10));
 
-          let fM = line.match(/炒麵\s*(\d+)/);
-          if (fM) orders[currentDate].friedNoodles += parseInt(fM[1], 10);
+        const friedNoodlesMatch = [...contentStr.matchAll(/炒麵(\d+)/g)];
+        friedNoodlesMatch.forEach(m => orders[currentDate].friedNoodles += parseInt(m[1], 10));
 
-          // 匹配餘額 (允許「餘額1000」、「餘額: 1000」、「餘額 1000」等格式)
-          let bM = line.match(/餘額\s*[:：]?\s*(-?\d+)/);
-          if (bM) {
-            balancesFound.push({ date: currentDate, amount: parseInt(bM[1], 10) });
-          }
-        }
-      });
+        // 解析餘額
+        const balanceMatch = [...contentStr.matchAll(/餘額[:：]?(-?\d+)/g)];
+        balanceMatch.forEach(m => {
+          balancesFound.push({ date: currentDate, amount: parseInt(m[1], 10) });
+        });
+      }
 
-      // 自動尋找：日期「小於」設定的開始日期 中，最新的一筆餘額
-      const targetStartDate = new Date(startDateVal);
+      // 自動抓取上期結餘邏輯
+      const targetStartDate = new Date(document.getElementById("startDate").value);
       let latestBalance = null;
-      let latestBalanceDate = new Date(0); // 初始設為極小的日期
+      let latestBalanceDate = new Date(0);
 
       balancesFound.forEach(b => {
         const bDate = new Date(b.date);
-        // 只要這筆餘額的日期在「開始日期」之前
         if (bDate < targetStartDate) {
           if (bDate >= latestBalanceDate) {
             latestBalanceDate = bDate;
@@ -313,16 +343,11 @@
         }
       });
 
-      // 如果有找到符合條件的最新餘額，自動填入主畫面的欄位
       if (latestBalance !== null) {
         document.getElementById("balanceInput").value = latestBalance;
-      } else {
-        // 如果沒找到，清空或保留原本輸入
-        console.log("未找到之前的餘額紀錄");
       }
 
       generateTable();
-      closePasteModal();
     }
 
     // 繪製報表表格
