@@ -2,9 +2,8 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <!-- 以本地裝置寬度與初始縮放 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>訂單報表產生器</title>
+  <title>訂單報表產生器 (LINE匯入版)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -20,14 +19,16 @@
       margin: 0 auto;
     }
     form div {
-      margin-bottom: 8px;
+      margin-bottom: 12px;
     }
     label {
       display: block;
       margin-bottom: 4px;
+      font-weight: bold;
     }
     input[type="date"],
-    input[type="number"] {
+    input[type="number"],
+    input[type="file"] {
       padding: 6px;
       font-size: 1rem;
       width: 100%;
@@ -37,9 +38,20 @@
       width: 100%;
       max-width: 600px;
       display: block;
-      margin: 10px auto;
-      padding: 8px 12px;
+      margin: 15px auto;
+      padding: 10px 12px;
       font-size: 1rem;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background-color: #45a049;
+    }
+    #downloadBtn {
+      background-color: #008CBA;
     }
     table {
       border-collapse: collapse;
@@ -55,19 +67,23 @@
     th {
       background-color: #f0f0f0;
     }
+    tr:hover {
+      background-color: #f9f9f9;
+      cursor: pointer;
+    }
     #overallTotalRow {
       background-color: #f0f0f0;
       font-weight: bold;
     }
-    /* 報表摘要區 */
     #balanceSummary {
       text-align: center;
       font-weight: bold;
       margin-top: 10px;
       white-space: pre-line;
+      cursor: pointer;
     }
-    /* Modal (訂單) */
-    #modalOverlay {
+    /* Modal */
+    .modal-overlay {
       display: none;
       position: fixed;
       top: 0; left: 0;
@@ -78,54 +94,24 @@
       padding: 10px;
       box-sizing: border-box;
     }
-    #modal {
+    .modal-content {
       background: #fff;
       padding: 20px;
       border-radius: 5px;
       width: 100%;
       max-width: 400px;
     }
-    #modal form div {
+    .modal-content form div {
       margin-bottom: 10px;
     }
     .modal-btns {
       text-align: center;
+      margin-top: 15px;
     }
     .modal-btns button {
       width: 100%;
       margin-bottom: 10px;
-      padding: 8px;
-      font-size: 1rem;
-    }
-    /* Modal (餘額/預收調整) */
-    #balanceModalOverlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
-      justify-content: center;
-      align-items: center;
       padding: 10px;
-      box-sizing: border-box;
-    }
-    #balanceModal {
-      background: #fff;
-      padding: 20px;
-      border-radius: 5px;
-      width: 100%;
-      max-width: 400px;
-    }
-    #balanceModal form div {
-      margin-bottom: 10px;
-    }
-    .balance-modal-btns {
-      text-align: center;
-    }
-    .balance-modal-btns button {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 8px;
       font-size: 1rem;
     }
   </style>
@@ -135,89 +121,63 @@
   <form id="reportForm">
     <div>
       <label for="startDate">開始日期:</label>
-      <input type="date" id="startDate" placeholder="若空白，則只輸出結束日資料">
+      <input type="date" id="startDate" required>
     </div>
     <div>
       <label for="endDate">結束日期:</label>
       <input type="date" id="endDate" required>
     </div>
     <div>
-      <label for="balanceInput">餘額:</label>
+      <label for="balanceInput">上期結餘 (餘額):</label>
       <input type="number" id="balanceInput" placeholder="無">
     </div>
     <div>
-      <label for="advanceInput">預收:</label>
+      <label for="advanceInput">預收金額:</label>
       <input type="number" id="advanceInput" placeholder="無">
     </div>
-    <h2>產品設定 (預設數量)</h2>
-    <div>
-      <label for="noodlesQty">麵線 (單價 50):</label>
-      <input type="number" id="noodlesQty" value="1" min="0" required onchange="saveDefaultQuantities()">
+    <div style="background: #eef; padding: 10px; border-radius: 5px; margin-top: 15px;">
+      <label for="logFile">上傳 LINE 對話紀錄 (.txt):</label>
+      <input type="file" id="logFile" accept=".txt">
+      <small style="color: #555;">※ 系統會自動抓取區間內的日期，並辨識「麵線、蛋餅、炒麵」加上數字的內容。</small>
     </div>
-    <div>
-      <label for="eggPancakeQty">蛋餅 (單價 30):</label>
-      <input type="number" id="eggPancakeQty" value="1" min="0" required onchange="saveDefaultQuantities()">
-    </div>
-    <div>
-      <label for="friedNoodlesQty">炒麵 (單價 30):</label>
-      <input type="number" id="friedNoodlesQty" value="1" min="0" required onchange="saveDefaultQuantities()">
-    </div>
-    <div>
-      <label for="redTeaQty">紅茶 (單價 10):</label>
-      <input type="number" id="redTeaQty" value="1" min="0" required onchange="saveDefaultQuantities()">
-    </div>
-    <div>
-      <label for="milkTeaQty">奶茶 (單價 15):</label>
-      <input type="number" id="milkTeaQty" value="1" min="0" required onchange="saveDefaultQuantities()">
-    </div>
-    <button type="button" class="btn" onclick="generateReport()">生成報表</button>
+    
+    <button type="button" class="btn" onclick="processAndGenerate()">解析檔案並生成報表</button>
   </form>
 
   <div id="report"></div>
-  <button id="downloadBtn" type="button" class="btn" onclick="downloadReport()">下載表格 JPG</button>
+  <button id="downloadBtn" type="button" class="btn" style="display:none;" onclick="downloadReport()">下載表格 JPG</button>
 
-  <!-- Modal (訂單修改) -->
-  <div id="modalOverlay">
-    <div id="modal">
-      <h2 id="modalDate"></h2>
+  <div id="modalOverlay" class="modal-overlay">
+    <div id="modal" class="modal-content">
+      <h2 id="modalDate" style="text-align: center;"></h2>
       <form id="modalForm">
         <div>
-          <label for="modalIsHoliday">休假:</label>
+          <label for="modalIsHoliday" style="display: inline-block;">設為休假:</label>
           <input type="checkbox" id="modalIsHoliday" onchange="toggleModalInputs()">
         </div>
         <div>
-          <label for="modalNoodlesQty">麵線:</label>
+          <label for="modalNoodlesQty">麵線 (50元):</label>
           <input type="number" id="modalNoodlesQty" min="0" required>
         </div>
         <div>
-          <label for="modalEggPancakeQty">蛋餅:</label>
+          <label for="modalEggPancakeQty">蛋餅 (30元):</label>
           <input type="number" id="modalEggPancakeQty" min="0" required>
         </div>
         <div>
-          <label for="modalFriedNoodlesQty">炒麵:</label>
+          <label for="modalFriedNoodlesQty">炒麵 (30元):</label>
           <input type="number" id="modalFriedNoodlesQty" min="0" required>
         </div>
-        <div>
-          <label for="modalRedTeaQty">紅茶:</label>
-          <input type="number" id="modalRedTeaQty" min="0" required>
-        </div>
-        <div>
-          <label for="modalMilkTeaQty">奶茶:</label>
-          <input type="number" id="modalMilkTeaQty" min="0" required>
-        </div>
         <div class="modal-btns">
-          <button type="button" onclick="saveOrder()">儲存修改</button>
-          <br>
+          <button type="button" style="background:#4CAF50; color:white; border:none;" onclick="saveOrder()">儲存修改</button>
           <button type="button" onclick="closeModal()">取消</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Modal (餘額/預收調整) -->
-  <div id="balanceModalOverlay">
-    <div id="balanceModal">
-      <h2>調整餘額與預收</h2>
+  <div id="balanceModalOverlay" class="modal-overlay">
+    <div id="balanceModal" class="modal-content">
+      <h2 style="text-align: center;">調整餘額與預收</h2>
       <form id="balanceForm">
         <div>
           <label for="modalBalance">餘額:</label>
@@ -227,9 +187,8 @@
           <label for="modalAdvance">預收:</label>
           <input type="number" id="modalAdvance" placeholder="無">
         </div>
-        <div class="balance-modal-btns">
-          <button type="button" onclick="saveBalance()">儲存</button>
-          <br>
+        <div class="modal-btns">
+          <button type="button" style="background:#4CAF50; color:white; border:none;" onclick="saveBalance()">儲存</button>
           <button type="button" onclick="closeBalanceModal()">取消</button>
         </div>
       </form>
@@ -238,7 +197,17 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
-    // 以本地時間取得 yyyy-mm-dd 格式字串
+    const prices = {
+      noodles: 50,
+      eggPancake: 30,
+      friedNoodles: 30
+    };
+
+    let orders = {}; 
+    const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    let currentEditDate = null;
+
+    // 格式化日期 YYYY-MM-DD
     function getLocalDateString(date) {
       const year = date.getFullYear();
       const month = (date.getMonth() + 1).toString().padStart(2, "0");
@@ -246,151 +215,173 @@
       return `${year}-${month}-${day}`;
     }
 
-    const prices = {
-      noodles: 50,
-      eggPancake: 30,
-      friedNoodles: 30,
-      redTea: 10,
-      milkTea: 15
-    };
+    // 初始化日期
+    window.addEventListener("DOMContentLoaded", function() {
+      const today = new Date();
+      document.getElementById("endDate").value = getLocalDateString(today);
+      
+      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      document.getElementById("startDate").value = getLocalDateString(firstDay);
+    });
 
-    // 訂單資料結構：{ isHoliday, noodles, eggPancake, friedNoodles, redTea, milkTea }
-    const orders = {};
-    const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    let currentEditDate = null;
+    // 解析文字檔並產生報表
+    function processAndGenerate() {
+      const fileInput = document.getElementById('logFile');
+      const startDateVal = document.getElementById("startDate").value;
+      const endDateVal = document.getElementById("endDate").value;
 
-    function generateReport() {
-      let endDateValue = document.getElementById("endDate").value;
-      let startDateValue = document.getElementById("startDate").value;
-      if (!endDateValue) {
-        alert("請輸入結束日期");
+      if (!startDateVal || !endDateVal) {
+        alert("請確認開始與結束日期！");
         return;
       }
-      if (!startDateValue) {
-        startDateValue = endDateValue;
+
+      // 如果沒有上傳檔案，僅產生空表單
+      if (!fileInput.files || fileInput.files.length === 0) {
+        orders = {}; // 清空資料
+        generateTable();
+        return;
       }
-      const startDate = new Date(startDateValue);
-      const endDate = new Date(endDateValue);
-      const defaultQuantities = getDefaultQuantities();
+
+      const file = fileInput.files[0];
+      const reader = new FileReader();
+
+      reader.onload = function(e) {
+        const content = e.target.result;
+        const lines = content.split('\n');
+        
+        orders = {}; // 重置訂單資料
+        let currentDate = null;
+
+        lines.forEach(line => {
+          line = line.trim();
+          if (!line) return;
+
+          // 匹配日期格式 例如: 2026/1/13(週二)
+          const dateMatch = line.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+          if (dateMatch) {
+            const y = dateMatch[1];
+            const m = dateMatch[2].padStart(2, '0');
+            const d = dateMatch[3].padStart(2, '0');
+            currentDate = `${y}-${m}-${d}`;
+            
+            if (!orders[currentDate]) {
+              orders[currentDate] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0 };
+            }
+            return; 
+          }
+
+          // 如果已經讀到日期，開始匹配產品與數量
+          // 匹配邏輯：尋找目標兩字，後面跟著可有可無的空白，然後是數字
+          if (currentDate) {
+            let nM = line.match(/麵線\s*(\d+)/);
+            if (nM) orders[currentDate].noodles += parseInt(nM[1], 10);
+
+            let eM = line.match(/蛋餅\s*(\d+)/);
+            if (eM) orders[currentDate].eggPancake += parseInt(eM[1], 10);
+
+            let fM = line.match(/炒麵\s*(\d+)/);
+            if (fM) orders[currentDate].friedNoodles += parseInt(fM[1], 10);
+          }
+        });
+
+        generateTable();
+      };
+
+      reader.readAsText(file);
+    }
+
+    // 繪製報表表格
+    function generateTable() {
+      const startDate = new Date(document.getElementById("startDate").value);
+      const endDate = new Date(document.getElementById("endDate").value);
+
       let html = "<table>";
-      html += "<tr><th>日期</th><th>麵線</th><th>蛋餅</th><th>炒麵</th><th>紅茶</th><th>奶茶</th><th>金額</th></tr>";
+      html += "<tr><th>日期</th><th>麵線</th><th>蛋餅</th><th>炒麵</th><th>金額</th></tr>";
       let overallTotalAmount = 0;
+
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         let isoDate = getLocalDateString(d);
+        
+        // 如果對話紀錄中沒有這天的資料，預設為 0；若是週一預設休假
         if (!orders[isoDate]) {
           if (d.getDay() === 1) {
-            orders[isoDate] = { isHoliday: true, noodles: 0, eggPancake: 0, friedNoodles: 0, redTea: 0, milkTea: 0 };
+            orders[isoDate] = { isHoliday: true, noodles: 0, eggPancake: 0, friedNoodles: 0 };
           } else {
-            orders[isoDate] = { isHoliday: false, ...defaultQuantities };
+            orders[isoDate] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0 };
           }
         }
+
         const month = (d.getMonth() + 1).toString().padStart(2, "0");
         const day = d.getDate().toString().padStart(2, "0");
         const weekday = weekdays[d.getDay()];
         const displayDate = `${month}/${day}/${weekday}`;
+        
         let dailyTotalAmount = 0;
         let rowContent = "";
+
         if (orders[isoDate].isHoliday) {
-          rowContent = `<td colspan="5">休假</td><td>0</td>`;
-          dailyTotalAmount = 0;
+          rowContent = `<td colspan="3" style="color:#888;">休假</td><td>0</td>`;
         } else {
           dailyTotalAmount =
             orders[isoDate].noodles * prices.noodles +
             orders[isoDate].eggPancake * prices.eggPancake +
-            orders[isoDate].friedNoodles * prices.friedNoodles +
-            orders[isoDate].redTea * prices.redTea +
-            orders[isoDate].milkTea * prices.milkTea;
+            orders[isoDate].friedNoodles * prices.friedNoodles;
+            
+          // 如果當天沒休假也沒訂單，數字會是 0
           rowContent =
-            `<td>${orders[isoDate].noodles}</td>` +
-            `<td>${orders[isoDate].eggPancake}</td>` +
-            `<td>${orders[isoDate].friedNoodles}</td>` +
-            `<td>${orders[isoDate].redTea}</td>` +
-            `<td>${orders[isoDate].milkTea}</td>` +
+            `<td>${orders[isoDate].noodles || ''}</td>` +
+            `<td>${orders[isoDate].eggPancake || ''}</td>` +
+            `<td>${orders[isoDate].friedNoodles || ''}</td>` +
             `<td>${dailyTotalAmount}</td>`;
         }
+
         overallTotalAmount += dailyTotalAmount;
         html += `<tr onclick="openModal('${isoDate}')"><td>${displayDate}</td>${rowContent}</tr>`;
       }
-      html += `<tr id="overallTotalRow"><td colspan="6">總金額:</td><td>${overallTotalAmount}</td></tr>`;
+
+      html += `<tr id="overallTotalRow"><td colspan="4">總計金額:</td><td style="color:#d9534f;">${overallTotalAmount}</td></tr>`;
       html += "</table>";
 
-      // 取得餘額與預收，若未輸入則顯示「無」
+      // 結餘計算區
       let balanceText = document.getElementById("balanceInput").value.trim();
       let advanceText = document.getElementById("advanceInput").value.trim();
-      // 若空字串，計算時視為 0，但顯示「無」
       let balanceValue = (balanceText === "") ? 0 : parseFloat(balanceText);
       let advanceValue = (advanceText === "") ? 0 : parseFloat(advanceText);
+      
       let balanceDisplay = (balanceText === "") ? "無" : balanceValue;
       let advanceDisplay = (advanceText === "") ? "無" : advanceValue;
       let finalBalance = (balanceValue + advanceValue) - overallTotalAmount;
+      
       const startDisplay = `${(startDate.getMonth()+1).toString().padStart(2,"0")}/${startDate.getDate().toString().padStart(2,"0")}`;
       const endDisplay = `${(endDate.getMonth()+1).toString().padStart(2,"0")}/${endDate.getDate().toString().padStart(2,"0")}`;
-      let summaryHtml = `<div id="balanceSummary" style="margin-top:10px;">`;
-      summaryHtml += `<span onclick="openBalanceModal()">${startDisplay} 餘額：${(balanceDisplay==="無"?"無":balanceDisplay+"元")}</span><br>`;
-      summaryHtml += `<span onclick="openBalanceModal()">${endDisplay} 預收：${(advanceDisplay==="無"?"無":advanceDisplay+"元")}</span><br>`;
-      summaryHtml += `結餘：${(balanceText === "" && advanceText === "") ? "無" : finalBalance+"元"}`;
+      
+      let summaryHtml = `<div id="balanceSummary" onclick="openBalanceModal()">`;
+      summaryHtml += `<span>${startDisplay} 餘額：${(balanceDisplay==="無"?"無":balanceDisplay+"元")}</span><br>`;
+      summaryHtml += `<span>${endDisplay} 預收：${(advanceDisplay==="無"?"無":advanceDisplay+"元")}</span><br>`;
+      summaryHtml += `<span style="color:#d9534f; font-size:1.1rem;">結餘：${(balanceText === "" && advanceText === "") ? "無" : finalBalance+"元"}</span>`;
       summaryHtml += `</div><br>`;
+      
       html += summaryHtml;
 
       document.getElementById("report").innerHTML = html;
+      document.getElementById("downloadBtn").style.display = "block";
     }
 
-    function downloadReport() {
-      html2canvas(document.getElementById("report")).then(canvas => {
-        const link = document.createElement("a");
-        link.href = canvas.toDataURL("image/jpeg");
-        link.download = "report.jpg";
-        link.click();
-      });
-    }
-
-    function getDefaultQuantities() {
-      return {
-        noodles: parseInt(document.getElementById("noodlesQty").value, 10),
-        eggPancake: parseInt(document.getElementById("eggPancakeQty").value, 10),
-        friedNoodles: parseInt(document.getElementById("friedNoodlesQty").value, 10),
-        redTea: parseInt(document.getElementById("redTeaQty").value, 10),
-        milkTea: parseInt(document.getElementById("milkTeaQty").value, 10)
-      };
-    }
-
-    function saveDefaultQuantities() {
-      const defaults = getDefaultQuantities();
-      localStorage.setItem("defaultQuantities", JSON.stringify(defaults));
-    }
-
-    window.addEventListener("DOMContentLoaded", function() {
-      const storedDefaults = localStorage.getItem("defaultQuantities");
-      if (storedDefaults) {
-        const defaults = JSON.parse(storedDefaults);
-        document.getElementById("noodlesQty").value = defaults.noodles;
-        document.getElementById("eggPancakeQty").value = defaults.eggPancake;
-        document.getElementById("friedNoodlesQty").value = defaults.friedNoodles;
-        document.getElementById("redTeaQty").value = defaults.redTea;
-        document.getElementById("milkTeaQty").value = defaults.milkTea;
-      }
-      const today = getLocalDateString(new Date());
-      document.getElementById("endDate").value = today;
-    });
-
-    // Modal (訂單修改)
+    // --- Modal 操作區 (訂單微調) ---
     function openModal(isoDate) {
       currentEditDate = isoDate;
       const d = new Date(isoDate);
-      const month = (d.getMonth() + 1).toString().padStart(2, "0");
-      const day = d.getDate().toString().padStart(2, "0");
-      const weekday = weekdays[d.getDay()];
-      document.getElementById("modalDate").textContent = `${month}/${day}/${weekday}`;
-      if (!orders[isoDate]) {
-        orders[isoDate] = { isHoliday: false, ...getDefaultQuantities() };
-      }
+      const displayDate = `${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getDate().toString().padStart(2, "0")}/${weekdays[d.getDay()]}`;
+      
+      document.getElementById("modalDate").textContent = `修改訂單：${displayDate}`;
       document.getElementById("modalIsHoliday").checked = orders[isoDate].isHoliday;
+      
       toggleModalInputs();
+      
       document.getElementById("modalNoodlesQty").value = orders[isoDate].noodles;
       document.getElementById("modalEggPancakeQty").value = orders[isoDate].eggPancake;
       document.getElementById("modalFriedNoodlesQty").value = orders[isoDate].friedNoodles;
-      document.getElementById("modalRedTeaQty").value = orders[isoDate].redTea;
-      document.getElementById("modalMilkTeaQty").value = orders[isoDate].milkTea;
+      
       document.getElementById("modalOverlay").style.display = "flex";
     }
 
@@ -399,8 +390,6 @@
       document.getElementById("modalNoodlesQty").disabled = isHoliday;
       document.getElementById("modalEggPancakeQty").disabled = isHoliday;
       document.getElementById("modalFriedNoodlesQty").disabled = isHoliday;
-      document.getElementById("modalRedTeaQty").disabled = isHoliday;
-      document.getElementById("modalMilkTeaQty").disabled = isHoliday;
     }
 
     function closeModal() {
@@ -412,39 +401,46 @@
       if (!currentEditDate) return;
       const isHoliday = document.getElementById("modalIsHoliday").checked;
       orders[currentEditDate].isHoliday = isHoliday;
+      
       if (isHoliday) {
         orders[currentEditDate].noodles = 0;
         orders[currentEditDate].eggPancake = 0;
         orders[currentEditDate].friedNoodles = 0;
-        orders[currentEditDate].redTea = 0;
-        orders[currentEditDate].milkTea = 0;
       } else {
-        orders[currentEditDate].noodles = parseInt(document.getElementById("modalNoodlesQty").value, 10);
-        orders[currentEditDate].eggPancake = parseInt(document.getElementById("modalEggPancakeQty").value, 10);
-        orders[currentEditDate].friedNoodles = parseInt(document.getElementById("modalFriedNoodlesQty").value, 10);
-        orders[currentEditDate].redTea = parseInt(document.getElementById("modalRedTeaQty").value, 10);
-        orders[currentEditDate].milkTea = parseInt(document.getElementById("modalMilkTeaQty").value, 10);
+        orders[currentEditDate].noodles = parseInt(document.getElementById("modalNoodlesQty").value) || 0;
+        orders[currentEditDate].eggPancake = parseInt(document.getElementById("modalEggPancakeQty").value) || 0;
+        orders[currentEditDate].friedNoodles = parseInt(document.getElementById("modalFriedNoodlesQty").value) || 0;
       }
-      generateReport();
+      generateTable();
       closeModal();
     }
 
-    // Modal (餘額/預收調整)
+    // --- Modal 操作區 (餘額/預收調整) ---
     function openBalanceModal() {
-      // 將目前餘額與預收值填入 modalBalance 與 modalAdvance
       document.getElementById("modalBalance").value = document.getElementById("balanceInput").value;
       document.getElementById("modalAdvance").value = document.getElementById("advanceInput").value;
       document.getElementById("balanceModalOverlay").style.display = "flex";
     }
+
     function closeBalanceModal() {
       document.getElementById("balanceModalOverlay").style.display = "none";
     }
+
     function saveBalance() {
-      // 儲存後更新主表單中的餘額與預收欄位，然後重建報表
       document.getElementById("balanceInput").value = document.getElementById("modalBalance").value;
       document.getElementById("advanceInput").value = document.getElementById("modalAdvance").value;
-      generateReport();
+      generateTable(); // 重建報表以更新結餘
       closeBalanceModal();
+    }
+
+    // --- 下載圖片 ---
+    function downloadReport() {
+      html2canvas(document.getElementById("report")).then(canvas => {
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/jpeg");
+        link.download = "訂單報表.jpg";
+        link.click();
+      });
     }
   </script>
 </body>
