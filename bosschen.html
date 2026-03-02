@@ -3,15 +3,18 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>訂單報表產生器 (PDF解析版)</title>
+  <title>訂單報表產生器</title>
   <style>
     body {
       font-family: Arial, sans-serif;
+      background-color: #ffffff;
+      color: #000000;
       padding: 10px;
       margin: 0;
     }
     h1 {
       text-align: center;
+      color: #000000;
     }
     form, #report {
       width: 100%;
@@ -25,6 +28,7 @@
       display: block;
       margin-bottom: 4px;
       font-weight: bold;
+      color: #333333;
     }
     input[type="date"],
     input[type="number"],
@@ -33,6 +37,8 @@
       font-size: 1rem;
       width: 100%;
       box-sizing: border-box;
+      border: 1px solid #cccccc;
+      border-radius: 4px;
     }
     .btn {
       width: 100%;
@@ -41,23 +47,24 @@
       margin: 15px auto;
       padding: 10px 12px;
       font-size: 1rem;
-      background-color: #4CAF50;
-      color: white;
+      background-color: #333333;
+      color: #ffffff;
       border: none;
       border-radius: 4px;
       cursor: pointer;
+      font-weight: bold;
     }
     .btn:hover {
-      background-color: #45a049;
+      background-color: #555555;
     }
     .btn-parse {
-      background-color: #FF9800;
+      background-color: #666666;
     }
     .btn-parse:hover {
-      background-color: #F57C00;
+      background-color: #888888;
     }
     #downloadBtn {
-      background-color: #008CBA;
+      background-color: #000000;
     }
     table {
       border-collapse: collapse;
@@ -67,18 +74,19 @@
       font-size: 0.9rem;
     }
     table, th, td {
-      border: 1px solid #333;
+      border: 1px solid #666666;
       padding: 8px;
     }
     th {
-      background-color: #f0f0f0;
+      background-color: #e0e0e0;
+      color: #000000;
     }
     tr:hover {
-      background-color: #f9f9f9;
+      background-color: #f5f5f5;
       cursor: pointer;
     }
     #overallTotalRow {
-      background-color: #f0f0f0;
+      background-color: #e0e0e0;
       font-weight: bold;
     }
     #balanceSummary {
@@ -87,6 +95,11 @@
       margin-top: 10px;
       white-space: pre-line;
       cursor: pointer;
+      color: #000000;
+      background-color: #f9f9f9;
+      border: 1px solid #cccccc;
+      padding: 10px;
+      border-radius: 4px;
     }
     /* Modal */
     .modal-overlay {
@@ -94,18 +107,19 @@
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.6);
       justify-content: center;
       align-items: center;
       padding: 10px;
       box-sizing: border-box;
     }
     .modal-content {
-      background: #fff;
+      background: #ffffff;
       padding: 20px;
       border-radius: 5px;
       width: 100%;
       max-width: 400px;
+      border: 1px solid #999999;
     }
     .modal-content form div {
       margin-bottom: 10px;
@@ -119,15 +133,41 @@
       margin-bottom: 10px;
       padding: 10px;
       font-size: 1rem;
+      font-weight: bold;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn-save {
+      background-color: #333333;
+      color: #ffffff;
+      border: none;
+    }
+    .btn-save:hover {
+      background-color: #555555;
+    }
+    .btn-cancel {
+      background-color: #ffffff;
+      color: #333333;
+      border: 1px solid #999999;
+    }
+    .btn-cancel:hover {
+      background-color: #f0f0f0;
     }
     #loadingMsg {
       display: none;
-      color: #D32F2F;
+      color: #333333;
       font-weight: bold;
       text-align: center;
       margin-top: 10px;
     }
-  </style>
+    .upload-section {
+      background: #f9f9f9;
+      padding: 10px;
+      border-radius: 5px;
+      margin-top: 15px;
+      border: 1px solid #cccccc;
+    }
+  </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 </head>
 <body>
@@ -150,10 +190,10 @@
       <input type="number" id="advanceInput" placeholder="無">
     </div>
     
-    <div style="background: #fff3e0; padding: 10px; border-radius: 5px; margin-top: 15px; border: 1px solid #ffcc80;">
+    <div class="upload-section">
       <label for="pdfFile">📄 上傳 LINE 對話紀錄 (.pdf):</label>
       <input type="file" id="pdfFile" accept=".pdf">
-      <small style="color: #666;">※ 自動覆蓋當日最後一筆資訊，無對話則預設為休假。</small>
+      <small style="color: #666666; display: block; margin-top: 4px;">※ 系統會自動將對話日期 +1 天轉為實際訂單日。</small>
       <button type="button" class="btn btn-parse" onclick="processPDF()">解析 PDF 並生成報表</button>
       <div id="loadingMsg">⏳ 正在解析 PDF 文字，請稍候...</div>
     </div>
@@ -164,7 +204,7 @@
 
   <div id="modalOverlay" class="modal-overlay">
     <div id="modal" class="modal-content">
-      <h2 id="modalDate" style="text-align: center;"></h2>
+      <h2 id="modalDate" style="text-align: center; color: #000;"></h2>
       <form id="modalForm">
         <div>
           <label for="modalIsHoliday" style="display: inline-block;">設為休假:</label>
@@ -183,8 +223,8 @@
           <input type="number" id="modalFriedNoodlesQty" min="0" required>
         </div>
         <div class="modal-btns">
-          <button type="button" style="background:#4CAF50; color:white; border:none;" onclick="saveOrder()">儲存修改</button>
-          <button type="button" onclick="closeModal()">取消</button>
+          <button type="button" class="btn-save" onclick="saveOrder()">儲存修改</button>
+          <button type="button" class="btn-cancel" onclick="closeModal()">取消</button>
         </div>
       </form>
     </div>
@@ -192,7 +232,7 @@
 
   <div id="balanceModalOverlay" class="modal-overlay">
     <div id="balanceModal" class="modal-content">
-      <h2 style="text-align: center;">調整結餘與預收</h2>
+      <h2 style="text-align: center; color: #000;">調整結餘與預收</h2>
       <form id="balanceForm">
         <div>
           <label for="modalBalance">結餘:</label>
@@ -203,8 +243,8 @@
           <input type="number" id="modalAdvance" placeholder="無">
         </div>
         <div class="modal-btns">
-          <button type="button" style="background:#4CAF50; color:white; border:none;" onclick="saveBalance()">儲存</button>
-          <button type="button" onclick="closeBalanceModal()">取消</button>
+          <button type="button" class="btn-save" onclick="saveBalance()">儲存</button>
+          <button type="button" class="btn-cancel" onclick="closeBalanceModal()">取消</button>
         </div>
       </form>
     </div>
@@ -287,13 +327,20 @@
         const dateMatch = dateStr.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
         if (!dateMatch) continue;
         
-        const y = dateMatch[1];
-        const m = dateMatch[2].padStart(2, '0');
-        const d = dateMatch[3].padStart(2, '0');
-        const currentDate = `${y}-${m}-${d}`;
+        const y = parseInt(dateMatch[1], 10);
+        const m = parseInt(dateMatch[2], 10) - 1; // JS 的月份是 0~11
+        const d = parseInt(dateMatch[3], 10);
+        
+        // **日期 +1 天邏輯** (前一天下訂單，所以實際訂單日為隔天)
+        let actualOrderDate = new Date(y, m, d);
+        actualOrderDate.setDate(actualOrderDate.getDate() + 1);
+        
+        const targetY = actualOrderDate.getFullYear();
+        const targetM = (actualOrderDate.getMonth() + 1).toString().padStart(2, '0');
+        const targetD = actualOrderDate.getDate().toString().padStart(2, '0');
+        const currentDate = `${targetY}-${targetM}-${targetD}`;
         
         if (!orders[currentDate]) {
-          // 先標記為無資訊 (hasInfo: false)
           orders[currentDate] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0, hasInfo: false };
         }
 
@@ -316,7 +363,7 @@
           orders[currentDate].hasInfo = true;
         }
 
-        // 解析結餘 (改為匹配「結餘」)
+        // 解析結餘
         const balanceMatch = [...contentStr.matchAll(/結餘[:：]?(-?\d+)/g)];
         balanceMatch.forEach(m => {
           balancesFound.push({ date: currentDate, amount: parseInt(m[1], 10) });
@@ -345,7 +392,6 @@
         }
       });
 
-      // 判斷手動輸入優先：只有當手動輸入欄位是空的時候，才將解析出的結餘填入
       let currentBalanceInput = document.getElementById("balanceInput").value.trim();
       if (latestBalance !== null && currentBalanceInput === "") {
         document.getElementById("balanceInput").value = latestBalance;
@@ -365,7 +411,6 @@
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         let isoDate = getLocalDateString(d);
         
-        // 如果這個日期完全沒出現在文字檔裡，預設為休假
         if (!orders[isoDate]) {
           orders[isoDate] = { isHoliday: true, noodles: 0, eggPancake: 0, friedNoodles: 0 };
         }
@@ -379,7 +424,7 @@
         let rowContent = "";
 
         if (orders[isoDate].isHoliday) {
-          rowContent = `<td colspan="3" style="color:#888;">休假</td><td>0</td>`;
+          rowContent = `<td colspan="3" style="color:#999999;">休假</td><td>0</td>`;
         } else {
           dailyTotalAmount =
             orders[isoDate].noodles * prices.noodles +
@@ -390,14 +435,14 @@
             `<td>${orders[isoDate].noodles || ''}</td>` +
             `<td>${orders[isoDate].eggPancake || ''}</td>` +
             `<td>${orders[isoDate].friedNoodles || ''}</td>` +
-            `<td>${dailyTotalAmount}</td>`;
+            `<td style="font-weight:bold;">${dailyTotalAmount}</td>`;
         }
 
         overallTotalAmount += dailyTotalAmount;
         html += `<tr onclick="openModal('${isoDate}')"><td>${displayDate}</td>${rowContent}</tr>`;
       }
 
-      html += `<tr id="overallTotalRow"><td colspan="4">總計金額:</td><td style="color:#d9534f;">${overallTotalAmount}</td></tr>`;
+      html += `<tr id="overallTotalRow"><td colspan="4">總計金額:</td><td>${overallTotalAmount}</td></tr>`;
       html += "</table>";
 
       let balanceText = document.getElementById("balanceInput").value.trim();
@@ -415,7 +460,7 @@
       let summaryHtml = `<div id="balanceSummary" onclick="openBalanceModal()">`;
       summaryHtml += `<span>${startDisplay} 結餘：${(balanceDisplay==="無"?"無":balanceDisplay+"元")}</span><br>`;
       summaryHtml += `<span>${endDisplay} 預收：${(advanceDisplay==="無"?"無":advanceDisplay+"元")}</span><br>`;
-      summaryHtml += `<span style="color:#d9534f; font-size:1.1rem;">結餘：${(balanceText === "" && advanceText === "") ? "無" : finalBalance+"元"}</span>`;
+      summaryHtml += `<span style="font-size:1.1rem; font-weight:bold; color:#000;">結餘：${(balanceText === "" && advanceText === "") ? "無" : finalBalance+"元"}</span>`;
       summaryHtml += `</div><br>`;
       
       html += summaryHtml;
