@@ -142,8 +142,8 @@
       <input type="date" id="endDate" required>
     </div>
     <div>
-      <label for="balanceInput">上期結餘 (餘額):</label>
-      <input type="number" id="balanceInput" placeholder="無">
+      <label for="balanceInput">上期結餘:</label>
+      <input type="number" id="balanceInput" placeholder="無 (手動輸入優先)">
     </div>
     <div>
       <label for="advanceInput">預收金額:</label>
@@ -153,7 +153,7 @@
     <div style="background: #fff3e0; padding: 10px; border-radius: 5px; margin-top: 15px; border: 1px solid #ffcc80;">
       <label for="pdfFile">📄 上傳 LINE 對話紀錄 (.pdf):</label>
       <input type="file" id="pdfFile" accept=".pdf">
-      <small style="color: #666;">※ 系統會自動解析 PDF 內的日期、產品與最新餘額。</small>
+      <small style="color: #666;">※ 自動覆蓋當日最後一筆資訊，無對話則預設為休假。</small>
       <button type="button" class="btn btn-parse" onclick="processPDF()">解析 PDF 並生成報表</button>
       <div id="loadingMsg">⏳ 正在解析 PDF 文字，請稍候...</div>
     </div>
@@ -192,10 +192,10 @@
 
   <div id="balanceModalOverlay" class="modal-overlay">
     <div id="balanceModal" class="modal-content">
-      <h2 style="text-align: center;">調整餘額與預收</h2>
+      <h2 style="text-align: center;">調整結餘與預收</h2>
       <form id="balanceForm">
         <div>
-          <label for="modalBalance">餘額:</label>
+          <label for="modalBalance">結餘:</label>
           <input type="number" id="modalBalance" placeholder="無">
         </div>
         <div>
@@ -212,7 +212,6 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
-    // 設定 PDF.js 的 Worker 來源
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
     const prices = { noodles: 50, eggPancake: 30, friedNoodles: 30 };
@@ -234,7 +233,6 @@
       document.getElementById("startDate").value = getLocalDateString(firstDay);
     });
 
-    // --- 讀取並解析 PDF 檔案 ---
     async function processPDF() {
       const fileInput = document.getElementById('pdfFile');
       const startDateVal = document.getElementById("startDate").value;
@@ -244,7 +242,6 @@
         alert("請確認首頁的開始與結束日期！");
         return;
       }
-
       if (!fileInput.files || fileInput.files.length === 0) {
         alert("請先選擇 PDF 檔案！");
         return;
@@ -259,16 +256,12 @@
         try {
           const pdf = await pdfjsLib.getDocument(typedarray).promise;
           let fullText = "";
-          
-          // 迴圈讀取每一頁的文字
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const textContent = await page.getTextContent();
-            // 直接將每一頁的文字串接起來
             const pageText = textContent.items.map(item => item.str).join('');
             fullText += pageText;
           }
-          
           parseTextData(fullText);
         } catch (error) {
           console.error("PDF 解析失敗:", error);
@@ -277,28 +270,20 @@
           document.getElementById("loadingMsg").style.display = "none";
         }
       };
-
       fileReader.readAsArrayBuffer(file);
     }
 
-    // --- 強悍的文字分析邏輯 ---
     function parseTextData(text) {
-      // 1. 去除所有的空白、換行字元，無視 PDF 版面走位問題
       const cleanText = text.replace(/\s+/g, '');
-
-      // 2. 用「日期」作為刀子，把整串文字切成一塊一塊的區段
-      // 匹配類似 2026/1/13 的格式
       const parts = cleanText.split(/(\d{4}\/\d{1,2}\/\d{1,2})/);
 
       orders = {}; 
       let balancesFound = []; 
 
-      // parts 陣列結構會變成: [ "雜訊", "日期1", "對話內容1", "日期2", "對話內容2", ... ]
       for (let i = 1; i < parts.length; i += 2) {
         const dateStr = parts[i];
         const contentStr = parts[i+1] || "";
 
-        // 解析出標準的 YYYY-MM-DD
         const dateMatch = dateStr.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
         if (!dateMatch) continue;
         
@@ -308,24 +293,41 @@
         const currentDate = `${y}-${m}-${d}`;
         
         if (!orders[currentDate]) {
-          orders[currentDate] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0 };
+          // 先標記為無資訊 (hasInfo: false)
+          orders[currentDate] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0, hasInfo: false };
         }
 
-        // 解析商品數量 (利用 matchAll 避免同一天點兩次的情況，完美略過前面的贅字)
+        // 解析商品數量，抓取陣列的最後一個元素 (最新的一筆)
         const noodlesMatch = [...contentStr.matchAll(/麵線(\d+)/g)];
-        noodlesMatch.forEach(m => orders[currentDate].noodles += parseInt(m[1], 10));
+        if (noodlesMatch.length > 0) {
+          orders[currentDate].noodles = parseInt(noodlesMatch[noodlesMatch.length - 1][1], 10);
+          orders[currentDate].hasInfo = true;
+        }
 
         const eggPancakeMatch = [...contentStr.matchAll(/蛋餅(\d+)/g)];
-        eggPancakeMatch.forEach(m => orders[currentDate].eggPancake += parseInt(m[1], 10));
+        if (eggPancakeMatch.length > 0) {
+          orders[currentDate].eggPancake = parseInt(eggPancakeMatch[eggPancakeMatch.length - 1][1], 10);
+          orders[currentDate].hasInfo = true;
+        }
 
         const friedNoodlesMatch = [...contentStr.matchAll(/炒麵(\d+)/g)];
-        friedNoodlesMatch.forEach(m => orders[currentDate].friedNoodles += parseInt(m[1], 10));
+        if (friedNoodlesMatch.length > 0) {
+          orders[currentDate].friedNoodles = parseInt(friedNoodlesMatch[friedNoodlesMatch.length - 1][1], 10);
+          orders[currentDate].hasInfo = true;
+        }
 
-        // 解析餘額
-        const balanceMatch = [...contentStr.matchAll(/餘額[:：]?(-?\d+)/g)];
+        // 解析結餘 (改為匹配「結餘」)
+        const balanceMatch = [...contentStr.matchAll(/結餘[:：]?(-?\d+)/g)];
         balanceMatch.forEach(m => {
           balancesFound.push({ date: currentDate, amount: parseInt(m[1], 10) });
         });
+      }
+
+      // 針對沒有抓到任何商品數量的日期，直接標記為休假
+      for (let dateKey in orders) {
+        if (!orders[dateKey].hasInfo) {
+          orders[dateKey].isHoliday = true;
+        }
       }
 
       // 自動抓取上期結餘邏輯
@@ -343,14 +345,15 @@
         }
       });
 
-      if (latestBalance !== null) {
+      // 判斷手動輸入優先：只有當手動輸入欄位是空的時候，才將解析出的結餘填入
+      let currentBalanceInput = document.getElementById("balanceInput").value.trim();
+      if (latestBalance !== null && currentBalanceInput === "") {
         document.getElementById("balanceInput").value = latestBalance;
       }
 
       generateTable();
     }
 
-    // 繪製報表表格
     function generateTable() {
       const startDate = new Date(document.getElementById("startDate").value);
       const endDate = new Date(document.getElementById("endDate").value);
@@ -362,12 +365,9 @@
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         let isoDate = getLocalDateString(d);
         
+        // 如果這個日期完全沒出現在文字檔裡，預設為休假
         if (!orders[isoDate]) {
-          if (d.getDay() === 1) {
-            orders[isoDate] = { isHoliday: true, noodles: 0, eggPancake: 0, friedNoodles: 0 };
-          } else {
-            orders[isoDate] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0 };
-          }
+          orders[isoDate] = { isHoliday: true, noodles: 0, eggPancake: 0, friedNoodles: 0 };
         }
 
         const month = (d.getMonth() + 1).toString().padStart(2, "0");
@@ -413,7 +413,7 @@
       const endDisplay = `${(endDate.getMonth()+1).toString().padStart(2,"0")}/${endDate.getDate().toString().padStart(2,"0")}`;
       
       let summaryHtml = `<div id="balanceSummary" onclick="openBalanceModal()">`;
-      summaryHtml += `<span>${startDisplay} 餘額：${(balanceDisplay==="無"?"無":balanceDisplay+"元")}</span><br>`;
+      summaryHtml += `<span>${startDisplay} 結餘：${(balanceDisplay==="無"?"無":balanceDisplay+"元")}</span><br>`;
       summaryHtml += `<span>${endDisplay} 預收：${(advanceDisplay==="無"?"無":advanceDisplay+"元")}</span><br>`;
       summaryHtml += `<span style="color:#d9534f; font-size:1.1rem;">結餘：${(balanceText === "" && advanceText === "") ? "無" : finalBalance+"元"}</span>`;
       summaryHtml += `</div><br>`;
@@ -424,7 +424,6 @@
       document.getElementById("downloadBtn").style.display = "block";
     }
 
-    // --- Modal 操作區 (訂單微調) ---
     function openModal(isoDate) {
       currentEditDate = isoDate;
       const d = new Date(isoDate);
@@ -457,6 +456,11 @@
     function saveOrder() {
       if (!currentEditDate) return;
       const isHoliday = document.getElementById("modalIsHoliday").checked;
+      
+      if (!orders[currentEditDate]) {
+        orders[currentEditDate] = {};
+      }
+      
       orders[currentEditDate].isHoliday = isHoliday;
       
       if (isHoliday) {
@@ -472,7 +476,6 @@
       closeModal();
     }
 
-    // --- Modal 操作區 (餘額/預收調整) ---
     function openBalanceModal() {
       document.getElementById("modalBalance").value = document.getElementById("balanceInput").value;
       document.getElementById("modalAdvance").value = document.getElementById("advanceInput").value;
@@ -490,7 +493,6 @@
       closeBalanceModal();
     }
 
-    // --- 下載圖片 ---
     function downloadReport() {
       html2canvas(document.getElementById("report")).then(canvas => {
         const link = document.createElement("a");
