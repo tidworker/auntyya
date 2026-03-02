@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>訂單報表產生器 (LINE匯入版)</title>
+  <title>訂單報表產生器 (LINE貼上版)</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -28,7 +28,7 @@
     }
     input[type="date"],
     input[type="number"],
-    input[type="file"] {
+    textarea {
       padding: 6px;
       font-size: 1rem;
       width: 100%;
@@ -49,6 +49,12 @@
     }
     .btn:hover {
       background-color: #45a049;
+    }
+    .btn-paste {
+      background-color: #FF9800;
+    }
+    .btn-paste:hover {
+      background-color: #F57C00;
     }
     #downloadBtn {
       background-color: #008CBA;
@@ -135,17 +141,24 @@
       <label for="advanceInput">預收金額:</label>
       <input type="number" id="advanceInput" placeholder="無">
     </div>
-    <div style="background: #eef; padding: 10px; border-radius: 5px; margin-top: 15px;">
-      <label for="logFile">上傳 LINE 對話紀錄 (.txt):</label>
-      <input type="file" id="logFile" accept=".txt">
-      <small style="color: #555;">※ 系統會自動抓取區間內的日期，並辨識「麵線、蛋餅、炒麵」加上數字的內容。</small>
-    </div>
     
-    <button type="button" class="btn" onclick="processAndGenerate()">解析檔案並生成報表</button>
+    <button type="button" class="btn btn-paste" onclick="openPasteModal()">📝 貼上 LINE 對話並解析</button>
   </form>
 
   <div id="report"></div>
   <button id="downloadBtn" type="button" class="btn" style="display:none;" onclick="downloadReport()">下載表格 JPG</button>
+
+  <div id="pasteModalOverlay" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+      <h2 style="text-align: center; margin-top: 0;">貼上對話紀錄</h2>
+      <p style="font-size: 0.85rem; color: #555; margin-bottom: 10px;">請直接貼上 LINE 的對話文字。系統會自動解析商品數量，並幫你尋找設定日期前的最新一筆「餘額」。</p>
+      <textarea id="pasteArea" rows="10" placeholder="在此貼上 LINE 對話..."></textarea>
+      <div class="modal-btns">
+        <button type="button" style="background:#4CAF50; color:white; border:none;" onclick="processPastedText()">確認解析</button>
+        <button type="button" onclick="closePasteModal()">取消</button>
+      </div>
+    </div>
+  </div>
 
   <div id="modalOverlay" class="modal-overlay">
     <div id="modal" class="modal-content">
@@ -207,7 +220,6 @@
     const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     let currentEditDate = null;
 
-    // 格式化日期 YYYY-MM-DD
     function getLocalDateString(date) {
       const year = date.getFullYear();
       const month = (date.getMonth() + 1).toString().padStart(2, "0");
@@ -215,79 +227,102 @@
       return `${year}-${month}-${day}`;
     }
 
-    // 初始化日期
     window.addEventListener("DOMContentLoaded", function() {
       const today = new Date();
       document.getElementById("endDate").value = getLocalDateString(today);
-      
       const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
       document.getElementById("startDate").value = getLocalDateString(firstDay);
     });
 
-    // 解析文字檔並產生報表
-    function processAndGenerate() {
-      const fileInput = document.getElementById('logFile');
+    // --- Modal 操作區 (貼上文字) ---
+    function openPasteModal() {
+      document.getElementById("pasteArea").value = "";
+      document.getElementById("pasteModalOverlay").style.display = "flex";
+    }
+
+    function closePasteModal() {
+      document.getElementById("pasteModalOverlay").style.display = "none";
+    }
+
+    // 解析貼上的文字
+    function processPastedText() {
+      const text = document.getElementById("pasteArea").value;
       const startDateVal = document.getElementById("startDate").value;
       const endDateVal = document.getElementById("endDate").value;
 
       if (!startDateVal || !endDateVal) {
-        alert("請確認開始與結束日期！");
+        alert("請確認首頁的開始與結束日期！");
         return;
       }
 
-      // 如果沒有上傳檔案，僅產生空表單
-      if (!fileInput.files || fileInput.files.length === 0) {
-        orders = {}; // 清空資料
-        generateTable();
-        return;
+      const lines = text.split('\n');
+      orders = {}; 
+      let currentDate = null;
+      let balancesFound = []; // 用來存取找到的所有餘額紀錄
+
+      lines.forEach(line => {
+        line = line.trim();
+        if (!line) return;
+
+        // 匹配日期格式 例如: 2026/1/13(週二)
+        const dateMatch = line.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+        if (dateMatch) {
+          const y = dateMatch[1];
+          const m = dateMatch[2].padStart(2, '0');
+          const d = dateMatch[3].padStart(2, '0');
+          currentDate = `${y}-${m}-${d}`;
+          
+          if (!orders[currentDate]) {
+            orders[currentDate] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0 };
+          }
+          return; 
+        }
+
+        if (currentDate) {
+          // 匹配商品與數量
+          let nM = line.match(/麵線\s*(\d+)/);
+          if (nM) orders[currentDate].noodles += parseInt(nM[1], 10);
+
+          let eM = line.match(/蛋餅\s*(\d+)/);
+          if (eM) orders[currentDate].eggPancake += parseInt(eM[1], 10);
+
+          let fM = line.match(/炒麵\s*(\d+)/);
+          if (fM) orders[currentDate].friedNoodles += parseInt(fM[1], 10);
+
+          // 匹配餘額 (允許「餘額1000」、「餘額: 1000」、「餘額 1000」等格式)
+          let bM = line.match(/餘額\s*[:：]?\s*(-?\d+)/);
+          if (bM) {
+            balancesFound.push({ date: currentDate, amount: parseInt(bM[1], 10) });
+          }
+        }
+      });
+
+      // 自動尋找：日期「小於」設定的開始日期 中，最新的一筆餘額
+      const targetStartDate = new Date(startDateVal);
+      let latestBalance = null;
+      let latestBalanceDate = new Date(0); // 初始設為極小的日期
+
+      balancesFound.forEach(b => {
+        const bDate = new Date(b.date);
+        // 只要這筆餘額的日期在「開始日期」之前
+        if (bDate < targetStartDate) {
+          if (bDate >= latestBalanceDate) {
+            latestBalanceDate = bDate;
+            latestBalance = b.amount;
+          }
+        }
+      });
+
+      // 如果有找到符合條件的最新餘額，自動填入主畫面的欄位
+      if (latestBalance !== null) {
+        document.getElementById("balanceInput").value = latestBalance;
+      } else {
+        // 如果沒找到，清空或保留原本輸入
+        console.log("未找到之前的餘額紀錄");
       }
 
-      const file = fileInput.files[0];
-      const reader = new FileReader();
-
-      reader.onload = function(e) {
-        const content = e.target.result;
-        const lines = content.split('\n');
-        
-        orders = {}; // 重置訂單資料
-        let currentDate = null;
-
-        lines.forEach(line => {
-          line = line.trim();
-          if (!line) return;
-
-          // 匹配日期格式 例如: 2026/1/13(週二)
-          const dateMatch = line.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})/);
-          if (dateMatch) {
-            const y = dateMatch[1];
-            const m = dateMatch[2].padStart(2, '0');
-            const d = dateMatch[3].padStart(2, '0');
-            currentDate = `${y}-${m}-${d}`;
-            
-            if (!orders[currentDate]) {
-              orders[currentDate] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0 };
-            }
-            return; 
-          }
-
-          // 如果已經讀到日期，開始匹配產品與數量
-          // 匹配邏輯：尋找目標兩字，後面跟著可有可無的空白，然後是數字
-          if (currentDate) {
-            let nM = line.match(/麵線\s*(\d+)/);
-            if (nM) orders[currentDate].noodles += parseInt(nM[1], 10);
-
-            let eM = line.match(/蛋餅\s*(\d+)/);
-            if (eM) orders[currentDate].eggPancake += parseInt(eM[1], 10);
-
-            let fM = line.match(/炒麵\s*(\d+)/);
-            if (fM) orders[currentDate].friedNoodles += parseInt(fM[1], 10);
-          }
-        });
-
-        generateTable();
-      };
-
-      reader.readAsText(file);
+      generateTable();
+      closePasteModal();
     }
 
     // 繪製報表表格
@@ -302,7 +337,6 @@
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         let isoDate = getLocalDateString(d);
         
-        // 如果對話紀錄中沒有這天的資料，預設為 0；若是週一預設休假
         if (!orders[isoDate]) {
           if (d.getDay() === 1) {
             orders[isoDate] = { isHoliday: true, noodles: 0, eggPancake: 0, friedNoodles: 0 };
@@ -327,7 +361,6 @@
             orders[isoDate].eggPancake * prices.eggPancake +
             orders[isoDate].friedNoodles * prices.friedNoodles;
             
-          // 如果當天沒休假也沒訂單，數字會是 0
           rowContent =
             `<td>${orders[isoDate].noodles || ''}</td>` +
             `<td>${orders[isoDate].eggPancake || ''}</td>` +
@@ -342,7 +375,6 @@
       html += `<tr id="overallTotalRow"><td colspan="4">總計金額:</td><td style="color:#d9534f;">${overallTotalAmount}</td></tr>`;
       html += "</table>";
 
-      // 結餘計算區
       let balanceText = document.getElementById("balanceInput").value.trim();
       let advanceText = document.getElementById("advanceInput").value.trim();
       let balanceValue = (balanceText === "") ? 0 : parseFloat(balanceText);
@@ -429,7 +461,7 @@
     function saveBalance() {
       document.getElementById("balanceInput").value = document.getElementById("modalBalance").value;
       document.getElementById("advanceInput").value = document.getElementById("modalAdvance").value;
-      generateTable(); // 重建報表以更新結餘
+      generateTable(); 
       closeBalanceModal();
     }
 
