@@ -6,306 +6,203 @@
   <title>訂單報表產生器</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: sans-serif;
       background-color: #ffffff;
       color: #000000;
-      padding: 10px;
+      padding: 8px;
       margin: 0;
     }
-    h1 {
-      text-align: center;
-      color: #000000;
-    }
-    form, #report {
-      width: 100%;
-      max-width: 600px;
-      margin: 0 auto;
-    }
-    form div {
-      margin-bottom: 12px;
+    div {
+      margin-bottom: 8px;
     }
     label {
       display: block;
-      margin-bottom: 4px;
       font-weight: bold;
-      color: #333333;
     }
-    input[type="date"],
-    input[type="number"],
-    input[type="file"] {
-      padding: 6px;
-      font-size: 1rem;
+    input[type="date"], input[type="number"], input[type="file"] {
       width: 100%;
       box-sizing: border-box;
-      border: 1px solid #cccccc;
-      border-radius: 4px;
+      padding: 4px;
+      border: 1px solid #000000;
     }
-    .btn {
+    button {
       width: 100%;
-      max-width: 600px;
-      display: block;
-      margin: 15px auto;
-      padding: 10px 12px;
-      font-size: 1rem;
-      background-color: #333333;
-      color: #ffffff;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
+      padding: 8px;
+      margin: 8px 0;
+      background-color: #e0e0e0;
+      color: #000000;
+      border: 1px solid #000000;
       font-weight: bold;
-    }
-    .btn:hover {
-      background-color: #555555;
-    }
-    .btn-parse {
-      background-color: #666666;
-    }
-    .btn-parse:hover {
-      background-color: #888888;
-    }
-    #downloadBtn {
-      background-color: #000000;
+      cursor: pointer;
     }
     table {
       border-collapse: collapse;
-      margin-top: 20px;
       width: 100%;
+      margin-top: 10px;
       text-align: center;
-      font-size: 0.9rem;
     }
-    table, th, td {
-      border: 1px solid #666666;
-      padding: 8px;
+    th, td {
+      border: 1px solid #000000;
+      padding: 4px;
     }
     th {
-      background-color: #e0e0e0;
-      color: #000000;
+      background-color: #cccccc;
     }
-    tr:hover {
-      background-color: #f5f5f5;
-      cursor: pointer;
-    }
-    #overallTotalRow {
-      background-color: #e0e0e0;
-      font-weight: bold;
-    }
-    #balanceSummary {
-      text-align: center;
-      font-weight: bold;
-      margin-top: 10px;
-      white-space: pre-line;
-      cursor: pointer;
-      color: #000000;
-      background-color: #f9f9f9;
-      border: 1px solid #cccccc;
-      padding: 10px;
-      border-radius: 4px;
-    }
-    /* Modal */
-    .modal-overlay {
+    .overlay {
       display: none;
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0,0,0,0.6);
-      justify-content: center;
-      align-items: center;
-      padding: 10px;
-      box-sizing: border-box;
+      background: rgba(0,0,0,0.5);
     }
-    .modal-content {
+    .modal {
       background: #ffffff;
-      padding: 20px;
-      border-radius: 5px;
-      width: 100%;
-      max-width: 400px;
-      border: 1px solid #999999;
-    }
-    .modal-content form div {
-      margin-bottom: 10px;
-    }
-    .modal-btns {
-      text-align: center;
-      margin-top: 15px;
-    }
-    .modal-btns button {
-      width: 100%;
-      margin-bottom: 10px;
-      padding: 10px;
-      font-size: 1rem;
-      font-weight: bold;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .btn-save {
-      background-color: #333333;
-      color: #ffffff;
-      border: none;
-    }
-    .btn-save:hover {
-      background-color: #555555;
-    }
-    .btn-cancel {
-      background-color: #ffffff;
-      color: #333333;
-      border: 1px solid #999999;
-    }
-    .btn-cancel:hover {
-      background-color: #f0f0f0;
+      border: 2px solid #000000;
+      padding: 16px;
+      margin: 10% auto;
+      width: 90%;
+      max-width: 300px;
     }
     #loadingMsg {
       display: none;
-      color: #333333;
       font-weight: bold;
       text-align: center;
+    }
+    .summary {
+      border: 1px solid #000000;
+      padding: 8px;
       margin-top: 10px;
+      text-align: center;
+      font-weight: bold;
     }
-    .upload-section {
-      background: #f9f9f9;
-      padding: 10px;
-      border-radius: 5px;
-      margin-top: 15px;
-      border: 1px solid #cccccc;
-    }
-  </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  </style>
 </head>
 <body>
-  <h1>訂單報表產生器</h1>
-  <form id="reportForm">
-    <div>
-      <label for="startDate">開始日期:</label>
-      <input type="date" id="startDate" required>
-    </div>
-    <div>
-      <label for="endDate">結束日期:</label>
-      <input type="date" id="endDate" required>
-    </div>
-    <div>
-      <label for="balanceInput">上期結餘:</label>
-      <input type="number" id="balanceInput" placeholder="無 (手動輸入優先)">
-    </div>
-    <div>
-      <label for="advanceInput">預收金額:</label>
-      <input type="number" id="advanceInput" placeholder="無">
-    </div>
-    
-    <div class="upload-section">
-      <label for="pdfFile">📄 上傳 LINE 對話紀錄 (.pdf):</label>
-      <input type="file" id="pdfFile" accept=".pdf">
-      <small style="color: #666666; display: block; margin-top: 4px;">※ 系統會自動將對話日期 +1 天轉為實際訂單日。</small>
-      <button type="button" class="btn btn-parse" onclick="processPDF()">解析 PDF 並生成報表</button>
-      <div id="loadingMsg">⏳ 正在解析 PDF 文字，請稍候...</div>
-    </div>
-  </form>
+  <h2>訂單報表產生器</h2>
+  
+  <div>
+    <label>開始日期:</label>
+    <input type="date" id="startDate">
+  </div>
+  <div>
+    <label>結束日期:</label>
+    <input type="date" id="endDate">
+  </div>
+  <div>
+    <label>上期結餘:</label>
+    <input type="number" id="balanceInput" placeholder="空白將自動抓取">
+  </div>
+  <div>
+    <label>預收金額:</label>
+    <input type="number" id="advanceInput">
+  </div>
+  <div style="border: 1px solid #000; padding: 8px; background: #f0f0f0;">
+    <label>上傳對話紀錄 (.pdf):</label>
+    <input type="file" id="pdfFile" accept=".pdf">
+    <button type="button" onclick="processPDF()">解析檔案</button>
+    <div id="loadingMsg">系統處理中，請稍候...</div>
+  </div>
 
   <div id="report"></div>
-  <button id="downloadBtn" type="button" class="btn" style="display:none;" onclick="downloadReport()">下載表格 JPG</button>
+  <button id="downloadBtn" type="button" style="display:none;" onclick="downloadReport()">下載灰階報表</button>
 
-  <div id="modalOverlay" class="modal-overlay">
-    <div id="modal" class="modal-content">
-      <h2 id="modalDate" style="text-align: center; color: #000;"></h2>
-      <form id="modalForm">
-        <div>
-          <label for="modalIsHoliday" style="display: inline-block;">設為休假:</label>
-          <input type="checkbox" id="modalIsHoliday" onchange="toggleModalInputs()">
-        </div>
-        <div>
-          <label for="modalNoodlesQty">麵線 (50元):</label>
-          <input type="number" id="modalNoodlesQty" min="0" required>
-        </div>
-        <div>
-          <label for="modalEggPancakeQty">蛋餅 (30元):</label>
-          <input type="number" id="modalEggPancakeQty" min="0" required>
-        </div>
-        <div>
-          <label for="modalFriedNoodlesQty">炒麵 (30元):</label>
-          <input type="number" id="modalFriedNoodlesQty" min="0" required>
-        </div>
-        <div class="modal-btns">
-          <button type="button" class="btn-save" onclick="saveOrder()">儲存修改</button>
-          <button type="button" class="btn-cancel" onclick="closeModal()">取消</button>
-        </div>
-      </form>
+  <div id="modalOverlay" class="overlay">
+    <div class="modal">
+      <h3 id="modalDate" style="margin-top:0;"></h3>
+      <div>
+        <label><input type="checkbox" id="modalIsHoliday" onchange="toggleModalInputs()"> 設為休假</label>
+      </div>
+      <div>
+        <label>麵線 (50元):</label>
+        <input type="number" id="modalNoodlesQty" min="0">
+      </div>
+      <div>
+        <label>蛋餅 (30元):</label>
+        <input type="number" id="modalEggPancakeQty" min="0">
+      </div>
+      <div>
+        <label>炒麵 (30元):</label>
+        <input type="number" id="modalFriedNoodlesQty" min="0">
+      </div>
+      <button type="button" onclick="saveOrder()">儲存</button>
+      <button type="button" onclick="closeModal()">取消</button>
     </div>
   </div>
 
-  <div id="balanceModalOverlay" class="modal-overlay">
-    <div id="balanceModal" class="modal-content">
-      <h2 style="text-align: center; color: #000;">調整結餘與預收</h2>
-      <form id="balanceForm">
-        <div>
-          <label for="modalBalance">結餘:</label>
-          <input type="number" id="modalBalance" placeholder="無">
-        </div>
-        <div>
-          <label for="modalAdvance">預收:</label>
-          <input type="number" id="modalAdvance" placeholder="無">
-        </div>
-        <div class="modal-btns">
-          <button type="button" class="btn-save" onclick="saveBalance()">儲存</button>
-          <button type="button" class="btn-cancel" onclick="closeBalanceModal()">取消</button>
-        </div>
-      </form>
+  <div id="balanceModalOverlay" class="overlay">
+    <div class="modal">
+      <h3 style="margin-top:0;">調整結餘與預收</h3>
+      <div>
+        <label>結餘:</label>
+        <input type="number" id="modalBalance">
+      </div>
+      <div>
+        <label>預收:</label>
+        <input type="number" id="modalAdvance">
+      </div>
+      <button type="button" onclick="saveBalance()">儲存</button>
+      <button type="button" onclick="closeBalanceModal()">取消</button>
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-    const prices = { noodles: 50, eggPancake: 30, friedNoodles: 30 };
-    let orders = {}; 
-    const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    let currentEditDate = null;
+    var prices = { noodles: 50, eggPancake: 30, friedNoodles: 30 };
+    var orders = {};
+    var weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    var currentEditDate = null;
 
     function getLocalDateString(date) {
-      const year = date.getFullYear();
-      const month = (date.getMonth() + 1).toString().padStart(2, "0");
-      const day = date.getDate().toString().padStart(2, "0");
-      return `${year}-${month}-${day}`;
+      var year = date.getFullYear();
+      var month = (date.getMonth() + 1).toString();
+      var day = date.getDate().toString();
+      if (month.length < 2) month = '0' + month;
+      if (day.length < 2) day = '0' + day;
+      return year + '-' + month + '-' + day;
     }
 
     window.addEventListener("DOMContentLoaded", function() {
-      const today = new Date();
+      var today = new Date();
       document.getElementById("endDate").value = getLocalDateString(today);
-      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+      var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
       document.getElementById("startDate").value = getLocalDateString(firstDay);
     });
 
     async function processPDF() {
-      const fileInput = document.getElementById('pdfFile');
-      const startDateVal = document.getElementById("startDate").value;
-      const endDateVal = document.getElementById("endDate").value;
+      var fileInput = document.getElementById('pdfFile');
+      var startDateVal = document.getElementById("startDate").value;
+      var endDateVal = document.getElementById("endDate").value;
 
       if (!startDateVal || !endDateVal) {
-        alert("請確認首頁的開始與結束日期！");
+        alert("請確認開始與結束日期");
         return;
       }
       if (!fileInput.files || fileInput.files.length === 0) {
-        alert("請先選擇 PDF 檔案！");
+        alert("請選擇 PDF 檔案");
         return;
       }
 
       document.getElementById("loadingMsg").style.display = "block";
-      const file = fileInput.files[0];
-      const fileReader = new FileReader();
+      var file = fileInput.files[0];
+      var fileReader = new FileReader();
 
       fileReader.onload = async function() {
-        const typedarray = new Uint8Array(this.result);
+        var typedarray = new Uint8Array(this.result);
         try {
-          const pdf = await pdfjsLib.getDocument(typedarray).promise;
-          let fullText = "";
-          for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map(item => item.str).join('');
+          var pdf = await pdfjsLib.getDocument(typedarray).promise;
+          var fullText = "";
+          for (var i = 1; i <= pdf.numPages; i++) {
+            var page = await pdf.getPage(i);
+            var textContent = await page.getTextContent();
+            var pageText = textContent.items.map(function(item) { return item.str; }).join('');
             fullText += pageText;
           }
           parseTextData(fullText);
         } catch (error) {
-          console.error("PDF 解析失敗:", error);
-          alert("PDF 讀取失敗，請確認檔案是否損毀或加密。");
+          alert("檔案解析失敗");
         } finally {
           document.getElementById("loadingMsg").style.display = "none";
         }
@@ -313,86 +210,80 @@
       fileReader.readAsArrayBuffer(file);
     }
 
+    // 解決舊版瀏覽器不支援 matchAll 的問題
+    function getLastMatchNumber(text, regex) {
+      var match;
+      var lastNum = null;
+      while ((match = regex.exec(text)) !== null) {
+        lastNum = parseInt(match[1], 10);
+      }
+      return lastNum;
+    }
+
     function parseTextData(text) {
-      const cleanText = text.replace(/\s+/g, '');
-      const parts = cleanText.split(/(\d{4}\/\d{1,2}\/\d{1,2})/);
+      var cleanText = text.replace(/\s+/g, '');
+      var parts = cleanText.split(/(\d{4}\/\d{1,2}\/\d{1,2})/);
 
       orders = {}; 
-      let balancesFound = []; 
+      var balancesFound = []; 
 
-      for (let i = 1; i < parts.length; i += 2) {
-        const dateStr = parts[i];
-        const contentStr = parts[i+1] || "";
+      for (var i = 1; i < parts.length; i += 2) {
+        var dateStr = parts[i];
+        var contentStr = parts[i+1] || "";
 
-        const dateMatch = dateStr.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
+        var dateMatch = dateStr.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
         if (!dateMatch) continue;
         
-        const y = parseInt(dateMatch[1], 10);
-        const m = parseInt(dateMatch[2], 10) - 1; // JS 的月份是 0~11
-        const d = parseInt(dateMatch[3], 10);
+        var y = parseInt(dateMatch[1], 10);
+        var m = parseInt(dateMatch[2], 10) - 1; 
+        var d = parseInt(dateMatch[3], 10);
         
-        // **日期 +1 天邏輯** (前一天下訂單，所以實際訂單日為隔天)
-        let actualOrderDate = new Date(y, m, d);
+        var actualOrderDate = new Date(y, m, d);
         actualOrderDate.setDate(actualOrderDate.getDate() + 1);
         
-        const targetY = actualOrderDate.getFullYear();
-        const targetM = (actualOrderDate.getMonth() + 1).toString().padStart(2, '0');
-        const targetD = actualOrderDate.getDate().toString().padStart(2, '0');
-        const currentDate = `${targetY}-${targetM}-${targetD}`;
+        var currentDate = getLocalDateString(actualOrderDate);
         
         if (!orders[currentDate]) {
           orders[currentDate] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0, hasInfo: false };
         }
 
-        // 解析商品數量，抓取陣列的最後一個元素 (最新的一筆)
-        const noodlesMatch = [...contentStr.matchAll(/麵線(\d+)/g)];
-        if (noodlesMatch.length > 0) {
-          orders[currentDate].noodles = parseInt(noodlesMatch[noodlesMatch.length - 1][1], 10);
-          orders[currentDate].hasInfo = true;
-        }
+        var nMatch = getLastMatchNumber(contentStr, /麵線(\d+)/g);
+        if (nMatch !== null) { orders[currentDate].noodles = nMatch; orders[currentDate].hasInfo = true; }
 
-        const eggPancakeMatch = [...contentStr.matchAll(/蛋餅(\d+)/g)];
-        if (eggPancakeMatch.length > 0) {
-          orders[currentDate].eggPancake = parseInt(eggPancakeMatch[eggPancakeMatch.length - 1][1], 10);
-          orders[currentDate].hasInfo = true;
-        }
+        var eMatch = getLastMatchNumber(contentStr, /蛋餅(\d+)/g);
+        if (eMatch !== null) { orders[currentDate].eggPancake = eMatch; orders[currentDate].hasInfo = true; }
 
-        const friedNoodlesMatch = [...contentStr.matchAll(/炒麵(\d+)/g)];
-        if (friedNoodlesMatch.length > 0) {
-          orders[currentDate].friedNoodles = parseInt(friedNoodlesMatch[friedNoodlesMatch.length - 1][1], 10);
-          orders[currentDate].hasInfo = true;
-        }
+        var fMatch = getLastMatchNumber(contentStr, /炒麵(\d+)/g);
+        if (fMatch !== null) { orders[currentDate].friedNoodles = fMatch; orders[currentDate].hasInfo = true; }
 
-        // 解析結餘
-        const balanceMatch = [...contentStr.matchAll(/結餘[:：]?(-?\d+)/g)];
-        balanceMatch.forEach(m => {
-          balancesFound.push({ date: currentDate, amount: parseInt(m[1], 10) });
-        });
+        var bRegex = /結餘[:：]?(-?\d+)/g;
+        var bMatch;
+        while ((bMatch = bRegex.exec(contentStr)) !== null) {
+          balancesFound.push({ date: currentDate, amount: parseInt(bMatch[1], 10) });
+        }
       }
 
-      // 針對沒有抓到任何商品數量的日期，直接標記為休假
-      for (let dateKey in orders) {
+      for (var dateKey in orders) {
         if (!orders[dateKey].hasInfo) {
           orders[dateKey].isHoliday = true;
         }
       }
 
-      // 自動抓取上期結餘邏輯
-      const targetStartDate = new Date(document.getElementById("startDate").value);
-      let latestBalance = null;
-      let latestBalanceDate = new Date(0);
+      var targetStartDate = new Date(document.getElementById("startDate").value);
+      var latestBalance = null;
+      var latestBalanceDate = new Date(0);
 
-      balancesFound.forEach(b => {
-        const bDate = new Date(b.date);
+      for (var j = 0; j < balancesFound.length; j++) {
+        var bDate = new Date(balancesFound[j].date);
         if (bDate < targetStartDate) {
           if (bDate >= latestBalanceDate) {
             latestBalanceDate = bDate;
-            latestBalance = b.amount;
+            latestBalance = balancesFound[j].amount;
           }
         }
-      });
+      }
 
-      let currentBalanceInput = document.getElementById("balanceInput").value.trim();
+      var currentBalanceInput = document.getElementById("balanceInput").value.trim();
       if (latestBalance !== null && currentBalanceInput === "") {
         document.getElementById("balanceInput").value = latestBalance;
       }
@@ -401,30 +292,32 @@
     }
 
     function generateTable() {
-      const startDate = new Date(document.getElementById("startDate").value);
-      const endDate = new Date(document.getElementById("endDate").value);
+      var startDate = new Date(document.getElementById("startDate").value);
+      var endDate = new Date(document.getElementById("endDate").value);
 
-      let html = "<table>";
+      var html = "<table>";
       html += "<tr><th>日期</th><th>麵線</th><th>蛋餅</th><th>炒麵</th><th>金額</th></tr>";
-      let overallTotalAmount = 0;
+      var overallTotalAmount = 0;
 
-      for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-        let isoDate = getLocalDateString(d);
+      for (var d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+        var isoDate = getLocalDateString(d);
         
         if (!orders[isoDate]) {
           orders[isoDate] = { isHoliday: true, noodles: 0, eggPancake: 0, friedNoodles: 0 };
         }
 
-        const month = (d.getMonth() + 1).toString().padStart(2, "0");
-        const day = d.getDate().toString().padStart(2, "0");
-        const weekday = weekdays[d.getDay()];
-        const displayDate = `${month}/${day}/${weekday}`;
+        var month = (d.getMonth() + 1).toString();
+        var day = d.getDate().toString();
+        var weekday = weekdays[d.getDay()];
+        if (month.length < 2) month = '0' + month;
+        if (day.length < 2) day = '0' + day;
+        var displayDate = month + '/' + day + '/' + weekday;
         
-        let dailyTotalAmount = 0;
-        let rowContent = "";
+        var dailyTotalAmount = 0;
+        var rowContent = "";
 
         if (orders[isoDate].isHoliday) {
-          rowContent = `<td colspan="3" style="color:#999999;">休假</td><td>0</td>`;
+          rowContent = "<td colspan='3'>休假</td><td>0</td>";
         } else {
           dailyTotalAmount =
             orders[isoDate].noodles * prices.noodles +
@@ -432,36 +325,34 @@
             orders[isoDate].friedNoodles * prices.friedNoodles;
             
           rowContent =
-            `<td>${orders[isoDate].noodles || ''}</td>` +
-            `<td>${orders[isoDate].eggPancake || ''}</td>` +
-            `<td>${orders[isoDate].friedNoodles || ''}</td>` +
-            `<td style="font-weight:bold;">${dailyTotalAmount}</td>`;
+            "<td>" + (orders[isoDate].noodles || '') + "</td>" +
+            "<td>" + (orders[isoDate].eggPancake || '') + "</td>" +
+            "<td>" + (orders[isoDate].friedNoodles || '') + "</td>" +
+            "<td>" + dailyTotalAmount + "</td>";
         }
 
         overallTotalAmount += dailyTotalAmount;
-        html += `<tr onclick="openModal('${isoDate}')"><td>${displayDate}</td>${rowContent}</tr>`;
+        html += "<tr onclick=\"openModal('" + isoDate + "')\"><td>" + displayDate + "</td>" + rowContent + "</tr>";
       }
 
-      html += `<tr id="overallTotalRow"><td colspan="4">總計金額:</td><td>${overallTotalAmount}</td></tr>`;
+      html += "<tr><td colspan='4'>總計</td><td>" + overallTotalAmount + "</td></tr>";
       html += "</table>";
 
-      let balanceText = document.getElementById("balanceInput").value.trim();
-      let advanceText = document.getElementById("advanceInput").value.trim();
-      let balanceValue = (balanceText === "") ? 0 : parseFloat(balanceText);
-      let advanceValue = (advanceText === "") ? 0 : parseFloat(advanceText);
+      var balanceText = document.getElementById("balanceInput").value.trim();
+      var advanceText = document.getElementById("advanceInput").value.trim();
+      var balanceValue = (balanceText === "") ? 0 : parseFloat(balanceText);
+      var advanceValue = (advanceText === "") ? 0 : parseFloat(advanceText);
       
-      let balanceDisplay = (balanceText === "") ? "無" : balanceValue;
-      let advanceDisplay = (advanceText === "") ? "無" : advanceValue;
-      let finalBalance = (balanceValue + advanceValue) - overallTotalAmount;
+      var finalBalance = (balanceValue + advanceValue) - overallTotalAmount;
       
-      const startDisplay = `${(startDate.getMonth()+1).toString().padStart(2,"0")}/${startDate.getDate().toString().padStart(2,"0")}`;
-      const endDisplay = `${(endDate.getMonth()+1).toString().padStart(2,"0")}/${endDate.getDate().toString().padStart(2,"0")}`;
+      var startDisplay = (startDate.getMonth()+1) + '/' + startDate.getDate();
+      var endDisplay = (endDate.getMonth()+1) + '/' + endDate.getDate();
       
-      let summaryHtml = `<div id="balanceSummary" onclick="openBalanceModal()">`;
-      summaryHtml += `<span>${startDisplay} 結餘：${(balanceDisplay==="無"?"無":balanceDisplay+"元")}</span><br>`;
-      summaryHtml += `<span>${endDisplay} 預收：${(advanceDisplay==="無"?"無":advanceDisplay+"元")}</span><br>`;
-      summaryHtml += `<span style="font-size:1.1rem; font-weight:bold; color:#000;">結餘：${(balanceText === "" && advanceText === "") ? "無" : finalBalance+"元"}</span>`;
-      summaryHtml += `</div><br>`;
+      var summaryHtml = "<div class='summary' onclick='openBalanceModal()'>";
+      summaryHtml += startDisplay + " 結餘: " + ((balanceText==="") ? "無" : balanceValue) + "<br>";
+      summaryHtml += endDisplay + " 預收: " + ((advanceText==="") ? "無" : advanceValue) + "<br>";
+      summaryHtml += "最終結餘: " + ((balanceText === "" && advanceText === "") ? "無" : finalBalance);
+      summaryHtml += "</div>";
       
       html += summaryHtml;
 
@@ -471,10 +362,10 @@
 
     function openModal(isoDate) {
       currentEditDate = isoDate;
-      const d = new Date(isoDate);
-      const displayDate = `${(d.getMonth() + 1).toString().padStart(2, "0")}/${d.getDate().toString().padStart(2, "0")}/${weekdays[d.getDay()]}`;
+      var d = new Date(isoDate);
+      var displayDate = (d.getMonth() + 1) + '/' + d.getDate() + '/' + weekdays[d.getDay()];
       
-      document.getElementById("modalDate").textContent = `修改訂單：${displayDate}`;
+      document.getElementById("modalDate").textContent = displayDate;
       document.getElementById("modalIsHoliday").checked = orders[isoDate].isHoliday;
       
       toggleModalInputs();
@@ -483,11 +374,11 @@
       document.getElementById("modalEggPancakeQty").value = orders[isoDate].eggPancake;
       document.getElementById("modalFriedNoodlesQty").value = orders[isoDate].friedNoodles;
       
-      document.getElementById("modalOverlay").style.display = "flex";
+      document.getElementById("modalOverlay").style.display = "block";
     }
 
     function toggleModalInputs() {
-      const isHoliday = document.getElementById("modalIsHoliday").checked;
+      var isHoliday = document.getElementById("modalIsHoliday").checked;
       document.getElementById("modalNoodlesQty").disabled = isHoliday;
       document.getElementById("modalEggPancakeQty").disabled = isHoliday;
       document.getElementById("modalFriedNoodlesQty").disabled = isHoliday;
@@ -500,7 +391,7 @@
 
     function saveOrder() {
       if (!currentEditDate) return;
-      const isHoliday = document.getElementById("modalIsHoliday").checked;
+      var isHoliday = document.getElementById("modalIsHoliday").checked;
       
       if (!orders[currentEditDate]) {
         orders[currentEditDate] = {};
@@ -524,7 +415,7 @@
     function openBalanceModal() {
       document.getElementById("modalBalance").value = document.getElementById("balanceInput").value;
       document.getElementById("modalAdvance").value = document.getElementById("advanceInput").value;
-      document.getElementById("balanceModalOverlay").style.display = "flex";
+      document.getElementById("balanceModalOverlay").style.display = "block";
     }
 
     function closeBalanceModal() {
@@ -539,10 +430,25 @@
     }
 
     function downloadReport() {
-      html2canvas(document.getElementById("report")).then(canvas => {
-        const link = document.createElement("a");
-        link.href = canvas.toDataURL("image/jpeg");
-        link.download = "訂單報表.jpg";
+      var reportDiv = document.getElementById("report");
+      html2canvas(reportDiv).then(function(canvas) {
+        var ctx = canvas.getContext("2d");
+        var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        var data = imgData.data;
+        
+        // 像素轉換為灰階
+        for (var i = 0; i < data.length; i += 4) {
+          var gray = data[i] * 0.3 + data[i+1] * 0.59 + data[i+2] * 0.11;
+          data[i] = gray;
+          data[i+1] = gray;
+          data[i+2] = gray;
+        }
+        ctx.putImageData(imgData, 0, 0);
+
+        // 輸出為 60% 品質的 JPG 以縮小檔案
+        var link = document.createElement("a");
+        link.href = canvas.toDataURL("image/jpeg", 0.6);
+        link.download = "report.jpg";
         link.click();
       });
     }
