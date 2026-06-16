@@ -190,8 +190,8 @@
       <textarea id="dailyText" rows="5" placeholder="在此貼上單日對話..."></textarea>
     </div>
     <div class="flex-row">
-      <button type="button" class="action-btn" onclick="pasteText()">一鍵貼上</button>
-      <button type="button" class="action-btn dark-btn" onclick="parseDailyText()">解析儲存</button>
+      <button type="button" class="action-btn" onclick="pasteAndParse()">一鍵貼上並儲存</button>
+      <button type="button" class="action-btn dark-btn" onclick="parseDailyText()">手動輸入儲存</button>
     </div>
     
     <div id="weekContainer">
@@ -259,7 +259,7 @@
     var advances = {};
     var weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     var currentEditDate = null;
-    var storageKey = "orderSystemData_v15";
+    var storageKey = "orderSystemData_v16";
     var currentWeekStart = new Date();
 
     function switchTab(tabName) {
@@ -309,12 +309,13 @@
       localStorage.setItem(storageKey, JSON.stringify(dataObj));
     }
 
-    async function pasteText() {
+    async function pasteAndParse() {
       try {
         var text = await navigator.clipboard.readText();
         document.getElementById("dailyText").value = text;
+        parseDailyText();
       } catch (err) {
-        alert("無法自動讀取剪貼簿，請手動長按輸入框並選擇貼上。");
+        alert("無法自動讀取剪貼簿，請手動貼上後點擊「手動輸入儲存」。");
       }
     }
 
@@ -413,12 +414,15 @@
     window.addEventListener("DOMContentLoaded", function() {
       initLocalStorage();
       
-      document.getElementById("startDate").value = "2026-06-14";
-      var d = new Date("2026-06-14");
-      d.setDate(d.getDate() + 6);
-      document.getElementById("endDate").value = getLocalDateString(d);
+      var savedStartDate = localStorage.getItem(storageKey + "_startDate");
+      if (savedStartDate) {
+        document.getElementById("startDate").value = savedStartDate;
+      } else {
+        document.getElementById("startDate").value = "2026-06-14";
+      }
       
       var todayStr = getLocalDateString(new Date());
+      document.getElementById("endDate").value = todayStr;
       document.getElementById("dailyDate").value = todayStr;
       
       initWeekView();
@@ -443,27 +447,34 @@
         return;
       }
       if (!rawText.trim()) {
-        alert("請貼上對話內容");
+        alert("請輸入對話內容");
         return;
       }
 
       var text = rawText.replace(/\s+/g, '');
-
-      if (!orders[targetDateStr]) {
-        orders[targetDateStr] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0, hasInfo: false };
-      }
+      var isHoliday = text.indexOf("休假") !== -1;
 
       var nMatch = getLastMatchNumber(text, /麵線(\d+)/g);
       var eMatch = getLastMatchNumber(text, /蛋餅(\d+)/g);
       var fMatch = getLastMatchNumber(text, /炒麵(\d+)/g);
       var advMatch = getLastMatchNumber(text, /預收[:：]?(-?\d+)/g);
 
-      var itemMatched = false;
-      if (nMatch !== null) { orders[targetDateStr].noodles = nMatch; itemMatched = true; }
-      if (eMatch !== null) { orders[targetDateStr].eggPancake = eMatch; itemMatched = true; }
-      if (fMatch !== null) { orders[targetDateStr].friedNoodles = fMatch; itemMatched = true; }
+      var itemMatched = (nMatch !== null || eMatch !== null || fMatch !== null);
 
-      if (text.indexOf("休假") !== -1) {
+      if (!itemMatched && advMatch === null && !isHoliday) {
+        alert("格式錯誤或無效資料：未能解析到任何商品、預收或休假資訊。");
+        return;
+      }
+
+      if (!orders[targetDateStr]) {
+        orders[targetDateStr] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0, hasInfo: false };
+      }
+
+      if (nMatch !== null) orders[targetDateStr].noodles = nMatch;
+      if (eMatch !== null) orders[targetDateStr].eggPancake = eMatch;
+      if (fMatch !== null) orders[targetDateStr].friedNoodles = fMatch;
+
+      if (isHoliday) {
         orders[targetDateStr].isHoliday = true;
         orders[targetDateStr].noodles = 0;
         orders[targetDateStr].eggPancake = 0;
@@ -474,19 +485,25 @@
         orders[targetDateStr].hasInfo = true;
       }
 
+      var bMatch = getLastMatchNumber(text, /結餘[:：]?(-?\d+)/g);
+      if (bMatch !== null) {
+        var d = new Date(targetDateStr);
+        d.setDate(d.getDate() - 1);
+        var prevDayStr = getLocalDateString(d);
+        balances[prevDayStr] = bMatch;
+      }
+
       if (advMatch !== null) {
         advances[targetDateStr] = advMatch;
         orders[targetDateStr].hasInfo = true;
+      } else {
+        delete advances[targetDateStr];
       }
 
-      if (itemMatched || advMatch !== null || text.indexOf("休假") !== -1) {
-        saveDataToLocal();
-        document.getElementById("dailyText").value = "";
-        alert("資料已解析並儲存");
-        renderWeekView(); 
-      } else {
-        alert("未能解析到任何商品、預收或休假資料，原有數據維持不變。");
-      }
+      saveDataToLocal();
+      document.getElementById("dailyText").value = "";
+      alert("資料已解析並儲存");
+      renderWeekView(); 
     }
 
     function calculateBalanceAt(targetDateStr) {
@@ -518,22 +535,32 @@
       var userEndDateStr = document.getElementById("endDate").value;
       if (!startDateStr || !userEndDateStr) return;
 
-      var maxDataDateStr = startDateStr;
-      for (var key in orders) {
-        if (orders[key].hasInfo && key > maxDataDateStr) {
-          maxDataDateStr = key;
+      localStorage.setItem(storageKey + "_startDate", startDateStr);
+
+      var startDate = new Date(startDateStr);
+      var userEndDate = new Date(userEndDateStr);
+      var endDate = new Date(userEndDateStr);
+      var isForcedThreeDays = false;
+
+      if (startDate >= userEndDate) {
+        endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + 2);
+        document.getElementById("endDate").value = getLocalDateString(endDate);
+        isForcedThreeDays = true;
+      } else {
+        var maxDataDateStr = startDateStr;
+        for (var key in orders) {
+          if (orders[key].hasInfo && key > maxDataDateStr) {
+            maxDataDateStr = key;
+          }
+        }
+        var maxDataDate = new Date(maxDataDateStr);
+        if (maxDataDate < endDate) {
+          endDate = maxDataDate;
         }
       }
-
-      var endDate = new Date(userEndDateStr);
-      var maxDataDate = new Date(maxDataDateStr);
-      if (maxDataDate < endDate) {
-        endDate = maxDataDate;
-      }
       
-      var startDate = new Date(startDateStr);
       var todayStr = getLocalDateString(new Date());
-
       var balanceValue = calculateBalanceAt(startDateStr);
 
       var latestAdvance = 0;
@@ -754,6 +781,12 @@
         link.href = canvas.toDataURL("image/jpeg", 0.6);
         link.download = "report.jpg";
         link.click();
+        
+        var currentEndDateStr = document.getElementById("endDate").value;
+        var d = new Date(currentEndDateStr);
+        d.setDate(d.getDate() + 1);
+        document.getElementById("startDate").value = getLocalDateString(d);
+        generateTable();
       });
     }
   </script>
