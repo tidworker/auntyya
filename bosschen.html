@@ -12,48 +12,121 @@
       padding: 8px;
       margin: 0;
     }
-    div {
-      margin-bottom: 8px;
+    h2 {
+      text-align: center;
+      margin-top: 10px;
+      margin-bottom: 15px;
+    }
+    .nav-bar {
+      display: flex;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #000000;
+    }
+    .nav-btn {
+      flex: 1;
+      padding: 10px;
+      background-color: #e0e0e0;
+      color: #000000;
+      border: 1px solid #000000;
+      border-bottom: none;
+      font-weight: bold;
+      font-size: 1rem;
+      cursor: pointer;
+      text-align: center;
+      margin: 0;
+    }
+    .nav-btn:first-child {
+      border-right: none;
+    }
+    .nav-btn.active {
+      background-color: #333333;
+      color: #ffffff;
+    }
+    .page-section {
+      display: none;
+    }
+    .page-section.active {
+      display: block;
+    }
+    div.form-group {
+      margin-bottom: 12px;
     }
     label {
       display: block;
       font-weight: bold;
+      font-size: 0.9rem;
+      margin-bottom: 4px;
     }
-    input[type="date"], input[type="number"], input[type="file"] {
+    input[type="date"], input[type="number"], textarea {
       width: 100%;
       box-sizing: border-box;
-      padding: 4px;
-      border: 1px solid #000000;
-    }
-    button {
-      width: 100%;
       padding: 8px;
-      margin: 8px 0;
+      border: 1px solid #000000;
+      font-size: 1rem;
+    }
+    .flex-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    button.action-btn {
+      flex: 1;
+      padding: 10px;
+      margin: 0;
       background-color: #e0e0e0;
       color: #000000;
       border: 1px solid #000000;
       font-weight: bold;
       cursor: pointer;
+      font-size: 1rem;
+    }
+    button.action-btn:hover {
+      background-color: #cccccc;
+    }
+    button.dark-btn {
+      background-color: #333333;
+      color: #ffffff;
+    }
+    button.dark-btn:hover {
+      background-color: #555555;
+    }
+    button.full-btn {
+      width: 100%;
+      margin-bottom: 10px;
     }
     table {
       border-collapse: collapse;
       width: 100%;
       margin-top: 10px;
       text-align: center;
+      font-size: 0.9rem;
     }
     th, td {
       border: 1px solid #000000;
-      padding: 4px;
+      padding: 6px;
     }
     th {
       background-color: #cccccc;
+    }
+    tr:hover {
+      background-color: #eeeeee;
+      cursor: pointer;
+    }
+    .summary {
+      border: 1px solid #000000;
+      padding: 10px;
+      margin-top: 15px;
+      text-align: center;
+      font-weight: bold;
+      background-color: #f0f0f0;
+      line-height: 1.6;
     }
     .overlay {
       display: none;
       position: fixed;
       top: 0; left: 0;
       width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.6);
     }
     .modal {
       background: #ffffff;
@@ -61,99 +134,150 @@
       padding: 16px;
       margin: 10% auto;
       width: 90%;
-      max-width: 300px;
+      max-width: 350px;
     }
-    #loadingMsg {
-      display: none;
-      font-weight: bold;
-      text-align: center;
+    .modal-title {
+      margin-top: 0;
+      border-bottom: 1px solid #000000;
+      padding-bottom: 6px;
+      margin-bottom: 10px;
     }
-    .summary {
+    #weekContainer {
       border: 1px solid #000000;
       padding: 8px;
-      margin-top: 10px;
-      text-align: center;
+      margin-top: 15px;
+      background-color: #f9f9f9;
+      touch-action: pan-y;
+    }
+    .week-nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
       font-weight: bold;
+    }
+    .week-nav button {
+      padding: 4px 12px;
+      background-color: #e0e0e0;
+      border: 1px solid #000;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    .today-row {
+      background-color: #dddddd;
+      font-weight: bold;
+    }
+    .future-row {
+      color: #aaaaaa;
     }
   </style>
 </head>
 <body>
-  <h2>訂單報表產生器</h2>
-  
-  <div>
-    <label>開始日期:</label>
-    <input type="date" id="startDate">
-  </div>
-  <div>
-    <label>結束日期:</label>
-    <input type="date" id="endDate">
-  </div>
-  <div>
-    <label>上期結餘:</label>
-    <input type="number" id="balanceInput" placeholder="空白將自動抓取">
-  </div>
-  <div>
-    <label>預收金額:</label>
-    <input type="number" id="advanceInput">
-  </div>
-  <div style="border: 1px solid #000; padding: 8px; background: #f0f0f0;">
-    <label>上傳對話紀錄 (.pdf):</label>
-    <input type="file" id="pdfFile" accept=".pdf">
-    <button type="button" onclick="processPDF()">解析檔案</button>
-    <div id="loadingMsg">系統處理中，請稍候...</div>
+  <h2>訂單系統</h2>
+
+  <div class="nav-bar">
+    <button id="navInput" class="nav-btn active" onclick="switchTab('input')">輸入資料</button>
+    <button id="navReport" class="nav-btn" onclick="switchTab('report')">報表管理</button>
   </div>
 
-  <div id="report"></div>
-  <button id="downloadBtn" type="button" style="display:none;" onclick="downloadReport()">下載灰階報表</button>
+  <div id="pageInput" class="page-section active">
+    <div class="form-group">
+      <label>訂單日期 (已自動處理前一天下單邏輯):</label>
+      <input type="date" id="dailyDate">
+    </div>
+    <div class="form-group">
+      <label>對話內容:</label>
+      <textarea id="dailyText" rows="5" placeholder="在此貼上單日對話..."></textarea>
+    </div>
+    <div class="flex-row">
+      <button type="button" class="action-btn" onclick="pasteText()">一鍵貼上</button>
+      <button type="button" class="action-btn dark-btn" onclick="parseDailyText()">解析儲存</button>
+    </div>
+    
+    <div id="weekContainer">
+      <div class="week-nav">
+        <button type="button" onclick="changeWeek(-1)">上周</button>
+        <span>本周紀錄 (可點選修改)</span>
+        <button type="button" onclick="changeWeek(1)">下周</button>
+      </div>
+      <div id="weekTableWrapper"></div>
+    </div>
+  </div>
+
+  <div id="pageReport" class="page-section">
+    <div class="form-group">
+      <label>開始日期:</label>
+      <input type="date" id="startDate" onchange="generateTable()">
+    </div>
+    <div class="form-group">
+      <label>結束日期:</label>
+      <input type="date" id="endDate" onchange="generateTable()">
+    </div>
+    
+    <div id="reportContainer"></div>
+    
+    <div id="actionBtnContainer" class="flex-row" style="display:none; margin-top:10px;">
+      <button type="button" class="action-btn" id="lineBtn" onclick="shareToLine()">傳送至 LINE</button>
+      <button type="button" class="action-btn dark-btn" onclick="downloadReport()">下載灰階報表</button>
+    </div>
+  </div>
 
   <div id="modalOverlay" class="overlay">
     <div class="modal">
-      <h3 id="modalDate" style="margin-top:0;"></h3>
-      <div>
+      <h3 id="modalDate" class="modal-title"></h3>
+      <div class="form-group">
         <label><input type="checkbox" id="modalIsHoliday" onchange="toggleModalInputs()"> 設為休假</label>
       </div>
-      <div>
+      <div class="form-group">
         <label>麵線 (50元):</label>
         <input type="number" id="modalNoodlesQty" min="0">
       </div>
-      <div>
+      <div class="form-group">
         <label>蛋餅 (30元):</label>
         <input type="number" id="modalEggPancakeQty" min="0">
       </div>
-      <div>
+      <div class="form-group">
         <label>炒麵 (30元):</label>
         <input type="number" id="modalFriedNoodlesQty" min="0">
       </div>
-      <button type="button" onclick="saveOrder()">儲存</button>
-      <button type="button" onclick="closeModal()">取消</button>
+      <div class="form-group" style="border-top: 1px dashed #000; padding-top: 10px; margin-top: 10px;">
+        <label>預收金額:</label>
+        <input type="number" id="modalAdvanceQty" placeholder="無">
+      </div>
+      <div class="flex-row" style="margin-top: 15px;">
+        <button type="button" class="action-btn dark-btn" onclick="saveOrder()">確認儲存</button>
+        <button type="button" class="action-btn" onclick="closeModal()">取消修改</button>
+      </div>
     </div>
   </div>
 
-  <div id="balanceModalOverlay" class="overlay">
-    <div class="modal">
-      <h3 style="margin-top:0;">調整結餘與預收</h3>
-      <div>
-        <label>結餘:</label>
-        <input type="number" id="modalBalance">
-      </div>
-      <div>
-        <label>預收:</label>
-        <input type="number" id="modalAdvance">
-      </div>
-      <button type="button" onclick="saveBalance()">儲存</button>
-      <button type="button" onclick="closeBalanceModal()">取消</button>
-    </div>
-  </div>
-
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-
     var prices = { noodles: 50, eggPancake: 30, friedNoodles: 30 };
     var orders = {};
+    var balances = {};
+    var advances = {};
     var weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     var currentEditDate = null;
+    var storageKey = "orderSystemData_v15";
+    var currentWeekStart = new Date();
+
+    function switchTab(tabName) {
+      document.getElementById('pageInput').classList.remove('active');
+      document.getElementById('pageReport').classList.remove('active');
+      document.getElementById('navInput').classList.remove('active');
+      document.getElementById('navReport').classList.remove('active');
+
+      if (tabName === 'input') {
+        document.getElementById('pageInput').classList.add('active');
+        document.getElementById('navInput').classList.add('active');
+        renderWeekView();
+      } else if (tabName === 'report') {
+        document.getElementById('pageReport').classList.add('active');
+        document.getElementById('navReport').classList.add('active');
+        generateTable();
+      }
+    }
 
     function getLocalDateString(date) {
       var year = date.getFullYear();
@@ -164,53 +288,143 @@
       return year + '-' + month + '-' + day;
     }
 
-    window.addEventListener("DOMContentLoaded", function() {
-      var today = new Date();
-      document.getElementById("endDate").value = getLocalDateString(today);
-      var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-      document.getElementById("startDate").value = getLocalDateString(firstDay);
-    });
-
-    async function processPDF() {
-      var fileInput = document.getElementById('pdfFile');
-      var startDateVal = document.getElementById("startDate").value;
-      var endDateVal = document.getElementById("endDate").value;
-
-      if (!startDateVal || !endDateVal) {
-        alert("請確認開始與結束日期");
-        return;
+    function initLocalStorage() {
+      var savedData = localStorage.getItem(storageKey);
+      if (!savedData) {
+        orders['2026-06-14'] = { noodles: 25, eggPancake: 30, friedNoodles: 50, isHoliday: false, hasInfo: true };
+        orders['2026-06-15'] = { noodles: 0, eggPancake: 0, friedNoodles: 0, isHoliday: true, hasInfo: true };
+        balances['2026-06-13'] = 17720;
+        advances = {};
+        saveDataToLocal();
+      } else {
+        var parsed = JSON.parse(savedData);
+        orders = parsed.orders || {};
+        balances = parsed.balances || {};
+        advances = parsed.advances || {};
       }
-      if (!fileInput.files || fileInput.files.length === 0) {
-        alert("請選擇 PDF 檔案");
-        return;
-      }
-
-      document.getElementById("loadingMsg").style.display = "block";
-      var file = fileInput.files[0];
-      var fileReader = new FileReader();
-
-      fileReader.onload = async function() {
-        var typedarray = new Uint8Array(this.result);
-        try {
-          var pdf = await pdfjsLib.getDocument(typedarray).promise;
-          var fullText = "";
-          for (var i = 1; i <= pdf.numPages; i++) {
-            var page = await pdf.getPage(i);
-            var textContent = await page.getTextContent();
-            var pageText = textContent.items.map(function(item) { return item.str; }).join('');
-            fullText += pageText;
-          }
-          parseTextData(fullText);
-        } catch (error) {
-          alert("檔案解析失敗");
-        } finally {
-          document.getElementById("loadingMsg").style.display = "none";
-        }
-      };
-      fileReader.readAsArrayBuffer(file);
     }
 
-    // 解決舊版瀏覽器不支援 matchAll 的問題
+    function saveDataToLocal() {
+      var dataObj = { orders: orders, balances: balances, advances: advances };
+      localStorage.setItem(storageKey, JSON.stringify(dataObj));
+    }
+
+    async function pasteText() {
+      try {
+        var text = await navigator.clipboard.readText();
+        document.getElementById("dailyText").value = text;
+      } catch (err) {
+        alert("無法自動讀取剪貼簿，請手動長按輸入框並選擇貼上。");
+      }
+    }
+
+    function initWeekView() {
+      var today = new Date();
+      var day = today.getDay();
+      var diff = today.getDate() - day + (day === 0 ? -6 : 1); 
+      currentWeekStart = new Date(today.setDate(diff));
+      renderWeekView();
+      setupSwipeListener();
+    }
+
+    function renderWeekView() {
+      var todayStr = getLocalDateString(new Date());
+      var html = "<table><tr><th>日期</th><th>麵線</th><th>蛋餅</th><th>炒麵</th><th>金額</th></tr>";
+      var weekTotalAmount = 0;
+
+      for (var i = 0; i < 7; i++) {
+        var d = new Date(currentWeekStart);
+        d.setDate(d.getDate() + i);
+        var dateStr = getLocalDateString(d);
+        
+        var month = (d.getMonth() + 1).toString();
+        var day = d.getDate().toString();
+        var weekday = weekdays[d.getDay()];
+        if (month.length < 2) month = '0' + month;
+        if (day.length < 2) day = '0' + day;
+        var displayDate = month + '/' + day + '(' + weekday + ')';
+        
+        var isToday = (dateStr === todayStr);
+        var isFuture = (dateStr > todayStr);
+        
+        var trClass = "";
+        if (isToday) trClass = " class='today-row'";
+        else if (isFuture) trClass = " class='future-row'";
+        
+        var dailyTotalAmount = 0;
+        var rowContent = "";
+        var hasData = orders[dateStr] && orders[dateStr].hasInfo && !orders[dateStr].isHoliday;
+
+        if (dateStr < "2026-06-14") {
+          rowContent = "<td colspan='3'>-</td><td>0</td>";
+        } else if (isFuture && !hasData) {
+          rowContent = "<td colspan='3'>空白</td><td>0</td>";
+        } else if (isToday && !hasData) {
+          rowContent = "<td colspan='3'>Today</td><td>0</td>";
+        } else if (!orders[dateStr] || !orders[dateStr].hasInfo || orders[dateStr].isHoliday) {
+          rowContent = "<td colspan='3' style='color:#666;'>休假</td><td>0</td>";
+        } else {
+          dailyTotalAmount =
+            (orders[dateStr].noodles * prices.noodles) +
+            (orders[dateStr].eggPancake * prices.eggPancake) +
+            (orders[dateStr].friedNoodles * prices.friedNoodles);
+            
+          rowContent =
+            "<td>" + (orders[dateStr].noodles || '0') + "</td>" +
+            "<td>" + (orders[dateStr].eggPancake || '0') + "</td>" +
+            "<td>" + (orders[dateStr].friedNoodles || '0') + "</td>" +
+            "<td style='font-weight:bold;'>" + dailyTotalAmount + "</td>";
+        }
+
+        weekTotalAmount += dailyTotalAmount;
+        html += "<tr" + trClass + " onclick=\"openModal('" + dateStr + "')\"><td>" + displayDate + "</td>" + rowContent + "</tr>";
+      }
+
+      html += "<tr style='background:#e0e0e0; font-weight:bold; color:#000;'><td colspan='4'>本周統計</td><td>" + weekTotalAmount + "</td></tr>";
+      html += "</table>";
+      document.getElementById("weekTableWrapper").innerHTML = html;
+    }
+
+    function changeWeek(offset) {
+      currentWeekStart.setDate(currentWeekStart.getDate() + (offset * 7));
+      renderWeekView();
+    }
+
+    function setupSwipeListener() {
+      var container = document.getElementById('weekContainer');
+      var touchstartX = 0;
+      var touchendX = 0;
+      
+      container.addEventListener('touchstart', function(event) {
+        touchstartX = event.changedTouches[0].screenX;
+      }, false);
+      
+      container.addEventListener('touchend', function(event) {
+        touchendX = event.changedTouches[0].screenX;
+        if (touchendX < touchstartX - 40) {
+          changeWeek(1); 
+        }
+        if (touchendX > touchstartX + 40) {
+          changeWeek(-1);
+        }
+      }, false);
+    }
+
+    window.addEventListener("DOMContentLoaded", function() {
+      initLocalStorage();
+      
+      document.getElementById("startDate").value = "2026-06-14";
+      var d = new Date("2026-06-14");
+      d.setDate(d.getDate() + 6);
+      document.getElementById("endDate").value = getLocalDateString(d);
+      
+      var todayStr = getLocalDateString(new Date());
+      document.getElementById("dailyDate").value = todayStr;
+      
+      initWeekView();
+      generateTable();
+    });
+
     function getLastMatchNumber(text, regex) {
       var match;
       var lastNum = null;
@@ -220,160 +434,253 @@
       return lastNum;
     }
 
-    function parseTextData(text) {
-      var cleanText = text.replace(/\s+/g, '');
-      var parts = cleanText.split(/(\d{4}\/\d{1,2}\/\d{1,2})/);
-
-      orders = {}; 
-      var balancesFound = []; 
-
-      for (var i = 1; i < parts.length; i += 2) {
-        var dateStr = parts[i];
-        var contentStr = parts[i+1] || "";
-
-        var dateMatch = dateStr.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})/);
-        if (!dateMatch) continue;
-        
-        var y = parseInt(dateMatch[1], 10);
-        var m = parseInt(dateMatch[2], 10) - 1; 
-        var d = parseInt(dateMatch[3], 10);
-        
-        var actualOrderDate = new Date(y, m, d);
-        actualOrderDate.setDate(actualOrderDate.getDate() + 1);
-        
-        var currentDate = getLocalDateString(actualOrderDate);
-        
-        if (!orders[currentDate]) {
-          orders[currentDate] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0, hasInfo: false };
-        }
-
-        var nMatch = getLastMatchNumber(contentStr, /麵線(\d+)/g);
-        if (nMatch !== null) { orders[currentDate].noodles = nMatch; orders[currentDate].hasInfo = true; }
-
-        var eMatch = getLastMatchNumber(contentStr, /蛋餅(\d+)/g);
-        if (eMatch !== null) { orders[currentDate].eggPancake = eMatch; orders[currentDate].hasInfo = true; }
-
-        var fMatch = getLastMatchNumber(contentStr, /炒麵(\d+)/g);
-        if (fMatch !== null) { orders[currentDate].friedNoodles = fMatch; orders[currentDate].hasInfo = true; }
-
-        var bRegex = /結餘[:：]?(-?\d+)/g;
-        var bMatch;
-        while ((bMatch = bRegex.exec(contentStr)) !== null) {
-          balancesFound.push({ date: currentDate, amount: parseInt(bMatch[1], 10) });
-        }
+    function parseDailyText() {
+      var targetDateStr = document.getElementById("dailyDate").value;
+      var rawText = document.getElementById("dailyText").value;
+      
+      if (!targetDateStr) {
+        alert("請選擇訂單日期");
+        return;
+      }
+      if (!rawText.trim()) {
+        alert("請貼上對話內容");
+        return;
       }
 
-      for (var dateKey in orders) {
-        if (!orders[dateKey].hasInfo) {
-          orders[dateKey].isHoliday = true;
+      var text = rawText.replace(/\s+/g, '');
+
+      if (!orders[targetDateStr]) {
+        orders[targetDateStr] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0, hasInfo: false };
+      }
+
+      var nMatch = getLastMatchNumber(text, /麵線(\d+)/g);
+      var eMatch = getLastMatchNumber(text, /蛋餅(\d+)/g);
+      var fMatch = getLastMatchNumber(text, /炒麵(\d+)/g);
+      var advMatch = getLastMatchNumber(text, /預收[:：]?(-?\d+)/g);
+
+      var itemMatched = false;
+      if (nMatch !== null) { orders[targetDateStr].noodles = nMatch; itemMatched = true; }
+      if (eMatch !== null) { orders[targetDateStr].eggPancake = eMatch; itemMatched = true; }
+      if (fMatch !== null) { orders[targetDateStr].friedNoodles = fMatch; itemMatched = true; }
+
+      if (text.indexOf("休假") !== -1) {
+        orders[targetDateStr].isHoliday = true;
+        orders[targetDateStr].noodles = 0;
+        orders[targetDateStr].eggPancake = 0;
+        orders[targetDateStr].friedNoodles = 0;
+        orders[targetDateStr].hasInfo = true;
+      } else if (itemMatched) {
+        orders[targetDateStr].isHoliday = false;
+        orders[targetDateStr].hasInfo = true;
+      }
+
+      if (advMatch !== null) {
+        advances[targetDateStr] = advMatch;
+        orders[targetDateStr].hasInfo = true;
+      }
+
+      if (itemMatched || advMatch !== null || text.indexOf("休假") !== -1) {
+        saveDataToLocal();
+        document.getElementById("dailyText").value = "";
+        alert("資料已解析並儲存");
+        renderWeekView(); 
+      } else {
+        alert("未能解析到任何商品、預收或休假資料，原有數據維持不變。");
+      }
+    }
+
+    function calculateBalanceAt(targetDateStr) {
+      var baseDateStr = "2026-06-13";
+      var baseBalance = balances[baseDateStr] || 0;
+      var bDate = new Date(baseDateStr);
+      bDate.setDate(bDate.getDate() + 1); 
+      var end = new Date(targetDateStr);
+      var runningBalance = baseBalance;
+
+      while (bDate < end) {
+        var currStr = getLocalDateString(bDate);
+        if (advances[currStr]) {
+          runningBalance += advances[currStr];
         }
-      }
-
-      var targetStartDate = new Date(document.getElementById("startDate").value);
-      var latestBalance = null;
-      var latestBalanceDate = new Date(0);
-
-      for (var j = 0; j < balancesFound.length; j++) {
-        var bDate = new Date(balancesFound[j].date);
-        if (bDate < targetStartDate) {
-          if (bDate >= latestBalanceDate) {
-            latestBalanceDate = bDate;
-            latestBalance = balancesFound[j].amount;
-          }
+        if (orders[currStr] && !orders[currStr].isHoliday && orders[currStr].hasInfo) {
+          var cons = (orders[currStr].noodles * prices.noodles) +
+                     (orders[currStr].eggPancake * prices.eggPancake) +
+                     (orders[currStr].friedNoodles * prices.friedNoodles);
+          runningBalance -= cons;
         }
+        bDate.setDate(bDate.getDate() + 1);
       }
-
-      var currentBalanceInput = document.getElementById("balanceInput").value.trim();
-      if (latestBalance !== null && currentBalanceInput === "") {
-        document.getElementById("balanceInput").value = latestBalance;
-      }
-
-      generateTable();
+      return runningBalance;
     }
 
     function generateTable() {
-      var startDate = new Date(document.getElementById("startDate").value);
-      var endDate = new Date(document.getElementById("endDate").value);
+      var startDateStr = document.getElementById("startDate").value;
+      var userEndDateStr = document.getElementById("endDate").value;
+      if (!startDateStr || !userEndDateStr) return;
 
-      var html = "<table>";
+      var maxDataDateStr = startDateStr;
+      for (var key in orders) {
+        if (orders[key].hasInfo && key > maxDataDateStr) {
+          maxDataDateStr = key;
+        }
+      }
+
+      var endDate = new Date(userEndDateStr);
+      var maxDataDate = new Date(maxDataDateStr);
+      if (maxDataDate < endDate) {
+        endDate = maxDataDate;
+      }
+      
+      var startDate = new Date(startDateStr);
+      var todayStr = getLocalDateString(new Date());
+
+      var balanceValue = calculateBalanceAt(startDateStr);
+
+      var latestAdvance = 0;
+      var latestAdvanceDate = new Date(0);
+      for (var advKey in advances) {
+        var aDate = new Date(advKey);
+        if (aDate <= endDate && aDate >= startDate) {
+          if (aDate >= latestAdvanceDate) {
+            latestAdvanceDate = aDate;
+            latestAdvance = advances[advKey];
+          }
+        }
+      }
+      var advanceValue = latestAdvance;
+
+      var html = "<table id='reportTable'>";
       html += "<tr><th>日期</th><th>麵線</th><th>蛋餅</th><th>炒麵</th><th>金額</th></tr>";
       var overallTotalAmount = 0;
 
       for (var d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
         var isoDate = getLocalDateString(d);
-        
-        if (!orders[isoDate]) {
-          orders[isoDate] = { isHoliday: true, noodles: 0, eggPancake: 0, friedNoodles: 0 };
-        }
-
         var month = (d.getMonth() + 1).toString();
         var day = d.getDate().toString();
         var weekday = weekdays[d.getDay()];
         if (month.length < 2) month = '0' + month;
         if (day.length < 2) day = '0' + day;
-        var displayDate = month + '/' + day + '/' + weekday;
+        var displayDate = month + '/' + day + '(' + weekday + ')';
         
+        var isToday = (isoDate === todayStr);
+        var isFuture = (isoDate > todayStr);
+        
+        var trClass = "";
+        if (isToday) trClass = " class='today-row'";
+        else if (isFuture) trClass = " class='future-row'";
+
         var dailyTotalAmount = 0;
         var rowContent = "";
+        var hasData = orders[isoDate] && orders[isoDate].hasInfo && !orders[isoDate].isHoliday;
 
-        if (orders[isoDate].isHoliday) {
-          rowContent = "<td colspan='3'>休假</td><td>0</td>";
+        if (isoDate < "2026-06-14") {
+          rowContent = "<td colspan='3'>-</td><td>0</td>";
+        } else if (isFuture && !hasData) {
+          rowContent = "<td colspan='3'>空白</td><td>0</td>";
+        } else if (isToday && !hasData) {
+          rowContent = "<td colspan='3'>Today</td><td>0</td>";
+        } else if (!orders[isoDate] || !orders[isoDate].hasInfo || orders[isoDate].isHoliday) {
+          rowContent = "<td colspan='3' style='color:#666;'>休假</td><td>0</td>";
         } else {
           dailyTotalAmount =
-            orders[isoDate].noodles * prices.noodles +
-            orders[isoDate].eggPancake * prices.eggPancake +
-            orders[isoDate].friedNoodles * prices.friedNoodles;
+            (orders[isoDate].noodles * prices.noodles) +
+            (orders[isoDate].eggPancake * prices.eggPancake) +
+            (orders[isoDate].friedNoodles * prices.friedNoodles);
             
           rowContent =
-            "<td>" + (orders[isoDate].noodles || '') + "</td>" +
-            "<td>" + (orders[isoDate].eggPancake || '') + "</td>" +
-            "<td>" + (orders[isoDate].friedNoodles || '') + "</td>" +
-            "<td>" + dailyTotalAmount + "</td>";
+            "<td>" + (orders[isoDate].noodles || '0') + "</td>" +
+            "<td>" + (orders[isoDate].eggPancake || '0') + "</td>" +
+            "<td>" + (orders[isoDate].friedNoodles || '0') + "</td>" +
+            "<td style='font-weight:bold; color:#000;'>" + dailyTotalAmount + "</td>";
         }
 
         overallTotalAmount += dailyTotalAmount;
-        html += "<tr onclick=\"openModal('" + isoDate + "')\"><td>" + displayDate + "</td>" + rowContent + "</tr>";
+        html += "<tr" + trClass + " onclick=\"openModal('" + isoDate + "')\"><td>" + displayDate + "</td>" + rowContent + "</tr>";
       }
 
-      html += "<tr><td colspan='4'>總計</td><td>" + overallTotalAmount + "</td></tr>";
+      html += "<tr style='background:#ccc; font-weight:bold; color:#000;'><td colspan='4'>本期消費總計</td><td>" + overallTotalAmount + "</td></tr>";
       html += "</table>";
+      
+      var sM = (startDate.getMonth() + 1).toString();
+      var sD = startDate.getDate().toString();
+      if (sM.length < 2) sM = '0' + sM;
+      if (sD.length < 2) sD = '0' + sD;
+      var startDateDisplay = sM + "/" + sD;
+      
+      var eM = (endDate.getMonth() + 1).toString();
+      var eD = endDate.getDate().toString();
+      if (eM.length < 2) eM = '0' + eM;
+      if (eD.length < 2) eD = '0' + eD;
+      
+      var periodStr = "結算區間: " + sM + "/" + sD + " ~ " + eM + "/" + eD;
 
-      var balanceText = document.getElementById("balanceInput").value.trim();
-      var advanceText = document.getElementById("advanceInput").value.trim();
-      var balanceValue = (balanceText === "") ? 0 : parseFloat(balanceText);
-      var advanceValue = (advanceText === "") ? 0 : parseFloat(advanceText);
+      var advDateDisplay = "本期";
+      if (latestAdvanceDate.getTime() > 0 && advanceValue !== 0) {
+        var advM = (latestAdvanceDate.getMonth() + 1).toString();
+        var advD = latestAdvanceDate.getDate().toString();
+        if (advM.length < 2) advM = '0' + advM;
+        if (advD.length < 2) advD = '0' + advD;
+        advDateDisplay = advM + "/" + advD;
+      }
+      var advanceDisplay = advanceValue.toString();
       
       var finalBalance = (balanceValue + advanceValue) - overallTotalAmount;
       
-      var startDisplay = (startDate.getMonth()+1) + '/' + startDate.getDate();
-      var endDisplay = (endDate.getMonth()+1) + '/' + endDate.getDate();
-      
-      var summaryHtml = "<div class='summary' onclick='openBalanceModal()'>";
-      summaryHtml += startDisplay + " 結餘: " + ((balanceText==="") ? "無" : balanceValue) + "<br>";
-      summaryHtml += endDisplay + " 預收: " + ((advanceText==="") ? "無" : advanceValue) + "<br>";
-      summaryHtml += "最終結餘: " + ((balanceText === "" && advanceText === "") ? "無" : finalBalance);
+      var summaryHtml = "<div class='summary'>";
+      summaryHtml += startDateDisplay + " 結餘: " + balanceValue + " ＋ " + advDateDisplay + " 預收: " + advanceDisplay + "<br>";
+      summaryHtml += "扣除本期消費: " + overallTotalAmount + "<br>";
+      summaryHtml += "<span style='font-size:1.2em; color:#000;'>最終結餘: " + finalBalance + "</span><br>";
+      summaryHtml += "<span style='font-size:0.85em; color:#666; font-weight:normal;'>" + periodStr + "</span>";
       summaryHtml += "</div>";
       
       html += summaryHtml;
 
-      document.getElementById("report").innerHTML = html;
-      document.getElementById("downloadBtn").style.display = "block";
+      document.getElementById("reportContainer").innerHTML = html;
+      
+      var plainTextSummary = startDateDisplay + " 結餘: " + balanceValue + "\n" +
+                             advDateDisplay + " 預收: " + advanceDisplay + "\n" +
+                             "扣除本期消費: " + overallTotalAmount + "\n" +
+                             "最終結餘: " + finalBalance + "\n" +
+                             periodStr;
+      document.getElementById("lineBtn").setAttribute("data-summary", plainTextSummary);
+      
+      document.getElementById("actionBtnContainer").style.display = "flex";
+    }
+
+    function shareToLine() {
+      var btn = document.getElementById("lineBtn");
+      var baseText = btn.getAttribute("data-summary");
+      if (!baseText) return;
+      
+      var finalMessage = baseText + "\n\n感謝！";
+      var encodedMsg = encodeURIComponent(finalMessage);
+      var lineUrl = "https://line.me/R/msg/text/?" + encodedMsg;
+      
+      window.location.href = lineUrl;
     }
 
     function openModal(isoDate) {
       currentEditDate = isoDate;
       var d = new Date(isoDate);
-      var displayDate = (d.getMonth() + 1) + '/' + d.getDate() + '/' + weekdays[d.getDay()];
+      var displayDate = (d.getMonth() + 1) + '/' + d.getDate() + '(' + weekdays[d.getDay()] + ')';
       
-      document.getElementById("modalDate").textContent = displayDate;
-      document.getElementById("modalIsHoliday").checked = orders[isoDate].isHoliday;
+      document.getElementById("modalDate").textContent = "修改: " + displayDate;
+      
+      if (!orders[isoDate]) {
+        document.getElementById("modalIsHoliday").checked = false;
+        document.getElementById("modalNoodlesQty").value = 0;
+        document.getElementById("modalEggPancakeQty").value = 0;
+        document.getElementById("modalFriedNoodlesQty").value = 0;
+      } else {
+        document.getElementById("modalIsHoliday").checked = orders[isoDate].isHoliday;
+        document.getElementById("modalNoodlesQty").value = orders[isoDate].noodles || 0;
+        document.getElementById("modalEggPancakeQty").value = orders[isoDate].eggPancake || 0;
+        document.getElementById("modalFriedNoodlesQty").value = orders[isoDate].friedNoodles || 0;
+      }
+      
+      document.getElementById("modalAdvanceQty").value = advances[isoDate] || "";
       
       toggleModalInputs();
-      
-      document.getElementById("modalNoodlesQty").value = orders[isoDate].noodles;
-      document.getElementById("modalEggPancakeQty").value = orders[isoDate].eggPancake;
-      document.getElementById("modalFriedNoodlesQty").value = orders[isoDate].friedNoodles;
-      
       document.getElementById("modalOverlay").style.display = "block";
     }
 
@@ -408,35 +715,33 @@
         orders[currentEditDate].eggPancake = parseInt(document.getElementById("modalEggPancakeQty").value) || 0;
         orders[currentEditDate].friedNoodles = parseInt(document.getElementById("modalFriedNoodlesQty").value) || 0;
       }
+      
+      var advInput = document.getElementById("modalAdvanceQty").value;
+      if (advInput !== "") {
+        advances[currentEditDate] = parseInt(advInput, 10);
+      } else {
+        delete advances[currentEditDate];
+      }
+      
+      if (orders[currentEditDate].noodles > 0 || orders[currentEditDate].eggPancake > 0 || orders[currentEditDate].friedNoodles > 0 || isHoliday || advInput !== "") {
+        orders[currentEditDate].hasInfo = true;
+      } else {
+        orders[currentEditDate].hasInfo = false;
+      }
+      
+      saveDataToLocal();
       generateTable();
+      renderWeekView();
       closeModal();
     }
 
-    function openBalanceModal() {
-      document.getElementById("modalBalance").value = document.getElementById("balanceInput").value;
-      document.getElementById("modalAdvance").value = document.getElementById("advanceInput").value;
-      document.getElementById("balanceModalOverlay").style.display = "block";
-    }
-
-    function closeBalanceModal() {
-      document.getElementById("balanceModalOverlay").style.display = "none";
-    }
-
-    function saveBalance() {
-      document.getElementById("balanceInput").value = document.getElementById("modalBalance").value;
-      document.getElementById("advanceInput").value = document.getElementById("modalAdvance").value;
-      generateTable(); 
-      closeBalanceModal();
-    }
-
     function downloadReport() {
-      var reportDiv = document.getElementById("report");
+      var reportDiv = document.getElementById("reportContainer");
       html2canvas(reportDiv).then(function(canvas) {
         var ctx = canvas.getContext("2d");
         var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
         var data = imgData.data;
         
-        // 像素轉換為灰階
         for (var i = 0; i < data.length; i += 4) {
           var gray = data[i] * 0.3 + data[i+1] * 0.59 + data[i+2] * 0.11;
           data[i] = gray;
@@ -445,7 +750,6 @@
         }
         ctx.putImageData(imgData, 0, 0);
 
-        // 輸出為 60% 品質的 JPG 以縮小檔案
         var link = document.createElement("a");
         link.href = canvas.toDataURL("image/jpeg", 0.6);
         link.download = "report.jpg";
