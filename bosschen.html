@@ -147,7 +147,6 @@
       padding: 8px;
       margin-top: 15px;
       background-color: #f9f9f9;
-      touch-action: pan-y;
     }
     .week-nav {
       display: flex;
@@ -186,12 +185,12 @@
       <input type="date" id="dailyDate">
     </div>
     <div class="form-group">
-      <label>對話內容:</label>
-      <textarea id="dailyText" rows="5" placeholder="在此貼上單日對話..."></textarea>
+      <label>對話內容 (可貼多筆):</label>
+      <textarea id="dailyText" rows="6" placeholder="在此貼上單日對話..."></textarea>
     </div>
     <div class="flex-row">
-      <button type="button" class="action-btn" onclick="pasteAndParse()">一鍵貼上並儲存</button>
-      <button type="button" class="action-btn dark-btn" onclick="parseDailyText()">手動輸入儲存</button>
+      <button type="button" class="action-btn" onclick="pasteText()">一鍵貼上</button>
+      <button type="button" class="action-btn dark-btn" onclick="parseDailyText()">解析儲存</button>
     </div>
     
     <div id="weekContainer">
@@ -214,10 +213,12 @@
       <input type="date" id="endDate" onchange="generateTable()">
     </div>
     
+    <button type="button" class="action-btn full-btn" onclick="generateTable()">更新報表資料</button>
+
     <div id="reportContainer"></div>
     
     <div id="actionBtnContainer" class="flex-row" style="display:none; margin-top:10px;">
-      <button type="button" class="action-btn" id="lineBtn" onclick="shareToLine()">傳送至 LINE</button>
+      <button type="button" class="action-btn" id="copyBtn" onclick="copySummaryText()">複製文字訊息</button>
       <button type="button" class="action-btn dark-btn" onclick="downloadReport()">下載灰階報表</button>
     </div>
   </div>
@@ -309,13 +310,18 @@
       localStorage.setItem(storageKey, JSON.stringify(dataObj));
     }
 
-    async function pasteAndParse() {
+    async function pasteText() {
       try {
         var text = await navigator.clipboard.readText();
-        document.getElementById("dailyText").value = text;
-        parseDailyText();
+        var dailyTextElem = document.getElementById("dailyText");
+        var existingText = dailyTextElem.value;
+        if (existingText.trim() !== "") {
+          dailyTextElem.value = existingText + "\n\n" + text;
+        } else {
+          dailyTextElem.value = text;
+        }
       } catch (err) {
-        alert("無法自動讀取剪貼簿，請手動貼上後點擊「手動輸入儲存」。");
+        alert("無法自動讀取剪貼簿，請手動長按輸入框並選擇貼上。");
       }
     }
 
@@ -325,7 +331,6 @@
       var diff = today.getDate() - day + (day === 0 ? -6 : 1); 
       currentWeekStart = new Date(today.setDate(diff));
       renderWeekView();
-      setupSwipeListener();
     }
 
     function renderWeekView() {
@@ -391,26 +396,6 @@
       renderWeekView();
     }
 
-    function setupSwipeListener() {
-      var container = document.getElementById('weekContainer');
-      var touchstartX = 0;
-      var touchendX = 0;
-      
-      container.addEventListener('touchstart', function(event) {
-        touchstartX = event.changedTouches[0].screenX;
-      }, false);
-      
-      container.addEventListener('touchend', function(event) {
-        touchendX = event.changedTouches[0].screenX;
-        if (touchendX < touchstartX - 40) {
-          changeWeek(1); 
-        }
-        if (touchendX > touchstartX + 40) {
-          changeWeek(-1);
-        }
-      }, false);
-    }
-
     window.addEventListener("DOMContentLoaded", function() {
       initLocalStorage();
       
@@ -428,6 +413,17 @@
       initWeekView();
       generateTable();
     });
+
+    function getSumOfMatches(text, regex) {
+      var match;
+      var sum = 0;
+      var found = false;
+      while ((match = regex.exec(text)) !== null) {
+        sum += parseInt(match[1], 10);
+        found = true;
+      }
+      return found ? sum : null;
+    }
 
     function getLastMatchNumber(text, regex) {
       var match;
@@ -447,22 +443,22 @@
         return;
       }
       if (!rawText.trim()) {
-        alert("請輸入對話內容");
+        alert("請輸入或貼上對話內容");
         return;
       }
 
       var text = rawText.replace(/\s+/g, '');
       var isHoliday = text.indexOf("休假") !== -1;
 
-      var nMatch = getLastMatchNumber(text, /麵線(\d+)/g);
-      var eMatch = getLastMatchNumber(text, /蛋餅(\d+)/g);
-      var fMatch = getLastMatchNumber(text, /炒麵(\d+)/g);
+      var nSum = getSumOfMatches(text, /麵線(\d{1,2})/g);
+      var eSum = getSumOfMatches(text, /蛋餅(\d{1,2})/g);
+      var fSum = getSumOfMatches(text, /炒麵(\d{1,2})/g);
       var advMatch = getLastMatchNumber(text, /預收[:：]?(-?\d+)/g);
 
-      var itemMatched = (nMatch !== null || eMatch !== null || fMatch !== null);
+      var itemMatched = (nSum !== null || eSum !== null || fSum !== null);
 
       if (!itemMatched && advMatch === null && !isHoliday) {
-        alert("格式錯誤或無效資料：未能解析到任何商品、預收或休假資訊。");
+        alert("未能解析到任何商品、預收或休假資料，原有數據維持不變。");
         return;
       }
 
@@ -470,9 +466,9 @@
         orders[targetDateStr] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0, hasInfo: false };
       }
 
-      if (nMatch !== null) orders[targetDateStr].noodles = nMatch;
-      if (eMatch !== null) orders[targetDateStr].eggPancake = eMatch;
-      if (fMatch !== null) orders[targetDateStr].friedNoodles = fMatch;
+      if (nSum !== null) orders[targetDateStr].noodles = nSum;
+      if (eSum !== null) orders[targetDateStr].eggPancake = eSum;
+      if (fSum !== null) orders[targetDateStr].friedNoodles = fSum;
 
       if (isHoliday) {
         orders[targetDateStr].isHoliday = true;
@@ -496,8 +492,6 @@
       if (advMatch !== null) {
         advances[targetDateStr] = advMatch;
         orders[targetDateStr].hasInfo = true;
-      } else {
-        delete advances[targetDateStr];
       }
 
       saveDataToLocal();
@@ -540,13 +534,11 @@
       var startDate = new Date(startDateStr);
       var userEndDate = new Date(userEndDateStr);
       var endDate = new Date(userEndDateStr);
-      var isForcedThreeDays = false;
 
       if (startDate >= userEndDate) {
         endDate = new Date(startDate);
         endDate.setDate(endDate.getDate() + 2);
         document.getElementById("endDate").value = getLocalDateString(endDate);
-        isForcedThreeDays = true;
       } else {
         var maxDataDateStr = startDateStr;
         for (var key in orders) {
@@ -664,26 +656,29 @@
 
       document.getElementById("reportContainer").innerHTML = html;
       
-      var plainTextSummary = startDateDisplay + " 結餘: " + balanceValue + "\n" +
-                             advDateDisplay + " 預收: " + advanceDisplay + "\n" +
-                             "扣除本期消費: " + overallTotalAmount + "\n" +
-                             "最終結餘: " + finalBalance + "\n" +
-                             periodStr;
-      document.getElementById("lineBtn").setAttribute("data-summary", plainTextSummary);
+      var tDate = new Date();
+      var tM = (tDate.getMonth() + 1).toString().padStart(2, '0');
+      var tD = tDate.getDate().toString().padStart(2, '0');
+      
+      var plainTextSummary = tM + "/" + tD + "\n" +
+                             "預收" + advanceDisplay + "\n" +
+                             "結餘" + finalBalance + "\n" +
+                             "感謝";
+      document.getElementById("copyBtn").setAttribute("data-summary", plainTextSummary);
       
       document.getElementById("actionBtnContainer").style.display = "flex";
     }
 
-    function shareToLine() {
-      var btn = document.getElementById("lineBtn");
+    function copySummaryText() {
+      var btn = document.getElementById("copyBtn");
       var baseText = btn.getAttribute("data-summary");
       if (!baseText) return;
       
-      var finalMessage = baseText + "\n\n感謝！";
-      var encodedMsg = encodeURIComponent(finalMessage);
-      var lineUrl = "https://line.me/R/msg/text/?" + encodedMsg;
-      
-      window.location.href = lineUrl;
+      navigator.clipboard.writeText(baseText).then(function() {
+        alert("已複製結算訊息");
+      }).catch(function() {
+        alert("複製失敗，請手動複製");
+      });
     }
 
     function openModal(isoDate) {
@@ -781,12 +776,6 @@
         link.href = canvas.toDataURL("image/jpeg", 0.6);
         link.download = "report.jpg";
         link.click();
-        
-        var currentEndDateStr = document.getElementById("endDate").value;
-        var d = new Date(currentEndDateStr);
-        d.setDate(d.getDate() + 1);
-        document.getElementById("startDate").value = getLocalDateString(d);
-        generateTable();
       });
     }
   </script>
