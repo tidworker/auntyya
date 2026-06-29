@@ -147,6 +147,7 @@
       padding: 8px;
       margin-top: 15px;
       background-color: #f9f9f9;
+      touch-action: pan-y;
     }
     .week-nav {
       display: flex;
@@ -320,6 +321,9 @@
         } else {
           dailyTextElem.value = text;
         }
+        
+        dailyTextElem.scrollTop = dailyTextElem.scrollHeight;
+        
       } catch (err) {
         alert("無法自動讀取剪貼簿，請手動長按輸入框並選擇貼上。");
       }
