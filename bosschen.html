@@ -99,11 +99,11 @@
       width: 100%;
       margin-top: 10px;
       text-align: center;
-      font-size: 0.9rem;
+      font-size: 0.8rem;
     }
     th, td {
       border: 1px solid #000000;
-      padding: 6px;
+      padding: 4px;
     }
     th {
       background-color: #cccccc;
@@ -127,6 +127,7 @@
       top: 0; left: 0;
       width: 100%; height: 100%;
       background: rgba(0,0,0,0.6);
+      overflow-y: auto;
     }
     .modal {
       background: #ffffff;
@@ -147,7 +148,6 @@
       padding: 8px;
       margin-top: 15px;
       background-color: #f9f9f9;
-      touch-action: pan-y;
     }
     .week-nav {
       display: flex;
@@ -190,8 +190,8 @@
       <textarea id="dailyText" rows="6" placeholder="在此貼上單日對話..."></textarea>
     </div>
     <div class="flex-row">
-      <button type="button" class="action-btn" onclick="pasteText()">一鍵貼上</button>
-      <button type="button" class="action-btn dark-btn" onclick="parseDailyText()">解析儲存</button>
+      <button type="button" class="action-btn" onclick="pasteAndParse()">一鍵貼上</button>
+      <button type="button" class="action-btn dark-btn" onclick="parseDailyText()">手動輸入儲存</button>
     </div>
     
     <div id="weekContainer">
@@ -216,7 +216,7 @@
     
     <button type="button" class="action-btn full-btn" onclick="generateTable()">更新報表資料</button>
 
-    <div id="reportContainer"></div>
+    <div id="reportContainer" style="overflow-x: auto;"></div>
     
     <div id="actionBtnContainer" class="flex-row" style="display:none; margin-top:10px;">
       <button type="button" class="action-btn" id="copyBtn" onclick="copySummaryText()">複製文字訊息</button>
@@ -242,6 +242,14 @@
         <label>炒麵 (30元):</label>
         <input type="number" id="modalFriedNoodlesQty" min="0">
       </div>
+      <div class="form-group">
+        <label>貢丸湯 (35元):</label>
+        <input type="number" id="modalMeatballSoupQty" min="0">
+      </div>
+      <div class="form-group">
+        <label>肉羹湯 (35元):</label>
+        <input type="number" id="modalMeatThickSoupQty" min="0">
+      </div>
       <div class="form-group" style="border-top: 1px dashed #000; padding-top: 10px; margin-top: 10px;">
         <label>預收金額:</label>
         <input type="number" id="modalAdvanceQty" placeholder="無">
@@ -255,7 +263,7 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <script>
-    var prices = { noodles: 50, eggPancake: 30, friedNoodles: 30 };
+    var prices = { noodles: 50, eggPancake: 30, friedNoodles: 30, meatballSoup: 35, meatThickSoup: 35 };
     var orders = {};
     var balances = {};
     var advances = {};
@@ -293,8 +301,8 @@
     function initLocalStorage() {
       var savedData = localStorage.getItem(storageKey);
       if (!savedData) {
-        orders['2026-06-14'] = { noodles: 25, eggPancake: 30, friedNoodles: 50, isHoliday: false, hasInfo: true };
-        orders['2026-06-15'] = { noodles: 0, eggPancake: 0, friedNoodles: 0, isHoliday: true, hasInfo: true };
+        orders['2026-06-14'] = { noodles: 25, eggPancake: 30, friedNoodles: 50, meatballSoup: 0, meatThickSoup: 0, isHoliday: false, hasInfo: true };
+        orders['2026-06-15'] = { noodles: 0, eggPancake: 0, friedNoodles: 0, meatballSoup: 0, meatThickSoup: 0, isHoliday: true, hasInfo: true };
         balances['2026-06-13'] = 17720;
         advances = {};
         saveDataToLocal();
@@ -311,7 +319,7 @@
       localStorage.setItem(storageKey, JSON.stringify(dataObj));
     }
 
-    async function pasteText() {
+    async function pasteAndParse() {
       try {
         var text = await navigator.clipboard.readText();
         var dailyTextElem = document.getElementById("dailyText");
@@ -321,11 +329,9 @@
         } else {
           dailyTextElem.value = text;
         }
-        
         dailyTextElem.scrollTop = dailyTextElem.scrollHeight;
-        
       } catch (err) {
-        alert("無法自動讀取剪貼簿，請手動長按輸入框並選擇貼上。");
+        alert("無法自動讀取剪貼簿，請手動貼上後點擊「手動輸入儲存」。");
       }
     }
 
@@ -339,7 +345,7 @@
 
     function renderWeekView() {
       var todayStr = getLocalDateString(new Date());
-      var html = "<table><tr><th>日期</th><th>麵線</th><th>蛋餅</th><th>炒麵</th><th>金額</th></tr>";
+      var html = "<table><tr><th>日期</th><th>麵線</th><th>蛋餅</th><th>炒麵</th><th>貢丸</th><th>肉羹</th><th>金額</th></tr>";
       var weekTotalAmount = 0;
 
       for (var i = 0; i < 7; i++) {
@@ -352,7 +358,7 @@
         var weekday = weekdays[d.getDay()];
         if (month.length < 2) month = '0' + month;
         if (day.length < 2) day = '0' + day;
-        var displayDate = month + '/' + day + '(' + weekday + ')';
+        var displayDate = month + '/' + day + '<br>(' + weekday + ')';
         
         var isToday = (dateStr === todayStr);
         var isFuture = (dateStr > todayStr);
@@ -366,23 +372,27 @@
         var hasData = orders[dateStr] && orders[dateStr].hasInfo && !orders[dateStr].isHoliday;
 
         if (dateStr < "2026-06-14") {
-          rowContent = "<td colspan='3'>-</td><td>0</td>";
+          rowContent = "<td colspan='5'>-</td><td>0</td>";
         } else if (isFuture && !hasData) {
-          rowContent = "<td colspan='3'>空白</td><td>0</td>";
+          rowContent = "<td colspan='5'>空白</td><td>0</td>";
         } else if (isToday && !hasData) {
-          rowContent = "<td colspan='3'>Today</td><td>0</td>";
+          rowContent = "<td colspan='5'>Today</td><td>0</td>";
         } else if (!orders[dateStr] || !orders[dateStr].hasInfo || orders[dateStr].isHoliday) {
-          rowContent = "<td colspan='3' style='color:#666;'>休假</td><td>0</td>";
+          rowContent = "<td colspan='5' style='color:#666;'>休假</td><td>0</td>";
         } else {
           dailyTotalAmount =
             (orders[dateStr].noodles * prices.noodles) +
             (orders[dateStr].eggPancake * prices.eggPancake) +
-            (orders[dateStr].friedNoodles * prices.friedNoodles);
+            (orders[dateStr].friedNoodles * prices.friedNoodles) +
+            ((orders[dateStr].meatballSoup || 0) * prices.meatballSoup) +
+            ((orders[dateStr].meatThickSoup || 0) * prices.meatThickSoup);
             
           rowContent =
             "<td>" + (orders[dateStr].noodles || '0') + "</td>" +
             "<td>" + (orders[dateStr].eggPancake || '0') + "</td>" +
             "<td>" + (orders[dateStr].friedNoodles || '0') + "</td>" +
+            "<td>" + (orders[dateStr].meatballSoup || '0') + "</td>" +
+            "<td>" + (orders[dateStr].meatThickSoup || '0') + "</td>" +
             "<td style='font-weight:bold;'>" + dailyTotalAmount + "</td>";
         }
 
@@ -390,7 +400,7 @@
         html += "<tr" + trClass + " onclick=\"openModal('" + dateStr + "')\"><td>" + displayDate + "</td>" + rowContent + "</tr>";
       }
 
-      html += "<tr style='background:#e0e0e0; font-weight:bold; color:#000;'><td colspan='4'>本周統計</td><td>" + weekTotalAmount + "</td></tr>";
+      html += "<tr style='background:#e0e0e0; font-weight:bold; color:#000;'><td colspan='6'>本周統計</td><td>" + weekTotalAmount + "</td></tr>";
       html += "</table>";
       document.getElementById("weekTableWrapper").innerHTML = html;
     }
@@ -457,9 +467,11 @@
       var nSum = getSumOfMatches(text, /麵線(\d{1,2})/g);
       var eSum = getSumOfMatches(text, /蛋餅(\d{1,2})/g);
       var fSum = getSumOfMatches(text, /炒麵(\d{1,2})/g);
+      var mbsSum = getSumOfMatches(text, /貢丸湯(\d{1,2})/g);
+      var mtsSum = getSumOfMatches(text, /肉羹湯(\d{1,2})/g);
       var advMatch = getLastMatchNumber(text, /預收[:：]?(-?\d+)/g);
 
-      var itemMatched = (nSum !== null || eSum !== null || fSum !== null);
+      var itemMatched = (nSum !== null || eSum !== null || fSum !== null || mbsSum !== null || mtsSum !== null);
 
       if (!itemMatched && advMatch === null && !isHoliday) {
         alert("未能解析到任何商品、預收或休假資料，原有數據維持不變。");
@@ -467,18 +479,22 @@
       }
 
       if (!orders[targetDateStr]) {
-        orders[targetDateStr] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0, hasInfo: false };
+        orders[targetDateStr] = { isHoliday: false, noodles: 0, eggPancake: 0, friedNoodles: 0, meatballSoup: 0, meatThickSoup: 0, hasInfo: false };
       }
 
       if (nSum !== null) orders[targetDateStr].noodles = nSum;
       if (eSum !== null) orders[targetDateStr].eggPancake = eSum;
       if (fSum !== null) orders[targetDateStr].friedNoodles = fSum;
+      if (mbsSum !== null) orders[targetDateStr].meatballSoup = mbsSum;
+      if (mtsSum !== null) orders[targetDateStr].meatThickSoup = mtsSum;
 
       if (isHoliday) {
         orders[targetDateStr].isHoliday = true;
         orders[targetDateStr].noodles = 0;
         orders[targetDateStr].eggPancake = 0;
         orders[targetDateStr].friedNoodles = 0;
+        orders[targetDateStr].meatballSoup = 0;
+        orders[targetDateStr].meatThickSoup = 0;
         orders[targetDateStr].hasInfo = true;
       } else if (itemMatched) {
         orders[targetDateStr].isHoliday = false;
@@ -520,7 +536,9 @@
         if (orders[currStr] && !orders[currStr].isHoliday && orders[currStr].hasInfo) {
           var cons = (orders[currStr].noodles * prices.noodles) +
                      (orders[currStr].eggPancake * prices.eggPancake) +
-                     (orders[currStr].friedNoodles * prices.friedNoodles);
+                     (orders[currStr].friedNoodles * prices.friedNoodles) +
+                     ((orders[currStr].meatballSoup || 0) * prices.meatballSoup) +
+                     ((orders[currStr].meatThickSoup || 0) * prices.meatThickSoup);
           runningBalance -= cons;
         }
         bDate.setDate(bDate.getDate() + 1);
@@ -573,7 +591,7 @@
       var advanceValue = latestAdvance;
 
       var html = "<table id='reportTable'>";
-      html += "<tr><th>日期</th><th>麵線</th><th>蛋餅</th><th>炒麵</th><th>金額</th></tr>";
+      html += "<tr><th>日期</th><th>麵線</th><th>蛋餅</th><th>炒麵</th><th>貢丸</th><th>肉羹</th><th>金額</th></tr>";
       var overallTotalAmount = 0;
 
       for (var d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
@@ -583,7 +601,7 @@
         var weekday = weekdays[d.getDay()];
         if (month.length < 2) month = '0' + month;
         if (day.length < 2) day = '0' + day;
-        var displayDate = month + '/' + day + '(' + weekday + ')';
+        var displayDate = month + '/' + day + '<br>(' + weekday + ')';
         
         var isToday = (isoDate === todayStr);
         var isFuture = (isoDate > todayStr);
@@ -597,23 +615,27 @@
         var hasData = orders[isoDate] && orders[isoDate].hasInfo && !orders[isoDate].isHoliday;
 
         if (isoDate < "2026-06-14") {
-          rowContent = "<td colspan='3'>-</td><td>0</td>";
+          rowContent = "<td colspan='5'>-</td><td>0</td>";
         } else if (isFuture && !hasData) {
-          rowContent = "<td colspan='3'>空白</td><td>0</td>";
+          rowContent = "<td colspan='5'>空白</td><td>0</td>";
         } else if (isToday && !hasData) {
-          rowContent = "<td colspan='3'>Today</td><td>0</td>";
+          rowContent = "<td colspan='5'>Today</td><td>0</td>";
         } else if (!orders[isoDate] || !orders[isoDate].hasInfo || orders[isoDate].isHoliday) {
-          rowContent = "<td colspan='3' style='color:#666;'>休假</td><td>0</td>";
+          rowContent = "<td colspan='5' style='color:#666;'>休假</td><td>0</td>";
         } else {
           dailyTotalAmount =
             (orders[isoDate].noodles * prices.noodles) +
             (orders[isoDate].eggPancake * prices.eggPancake) +
-            (orders[isoDate].friedNoodles * prices.friedNoodles);
+            (orders[isoDate].friedNoodles * prices.friedNoodles) +
+            ((orders[isoDate].meatballSoup || 0) * prices.meatballSoup) +
+            ((orders[isoDate].meatThickSoup || 0) * prices.meatThickSoup);
             
           rowContent =
             "<td>" + (orders[isoDate].noodles || '0') + "</td>" +
             "<td>" + (orders[isoDate].eggPancake || '0') + "</td>" +
             "<td>" + (orders[isoDate].friedNoodles || '0') + "</td>" +
+            "<td>" + (orders[isoDate].meatballSoup || '0') + "</td>" +
+            "<td>" + (orders[isoDate].meatThickSoup || '0') + "</td>" +
             "<td style='font-weight:bold; color:#000;'>" + dailyTotalAmount + "</td>";
         }
 
@@ -621,7 +643,7 @@
         html += "<tr" + trClass + " onclick=\"openModal('" + isoDate + "')\"><td>" + displayDate + "</td>" + rowContent + "</tr>";
       }
 
-      html += "<tr style='background:#ccc; font-weight:bold; color:#000;'><td colspan='4'>本期消費總計</td><td>" + overallTotalAmount + "</td></tr>";
+      html += "<tr style='background:#ccc; font-weight:bold; color:#000;'><td colspan='6'>本期消費總計</td><td>" + overallTotalAmount + "</td></tr>";
       html += "</table>";
       
       var sM = (startDate.getMonth() + 1).toString();
@@ -697,11 +719,15 @@
         document.getElementById("modalNoodlesQty").value = 0;
         document.getElementById("modalEggPancakeQty").value = 0;
         document.getElementById("modalFriedNoodlesQty").value = 0;
+        document.getElementById("modalMeatballSoupQty").value = 0;
+        document.getElementById("modalMeatThickSoupQty").value = 0;
       } else {
         document.getElementById("modalIsHoliday").checked = orders[isoDate].isHoliday;
         document.getElementById("modalNoodlesQty").value = orders[isoDate].noodles || 0;
         document.getElementById("modalEggPancakeQty").value = orders[isoDate].eggPancake || 0;
         document.getElementById("modalFriedNoodlesQty").value = orders[isoDate].friedNoodles || 0;
+        document.getElementById("modalMeatballSoupQty").value = orders[isoDate].meatballSoup || 0;
+        document.getElementById("modalMeatThickSoupQty").value = orders[isoDate].meatThickSoup || 0;
       }
       
       document.getElementById("modalAdvanceQty").value = advances[isoDate] || "";
@@ -715,6 +741,8 @@
       document.getElementById("modalNoodlesQty").disabled = isHoliday;
       document.getElementById("modalEggPancakeQty").disabled = isHoliday;
       document.getElementById("modalFriedNoodlesQty").disabled = isHoliday;
+      document.getElementById("modalMeatballSoupQty").disabled = isHoliday;
+      document.getElementById("modalMeatThickSoupQty").disabled = isHoliday;
     }
 
     function closeModal() {
@@ -736,10 +764,14 @@
         orders[currentEditDate].noodles = 0;
         orders[currentEditDate].eggPancake = 0;
         orders[currentEditDate].friedNoodles = 0;
+        orders[currentEditDate].meatballSoup = 0;
+        orders[currentEditDate].meatThickSoup = 0;
       } else {
         orders[currentEditDate].noodles = parseInt(document.getElementById("modalNoodlesQty").value) || 0;
         orders[currentEditDate].eggPancake = parseInt(document.getElementById("modalEggPancakeQty").value) || 0;
         orders[currentEditDate].friedNoodles = parseInt(document.getElementById("modalFriedNoodlesQty").value) || 0;
+        orders[currentEditDate].meatballSoup = parseInt(document.getElementById("modalMeatballSoupQty").value) || 0;
+        orders[currentEditDate].meatThickSoup = parseInt(document.getElementById("modalMeatThickSoupQty").value) || 0;
       }
       
       var advInput = document.getElementById("modalAdvanceQty").value;
@@ -749,7 +781,12 @@
         delete advances[currentEditDate];
       }
       
-      if (orders[currentEditDate].noodles > 0 || orders[currentEditDate].eggPancake > 0 || orders[currentEditDate].friedNoodles > 0 || isHoliday || advInput !== "") {
+      if (orders[currentEditDate].noodles > 0 || 
+          orders[currentEditDate].eggPancake > 0 || 
+          orders[currentEditDate].friedNoodles > 0 || 
+          orders[currentEditDate].meatballSoup > 0 || 
+          orders[currentEditDate].meatThickSoup > 0 || 
+          isHoliday || advInput !== "") {
         orders[currentEditDate].hasInfo = true;
       } else {
         orders[currentEditDate].hasInfo = false;
