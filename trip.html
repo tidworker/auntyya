@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>旅遊費用結算</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        morandi: {
+                            blue: '#6D8A96',
+                            green: '#6E8272',
+                            rose: '#A67C75',
+                            khaki: '#A69675',
+                            bg: '#F5F7F6',
+                            card: '#FFFFFF'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    },
+                    borderRadius: {
+                        '2xl': '16px',
+                    },
+                    boxShadow: {
+                        'soft': '0 4px 20px rgba(109, 138, 150, 0.08)',
+                        'modal': '0 10px 40px rgba(0, 0, 0, 0.1)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #F5F7F6;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Hide scrollbar for clean UI */
+        ::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .tab-content.active {
+            display: block;
+        }
+
+        .tab-btn.active {
+            color: #6D8A96;
+            border-bottom: 3px solid #6D8A96;
+            font-weight: 700;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Modal Animation */
+        .modal-overlay {
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .modal-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            transform: translateY(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="text-gray-700 antialiased pb-20 max-w-md mx-auto relative min-h-screen shadow-xl bg-white overflow-x-hidden">
+
+    <!-- Header -->
+    <header class="bg-morandi-blue text-white pt-12 pb-4 px-6 rounded-b-2xl shadow-soft sticky top-0 z-20">
+        <h1 class="text-xl font-bold text-center tracking-wider">旅遊費用結算</h1>
+    </header>
+
+    <!-- Tab Navigation -->
+    <nav class="flex px-4 mt-4 mb-2 bg-white sticky top-[72px] z-10">
+        <button onclick="switchTab('tab-transfers')" id="btn-transfers" class="tab-btn active flex-1 py-3 text-center text-sm font-medium text-gray-400 transition-colors">
+            最終找補
+        </button>
+        <button onclick="switchTab('tab-families')" id="btn-families" class="tab-btn flex-1 py-3 text-center text-sm font-medium text-gray-400 transition-colors">
+            各家明細
+        </button>
+        <button onclick="switchTab('tab-expenses')" id="btn-expenses" class="tab-btn flex-1 py-3 text-center text-sm font-medium text-gray-400 transition-colors">
+            公費清單
+        </button>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main class="p-5">
+
+        <!-- TAB 1: 最終找補 (Final Transfers) -->
+        <section id="tab-transfers" class="tab-content active">
+            <div class="mb-6 flex items-center gap-2">
+                <svg class="w-5 h-5 text-morandi-rose" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                <h2 class="text-lg font-bold text-gray-800">轉帳建議</h2>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- Transfer Card 1 -->
+                <div class="bg-white p-4 rounded-2xl shadow-soft flex items-center justify-between border border-gray-50">
+                    <div class="flex flex-col items-center">
+                        <span class="text-sm font-bold text-gray-700">小玉家</span>
+                        <span class="text-xs text-gray-400 mt-1">匯出</span>
+                    </div>
+                    <div class="flex flex-col items-center flex-1 px-4">
+                        <span class="text-morandi-rose font-bold text-lg tracking-wide">$6,453</span>
+                        <svg class="w-10 h-10 text-morandi-blue opacity-50 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <span class="text-sm font-bold text-morandi-blue">飛飛家</span>
+                        <span class="text-xs text-gray-400 mt-1">接收</span>
+                    </div>
+                </div>
+
+                <!-- Transfer Card 2 -->
+                <div class="bg-white p-4 rounded-2xl shadow-soft flex items-center justify-between border border-gray-50">
+                    <div class="flex flex-col items-center">
+                        <span class="text-sm font-bold text-gray-700">郁芳家</span>
+                        <span class="text-xs text-gray-400 mt-1">匯出</span>
+                    </div>
+                    <div class="flex flex-col items-center flex-1 px-4">
+                        <span class="text-morandi-rose font-bold text-lg tracking-wide">$3,466</span>
+                        <svg class="w-10 h-10 text-morandi-blue opacity-50 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <span class="text-sm font-bold text-morandi-blue">飛飛家</span>
+                        <span class="text-xs text-gray-400 mt-1">接收</span>
+                    </div>
+                </div>
+
+                <!-- Transfer Card 3 -->
+                <div class="bg-white p-4 rounded-2xl shadow-soft flex items-center justify-between border border-gray-50">
+                    <div class="flex flex-col items-center">
+                        <span class="text-sm font-bold text-gray-700">郁芳家</span>
+                        <span class="text-xs text-gray-400 mt-1">匯出</span>
+                    </div>
+                    <div class="flex flex-col items-center flex-1 px-4">
+                        <span class="text-morandi-rose font-bold text-lg tracking-wide">$1,229</span>
+                        <svg class="w-10 h-10 text-morandi-khaki opacity-50 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <span class="text-sm font-bold text-morandi-khaki">虹谷</span>
+                        <span class="text-xs text-gray-400 mt-1">接收</span>
+                    </div>
+                </div>
+
+                <!-- Transfer Card 4 -->
+                <div class="bg-white p-4 rounded-2xl shadow-soft flex items-center justify-between border border-gray-50">
+                    <div class="flex flex-col items-center">
+                        <span class="text-sm font-bold text-gray-700">大頭家</span>
+                        <span class="text-xs text-gray-400 mt-1">匯出</span>
+                    </div>
+                    <div class="flex flex-col items-center flex-1 px-4">
+                        <span class="text-morandi-rose font-bold text-lg tracking-wide">$736</span>
+                        <svg class="w-10 h-10 text-morandi-khaki opacity-50 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <span class="text-sm font-bold text-morandi-khaki">虹谷</span>
+                        <span class="text-xs text-gray-400 mt-1">接收</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-8 text-center text-xs text-gray-400 bg-morandi-bg p-4 rounded-2xl">
+                依照上述方式轉帳即可完全結清本次費用。
+            </div>
+        </section>
+
+        <!-- TAB 2: 各家明細 (Family Details) -->
+        <section id="tab-families" class="tab-content">
+            <div class="mb-6 flex items-center gap-2">
+                <svg class="w-5 h-5 text-morandi-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                <h2 class="text-lg font-bold text-gray-800">各家結算明細</h2>
+            </div>
+            <p class="text-xs text-gray-400 mb-4 ml-1">點擊卡片查看詳細金額計算</p>
+
+            <div class="grid grid-cols-2 gap-4">
+                <!-- Family Cards -->
+                <button onclick="openModal('小玉家', '6,453', '295', '0', '6,453', 'pay')" class="bg-white p-5 rounded-2xl shadow-soft text-left focus:outline-none focus:ring-2 focus:ring-morandi-blue border border-gray-50 flex flex-col items-center justify-center gap-1 transition-transform active:scale-95">
+                    <div class="w-12 h-12 rounded-full bg-morandi-bg flex items-center justify-center text-morandi-blue mb-1">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    </div>
+                    <span class="font-bold text-gray-700">小玉家</span>
+                    <span class="font-bold text-morandi-rose text-lg">-6,453</span>
+                    <span class="text-xs font-medium text-morandi-rose bg-red-50 px-2 py-1 rounded-full">付款方</span>
+                </button>
+
+                <button onclick="openModal('飛飛家', '6,448', '290', '16,367', '9,919', 'receive')" class="bg-white p-5 rounded-2xl shadow-soft text-left focus:outline-none focus:ring-2 focus:ring-morandi-blue border border-gray-50 flex flex-col items-center justify-center gap-1 transition-transform active:scale-95">
+                    <div class="w-12 h-12 rounded-full bg-morandi-bg flex items-center justify-center text-morandi-blue mb-1">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    </div>
+                    <span class="font-bold text-gray-700">飛飛家</span>
+                    <span class="font-bold text-morandi-green text-lg">+9,919</span>
+                    <span class="text-xs font-medium text-morandi-green bg-green-50 px-2 py-1 rounded-full">收款方</span>
+                </button>
+
+                <button onclick="openModal('郁芳家', '5,105', '315', '410', '4,695', 'pay')" class="bg-white p-5 rounded-2xl shadow-soft text-left focus:outline-none focus:ring-2 focus:ring-morandi-blue border border-gray-50 flex flex-col items-center justify-center gap-1 transition-transform active:scale-95">
+                    <div class="w-12 h-12 rounded-full bg-morandi-bg flex items-center justify-center text-morandi-blue mb-1">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    </div>
+                    <span class="font-bold text-gray-700">郁芳家</span>
+                    <span class="font-bold text-morandi-rose text-lg">-4,695</span>
+                    <span class="text-xs font-medium text-morandi-rose bg-red-50 px-2 py-1 rounded-full">付款方</span>
+                </button>
+
+                <button onclick="openModal('大頭家', '3,561', '140', '2,825', '736', 'pay')" class="bg-white p-5 rounded-2xl shadow-soft text-left focus:outline-none focus:ring-2 focus:ring-morandi-blue border border-gray-50 flex flex-col items-center justify-center gap-1 transition-transform active:scale-95">
+                    <div class="w-12 h-12 rounded-full bg-morandi-bg flex items-center justify-center text-morandi-blue mb-1">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    </div>
+                    <span class="font-bold text-gray-700">大頭家</span>
+                    <span class="font-bold text-morandi-rose text-lg">-736</span>
+                    <span class="text-xs font-medium text-morandi-rose bg-red-50 px-2 py-1 rounded-full">付款方</span>
+                </button>
+
+                <button onclick="openModal('虹谷', '1,825', '115', '3,790', '1,965', 'receive')" class="bg-white p-5 rounded-2xl shadow-soft text-left focus:outline-none focus:ring-2 focus:ring-morandi-blue border border-gray-50 flex flex-col items-center justify-center gap-1 transition-transform active:scale-95 col-span-2 mx-auto w-1/2">
+                    <div class="w-12 h-12 rounded-full bg-morandi-bg flex items-center justify-center text-morandi-blue mb-1">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                    </div>
+                    <span class="font-bold text-gray-700">虹谷</span>
+                    <span class="font-bold text-morandi-green text-lg">+1,965</span>
+                    <span class="text-xs font-medium text-morandi-green bg-green-50 px-2 py-1 rounded-full">收款方</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- TAB 3: 公費清單 (Expense List) -->
+        <section id="tab-expenses" class="tab-content">
+            <div class="mb-6 flex items-center gap-2">
+                <svg class="w-5 h-5 text-morandi-khaki" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <h2 class="text-lg font-bold text-gray-800">公費代墊清單</h2>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-soft border border-gray-50 overflow-hidden">
+                <ul class="divide-y divide-gray-100">
+                    <li class="p-4 flex justify-between items-center hover:bg-gray-50 transition-colors">
+                        <div>
+                            <p class="font-bold text-gray-700">住宿</p>
+                            <p class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                飛飛家 墊付
+                            </p>
+                        </div>
+                        <span class="font-bold text-gray-600">$15,299</span>
+                    </li>
+                    <li class="p-4 flex justify-between items-center hover:bg-gray-50 transition-colors">
+                        <div>
+                            <p class="font-bold text-gray-700">午餐烤雞</p>
+                            <p class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                虹谷 墊付
+                            </p>
+                        </div>
+                        <span class="font-bold text-gray-600">$3,790</span>
+                    </li>
+                    <li class="p-4 flex justify-between items-center hover:bg-gray-50 transition-colors">
+                        <div>
+                            <p class="font-bold text-gray-700">比薩</p>
+                            <p class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                大頭家 墊付
+                            </p>
+                        </div>
+                        <span class="font-bold text-gray-600">$1,670</span>
+                    </li>
+                    <li class="p-4 flex justify-between items-center hover:bg-gray-50 transition-colors">
+                        <div>
+                            <p class="font-bold text-gray-700">早餐</p>
+                            <p class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                大頭家 墊付
+                            </p>
+                        </div>
+                        <span class="font-bold text-gray-600">$1,155</span>
+                    </li>
+                    <li class="p-4 flex justify-between items-center hover:bg-gray-50 transition-colors">
+                        <div>
+                            <p class="font-bold text-gray-700">鹹酥雞</p>
+                            <p class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                飛飛家 墊付
+                            </p>
+                        </div>
+                        <span class="font-bold text-gray-600">$1,068</span>
+                    </li>
+                    <li class="p-4 flex justify-between items-center hover:bg-gray-50 transition-colors">
+                        <div>
+                            <p class="font-bold text-gray-700">手搖</p>
+                            <p class="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                郁芳家 墊付
+                            </p>
+                        </div>
+                        <span class="font-bold text-gray-600">$410</span>
+                    </li>
+                    
+                    <li class="p-4 flex justify-between items-center bg-morandi-bg">
+                        <span class="font-bold text-morandi-blue">總花費</span>
+                        <span class="font-bold text-morandi-blue text-lg">$23,392</span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+    </main>
+
+    <!-- Modal Overlay & Content -->
+    <div id="detail-modal" class="modal-overlay fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm">
+        <div class="modal-content w-full max-w-md bg-white rounded-t-3xl sm:rounded-3xl p-6 sm:m-4 relative shadow-modal">
+            
+            <!-- Close Button -->
+            <button onclick="closeModal()" class="absolute top-4 right-4 p-2 bg-gray-50 text-gray-400 rounded-full hover:bg-gray-100 transition-colors focus:outline-none">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+
+            <!-- Modal Header -->
+            <div class="flex items-center gap-3 mb-6 border-b border-gray-100 pb-4 mt-2">
+                <div class="w-10 h-10 rounded-full bg-morandi-blue bg-opacity-10 flex items-center justify-center text-morandi-blue">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                </div>
+                <h3 id="modal-title" class="text-xl font-bold text-gray-800">家長名稱</h3>
+            </div>
+
+            <!-- Modal Data Rows -->
+            <div class="space-y-4 mb-8">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-500 font-medium">總應攤金額</span>
+                    <div class="text-right">
+                        <span id="modal-total" class="font-bold text-gray-700 text-lg">$0</span>
+                        <p id="modal-breakfast" class="text-xs text-gray-400">(含早餐 $0)</p>
+                    </div>
+                </div>
+                
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-500 font-medium">已墊付金額</span>
+                    <span id="modal-paid" class="font-bold text-morandi-blue text-lg">$0</span>
+                </div>
+
+                <div class="h-px w-full bg-gray-100 my-2"></div>
+
+                <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl">
+                    <span id="modal-result-label" class="font-bold text-gray-700">最終結算</span>
+                    <span id="modal-result-amount" class="font-bold text-xl text-morandi-rose">$0</span>
+                </div>
+            </div>
+
+            <!-- Done Button -->
+            <button onclick="closeModal()" class="w-full bg-morandi-blue text-white font-bold py-3 rounded-2xl shadow-soft active:scale-95 transition-transform">
+                我知道了
+            </button>
+        </div>
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Switch Tabs function
+        function switchTab(tabId) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(el => {
+                el.classList.remove('active');
+            });
+            // Remove active style from all buttons
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabId).classList.add('active');
+            
+            // Set active style on clicked button
+            const btnId = 'btn-' + tabId.split('-')[1];
+            document.getElementById(btnId).classList.add('active');
+        }
+
+        // Modal Logic
+        const modal = document.getElementById('detail-modal');
+        
+        function openModal(name, total, breakfast, paid, result, type) {
+            // Populate Data
+            document.getElementById('modal-title').innerText = name;
+            document.getElementById('modal-total').innerText = '$' + total;
+            document.getElementById('modal-breakfast').innerText = '(含早餐 $' + breakfast + ')';
+            document.getElementById('modal-paid').innerText = '$' + paid;
+            
+            const resultLabel = document.getElementById('modal-result-label');
+            const resultAmount = document.getElementById('modal-result-amount');
+            
+            if(type === 'pay') {
+                resultLabel.innerText = '付款方';
+                resultAmount.innerText = '-$' + result;
+                resultAmount.className = 'font-bold text-xl text-morandi-rose';
+            } else {
+                resultLabel.innerText = '收款方';
+                resultAmount.innerText = '+$' + result;
+                resultAmount.className = 'font-bold text-xl text-morandi-green';
+            }
+
+            // Show Modal
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+            document.body.style.overflow = ''; // Restore background scrolling
+        }
+
+        // Close modal when clicking outside of it
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
