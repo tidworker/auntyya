@@ -121,77 +121,105 @@
         <section id="tab-transfers" class="tab-content active">
             <div class="mb-6 flex items-center gap-2">
                 <svg class="w-5 h-5 text-morandi-rose" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                <h2 class="text-lg font-bold text-gray-800">轉帳建議</h2>
+                <h2 class="text-lg font-bold text-gray-800">各家轉帳圖卡</h2>
             </div>
             
             <div class="space-y-4">
-                <!-- Transfer Card 1 -->
-                <div class="bg-white p-4 rounded-2xl shadow-soft flex items-center justify-between border border-gray-50">
-                    <div class="flex flex-col items-center">
-                        <span class="text-sm font-bold text-gray-700">小玉家</span>
-                        <span class="text-xs text-gray-400 mt-1">匯出</span>
+                <!-- 小玉家 Card -->
+                <div class="bg-white p-5 rounded-2xl shadow-soft border border-gray-50">
+                    <div class="flex items-center gap-3 mb-3 border-b border-gray-100 pb-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-sm">玉</div>
+                        <h3 class="font-bold text-gray-800 text-lg">小玉家</h3>
                     </div>
-                    <div class="flex flex-col items-center flex-1 px-4">
-                        <span class="text-morandi-rose font-bold text-lg tracking-wide">$6,453</span>
-                        <svg class="w-10 h-10 text-morandi-blue opacity-50 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <span class="text-sm font-bold text-morandi-blue">飛飛家</span>
-                        <span class="text-xs text-gray-400 mt-1">接收</span>
+                    <div class="flex items-center justify-between py-1">
+                        <span class="text-gray-500 text-sm flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-morandi-rose"></span> 轉出給 <span class="font-bold text-gray-700">飛飛家</span>
+                        </span>
+                        <span class="font-bold text-morandi-rose">-$6,453</span>
                     </div>
                 </div>
 
-                <!-- Transfer Card 2 -->
-                <div class="bg-white p-4 rounded-2xl shadow-soft flex items-center justify-between border border-gray-50">
-                    <div class="flex flex-col items-center">
-                        <span class="text-sm font-bold text-gray-700">郁芳家</span>
-                        <span class="text-xs text-gray-400 mt-1">匯出</span>
+                <!-- 郁芳家 Card -->
+                <div class="bg-white p-5 rounded-2xl shadow-soft border border-gray-50">
+                    <div class="flex items-center gap-3 mb-3 border-b border-gray-100 pb-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-sm">郁</div>
+                        <h3 class="font-bold text-gray-800 text-lg">郁芳家</h3>
                     </div>
-                    <div class="flex flex-col items-center flex-1 px-4">
-                        <span class="text-morandi-rose font-bold text-lg tracking-wide">$3,466</span>
-                        <svg class="w-10 h-10 text-morandi-blue opacity-50 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <span class="text-sm font-bold text-morandi-blue">飛飛家</span>
-                        <span class="text-xs text-gray-400 mt-1">接收</span>
-                    </div>
-                </div>
-
-                <!-- Transfer Card 3 -->
-                <div class="bg-white p-4 rounded-2xl shadow-soft flex items-center justify-between border border-gray-50">
-                    <div class="flex flex-col items-center">
-                        <span class="text-sm font-bold text-gray-700">大頭家</span>
-                        <span class="text-xs text-gray-400 mt-1">匯出</span>
-                    </div>
-                    <div class="flex flex-col items-center flex-1 px-4">
-                        <span class="text-morandi-rose font-bold text-lg tracking-wide">$736</span>
-                        <svg class="w-10 h-10 text-morandi-blue opacity-50 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <span class="text-sm font-bold text-morandi-blue">郁芳家</span>
-                        <span class="text-xs text-gray-400 mt-1">接收</span>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center justify-between py-1">
+                            <span class="text-gray-500 text-sm flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-morandi-green"></span> 向 <span class="font-bold text-gray-700">大頭家</span> 收取
+                            </span>
+                            <span class="font-bold text-morandi-green">+$736</span>
+                        </div>
+                        <div class="flex items-center justify-between py-1">
+                            <span class="text-gray-500 text-sm flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-morandi-rose"></span> 轉出給 <span class="font-bold text-gray-700">飛飛家</span>
+                            </span>
+                            <span class="font-bold text-morandi-rose">-$3,466</span>
+                        </div>
+                        <div class="flex items-center justify-between py-1">
+                            <span class="text-gray-500 text-sm flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-morandi-rose"></span> 轉出給 <span class="font-bold text-gray-700">虹谷</span>
+                            </span>
+                            <span class="font-bold text-morandi-rose">-$1,965</span>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Transfer Card 4 -->
-                <div class="bg-white p-4 rounded-2xl shadow-soft flex items-center justify-between border border-gray-50">
-                    <div class="flex flex-col items-center">
-                        <span class="text-sm font-bold text-gray-700">郁芳家</span>
-                        <span class="text-xs text-gray-400 mt-1">匯出</span>
+                <!-- 大頭家 Card -->
+                <div class="bg-white p-5 rounded-2xl shadow-soft border border-gray-50">
+                    <div class="flex items-center gap-3 mb-3 border-b border-gray-100 pb-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-sm">大</div>
+                        <h3 class="font-bold text-gray-800 text-lg">大頭家</h3>
                     </div>
-                    <div class="flex flex-col items-center flex-1 px-4">
-                        <span class="text-morandi-rose font-bold text-lg tracking-wide">$1,965</span>
-                        <svg class="w-10 h-10 text-morandi-khaki opacity-50 mt-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                    <div class="flex items-center justify-between py-1">
+                        <span class="text-gray-500 text-sm flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-morandi-rose"></span> 轉出給 <span class="font-bold text-gray-700">郁芳家</span>
+                        </span>
+                        <span class="font-bold text-morandi-rose">-$736</span>
                     </div>
-                    <div class="flex flex-col items-center">
-                        <span class="text-sm font-bold text-morandi-khaki">虹谷</span>
-                        <span class="text-xs text-gray-400 mt-1">接收</span>
+                </div>
+
+                <!-- 飛飛家 Card -->
+                <div class="bg-white p-5 rounded-2xl shadow-soft border border-gray-50">
+                    <div class="flex items-center gap-3 mb-3 border-b border-gray-100 pb-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-sm">飛</div>
+                        <h3 class="font-bold text-gray-800 text-lg">飛飛家</h3>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center justify-between py-1">
+                            <span class="text-gray-500 text-sm flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-morandi-green"></span> 向 <span class="font-bold text-gray-700">小玉家</span> 收取
+                            </span>
+                            <span class="font-bold text-morandi-green">+$6,453</span>
+                        </div>
+                        <div class="flex items-center justify-between py-1">
+                            <span class="text-gray-500 text-sm flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-morandi-green"></span> 向 <span class="font-bold text-gray-700">郁芳家</span> 收取
+                            </span>
+                            <span class="font-bold text-morandi-green">+$3,466</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 虹谷 Card -->
+                <div class="bg-white p-5 rounded-2xl shadow-soft border border-gray-50">
+                    <div class="flex items-center gap-3 mb-3 border-b border-gray-100 pb-3">
+                        <div class="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-sm">虹</div>
+                        <h3 class="font-bold text-gray-800 text-lg">虹谷</h3>
+                    </div>
+                    <div class="flex items-center justify-between py-1">
+                        <span class="text-gray-500 text-sm flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-morandi-green"></span> 向 <span class="font-bold text-gray-700">郁芳家</span> 收取
+                        </span>
+                        <span class="font-bold text-morandi-green">+$1,965</span>
                     </div>
                 </div>
             </div>
             
             <div class="mt-8 text-center text-xs text-gray-400 bg-morandi-bg p-4 rounded-2xl">
-                依照上述方式轉帳即可完全結清本次費用。
+                請各家參考自己的專屬卡片進行轉帳即可結清！
             </div>
         </section>
 
